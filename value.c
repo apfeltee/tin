@@ -4,49 +4,54 @@
 #include "lit.h"
 
 
-LitValue lit_value_objectvalue_actual(uintptr_t obj)
+LitValue lit_value_objectvalue_actual(LitObject* obj)
 {
-    return (LitValue)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj));
+    //return (LitValue)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj));
+    LitValue val;
+    val.type = LITVAL_OBJECT;
+    val.obj = obj;
+    return val;
 }
 
 bool lit_value_isobject(LitValue v)
 {
-    return ((v & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT));
+    return v.type == LITVAL_OBJECT;
 }
-
 
 LitObject* lit_value_asobject(LitValue v)
 {
-    return ((LitObject*)(uintptr_t)((v) & ~(SIGN_BIT | QNAN)));
+    return v.obj;
 }
-
 
 LitValue lit_bool_to_value(LitState* state, bool b) 
 {
     (void)state;
-    return (b ? TRUE_VALUE : FALSE_VALUE);
+    if(!b)
+    {
+        return FALSE_VALUE;
+    }
+    return TRUE_VALUE;
 }
 
 bool lit_value_isbool(LitValue v)
 {
-    return ((v & FALSE_VALUE) == FALSE_VALUE);
+    return v.type == LITVAL_BOOL;
 }
 
 bool lit_value_isfalsey(LitValue v)
 {
-    return (lit_value_isbool(v) && (v == FALSE_VALUE)) || lit_value_isnull(v) || (lit_value_isnumber(v) && lit_value_asnumber(v) == 0);
+    return (lit_value_isbool(v) && !v.boolval) || lit_value_isnull(v) || (lit_value_isnumber(v) && lit_value_asnumber(v) == 0);
 }
 
 bool lit_value_asbool(LitValue v)
 {
-    return (v == TRUE_VALUE);
+    return v.boolval;
 }
 
 bool lit_value_isnull(LitValue v)
 {
-    return (v == NULL_VALUE);
+    return (v.type == LITVAL_NULL);
 }
-
 
 LitObjType lit_value_type(LitValue v)
 {
@@ -72,40 +77,44 @@ double lit_value_asnumber(LitValue v)
         tmp = lit_value_asobject(v);
         return ((LitNumber*)tmp)->num;
     #else
-        return *((double*)&v);
+        return v.numval;
     #endif
 }
 
 LitValue lit_value_numbertovalue(LitState* state, double num)
 {
     (void)state;
-    #if defined(USE_NUMBEROBJECT) && (USE_NUMBEROBJECT == 1)
-        #if 1
-            LitNumber* nobj;
-            nobj = (LitNumber*)lit_gcmem_allocobject(state, sizeof(LitNumber), LITTYPE_NUMBER, true);
-            nobj->num = num;
-            return lit_value_objectvalue(nobj);
+    LitValue v;
+    v.type = LITVAL_NUMBER;
+    v.numval = num;
+    return v;
+
+    #if 0
+        #if defined(USE_NUMBEROBJECT) && (USE_NUMBEROBJECT == 1)
+            #if 1
+                LitNumber* nobj;
+                nobj = (LitNumber*)lit_gcmem_allocobject(state, sizeof(LitNumber), LITTYPE_NUMBER, true);
+                nobj->num = num;
+                return lit_value_objectvalue(nobj);
+            #else
+                LitNumber* n;
+                LitObject o;
+                n = (LitNumber*)&o;
+                o.type = LITTYPE_NUMBER;
+                n->object = o;
+                n->num = num;
+                return lit_value_objectvalue(n);
+            #endif
         #else
-            LitNumber* n;
-            LitObject o;
-            n = (LitNumber*)&o;
-            o.type = LITTYPE_NUMBER;
-            n->object = o;
-            n->num = num;
-            return lit_value_objectvalue(n);
+
         #endif
-    #else
-        return *((LitValue*)&num);
     #endif
+
 }
 
 bool lit_value_isnumber(LitValue v)
 {
-    #if defined(USE_NUMBEROBJECT) && (USE_NUMBEROBJECT == 1)
-        return lit_value_istype(v, LITTYPE_NUMBER);
-    #else
-        return (((v)&QNAN) != QNAN);
-    #endif
+    return v.type == LITVAL_NUMBER;
 }
 
 
@@ -123,10 +132,12 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
         inret = lit_state_callinstancemethod(state, a, CONST_STRING(state, "=="), args, 1);
         if(inret.type == LITRESULT_OK)
         {
-            if(lit_bool_to_value(state, inret.result) == TRUE_VALUE)
+            /*
+            if(lit_bool_to_value(state, inret.result.) == TRUE_VALUE)
             {
                 return true;
             }
+            */
             return false;
         }
     }
@@ -139,7 +150,7 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
         {
             return (lit_value_asnumber(a) == lit_value_asnumber(b));
         }
-        return (a == b);
+        return (lit_value_compare(state, a, b));
     }
     return false;
 }
@@ -350,7 +361,6 @@ void lit_value_ensureobjtype(LitVM* vm, LitValue value, LitObjType type, const c
     }
 }
 
-
 LitValue lit_value_callnew(LitVM* vm, const char* name, LitValue* args, size_t argc, bool ignfiber)
 {
     LitValue value;
@@ -358,7 +368,7 @@ LitValue lit_value_callnew(LitVM* vm, const char* name, LitValue* args, size_t a
     if(!lit_table_get(&vm->globals->values, CONST_STRING(vm->state, name), &value))
     {
         lit_vm_raiseerror(vm, "failed to create instance of class %s: class not found", name);
-        return NULL_VALUE;
+        return lit_value_makenull(vm->state);
     }
     klass = lit_value_asclass(value);
     if(klass->init_method == NULL)

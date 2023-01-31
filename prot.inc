@@ -180,7 +180,7 @@ const char *lit_error_getformatstring(LitError e);
 LitString *lit_vformat_error(LitState *state, size_t line, LitError lit_emitter_raiseerror, va_list args);
 LitString *lit_format_error(LitState *state, size_t line, LitError lit_emitter_raiseerror, ...);
 /* value.c */
-LitValue lit_value_objectvalue_actual(uintptr_t obj);
+LitValue lit_value_objectvalue_actual(LitObject* obj);
 bool lit_value_isobject(LitValue v);
 LitObject *lit_value_asobject(LitValue v);
 LitValue lit_bool_to_value(LitState *state, bool b);

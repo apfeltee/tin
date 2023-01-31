@@ -370,38 +370,6 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
 //
 void lit_towriter_value(LitState* state, LitWriter* wr, LitValue value)
 {
-    /*
-    LitValue mthtostring;
-    LitValue tstrval;
-    LitString* tstring;
-    LitString* mthname;
-    LitInterpretResult inret;
-    LitValue args[1] = {NULL_VALUE};
-    mthname = CONST_STRING(state, "toString");
-    fprintf(stderr, "lit_towriter_value: checking if toString() exists for '%s' ...\n", lit_tostring_typename(value));
-    if(lit_value_asclass(value) != NULL)
-    {
-        mthtostring = lit_state_getinstancemethod(state, value, mthname);
-        if(!lit_value_isnull(mthtostring))
-        {
-            fprintf(stderr, "lit_towriter_value: we got toString()! now checking if calling it works ...\n");
-            inret = lit_state_callinstancemethod(state, value, mthname, args, 0);
-            if(inret.type == LITRESULT_OK)
-            {
-                fprintf(stderr, "lit_towriter_value: calling toString() succeeded! but is it a string? ...\n");
-                tstrval = inret.result;
-                if(!lit_value_isnull(tstrval))
-                {
-                    fprintf(stderr, "lit_towriter_value: toString() returned a string! so that's what we'll use.\n");
-                    tstring = lit_value_asstring(tstrval);
-                    printf("%.*s", (int)lit_string_getlength(tstring), tstring->chars);
-                    return;
-                }
-            }
-        }
-    }
-    fprintf(stderr, "lit_towriter_value: nope, no toString(), or it didn't return a string. falling back to manual stringification\n");
-    */
     if(lit_value_isbool(value))
     {
         lit_writer_writestring(wr, lit_value_asbool(value) ? "true" : "false");

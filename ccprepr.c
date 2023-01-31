@@ -35,6 +35,7 @@ void lit_preproc_override(char* source, int length)
 
 bool lit_preproc_run(LitPreprocessor* preprocessor, char* source)
 {
+    /*
     bool close;
     bool in_macro;
     bool in_arg;
@@ -213,5 +214,6 @@ bool lit_preproc_run(LitPreprocessor* preprocessor, char* source)
         return false;
     }
     lit_vallist_destroy(preprocessor->state, &preprocessor->open_ifs);
+    */
     return true;
 }

@@ -176,8 +176,8 @@ function core_hmac_sha1(key, data)
         ipad[i] = bkey[i] ^ 0x36363636;
         opad[i] = bkey[i] ^ 0x5C5C5C5C;
     }
-    var hash = core_sha1(ipad.concat(str2binb(data)), 512 + data.length * chrsz);
-    return core_sha1(opad.concat(hash), 512 + 160);
+    var hash = core_sha1(ipad + str2binb(data), 512 + data.length * chrsz);
+    return core_sha1(opad + hash, 512 + 160);
 }
 
 

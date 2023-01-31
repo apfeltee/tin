@@ -257,32 +257,6 @@ enum LitFuncType
     LITFUNC_CONSTRUCTOR
 };
 
-enum LitObjType
-{
-    LITTYPE_UNDEFINED,
-    LITTYPE_NULL,
-    LITTYPE_STRING,
-    LITTYPE_FUNCTION,
-    LITTYPE_NATIVE_FUNCTION,
-    LITTYPE_NATIVE_PRIMITIVE,
-    LITTYPE_NATIVE_METHOD,
-    LITTYPE_PRIMITIVE_METHOD,
-    LITTYPE_FIBER,
-    LITTYPE_MODULE,
-    LITTYPE_CLOSURE,
-    LITTYPE_UPVALUE,
-    LITTYPE_CLASS,
-    LITTYPE_INSTANCE,
-    LITTYPE_BOUND_METHOD,
-    LITTYPE_ARRAY,
-    LITTYPE_MAP,
-    LITTYPE_USERDATA,
-    LITTYPE_RANGE,
-    LITTYPE_FIELD,
-    LITTYPE_REFERENCE,
-    LITTYPE_NUMBER,
-    LITTYPE_BOOL,
-};
 
 typedef enum /**/LitOpCode LitOpCode;
 typedef enum /**/LitExprType LitExprType;
@@ -294,7 +268,6 @@ typedef enum /**/LitTokType LitTokType;
 typedef enum /**/LitResult LitResult;
 typedef enum /**/LitErrType LitErrType;
 typedef enum /**/LitFuncType LitFuncType;
-typedef enum /**/LitObjType LitObjType;
 typedef struct /**/LitScanner LitScanner;
 typedef struct /**/LitPreprocessor LitPreprocessor;
 typedef struct /**/LitExecState LitExecState;
@@ -408,19 +381,6 @@ typedef void(*LitWriterByteFN)(LitWriter*, int);
 typedef void(*LitWriterStringFN)(LitWriter*, const char*, size_t);
 typedef void(*LitWriterFormatFN)(LitWriter*, const char*, va_list);
 
-struct LitObject
-{
-    /* the type of this object */
-    LitObjType type;
-    LitObject* next;
-    bool marked;
-    bool mustfree;
-
-    union
-    {
-        bool boolval;
-    };
-};
 
 
 
@@ -455,7 +415,9 @@ struct LitUintList
 
 struct LitValueList
 {
-    LitDataList list;
+    size_t capacity;
+    size_t count;
+    LitValue* values;
 };
 
 /* TODO: using DataList messes with the string its supposed to collect. no clue why, though. */

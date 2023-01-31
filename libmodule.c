@@ -64,7 +64,7 @@ static LitValue objfn_module_tostring(LitVM* vm, LitValue instance, size_t argc,
 {
     (void)argc;
     (void)argv;
-    return lit_value_objectvalue(lit_string_format(vm->state, "Module @", lit_value_objectvalue(lit_value_asmodule(instance)->name)));
+    return lit_string_format(vm->state, "Module @", lit_value_objectvalue(lit_value_asmodule(instance)->name));
 }
 
 static LitValue objfn_module_name(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)

@@ -73,11 +73,13 @@ void lit_chunk_push(LitState* state, LitChunk* chunk, uint8_t byte, uint16_t lin
 
 size_t lit_chunk_addconst(LitState* state, LitChunk* chunk, LitValue constant)
 {
+    LitValue itm;
     LitState** cst;
     cst = &state;
     for(size_t i = 0; i < lit_vallist_count(&chunk->constants); i++)
     {
-        if(lit_vallist_get(&chunk->constants, i) == constant)
+        itm = lit_vallist_get(&chunk->constants, i);
+        if(&itm == &constant)
         {
             return i;
         }

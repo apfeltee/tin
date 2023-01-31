@@ -430,7 +430,7 @@ static LitValue objfn_number_tostring(LitVM* vm, LitValue instance, size_t argc,
 {
     (void)argc;
     (void)argv;
-    return lit_value_objectvalue(lit_string_numbertostring(vm->state, lit_value_asnumber(instance)));
+    return lit_string_numbertostring(vm->state, lit_value_asnumber(instance));
 }
 
 static LitValue objfn_number_tochar(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)

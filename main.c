@@ -262,7 +262,7 @@ static int run_repl(LitState* state)
         }
         add_history(line);
         LitInterpretResult result = lit_state_execsource(state, "repl", line, strlen(line));
-        if(result.type == LITRESULT_OK && result.result != NULL_VALUE)
+        if(result.type == LITRESULT_OK && !lit_value_isnull(result.result))
         {
             printf("%s%s%s\n", COLOR_GREEN, lit_string_getdata(lit_value_tostring(state, result.result)), COLOR_RESET);
         }

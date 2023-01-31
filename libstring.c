@@ -951,7 +951,7 @@ static LitValue objfn_string_iteratorvalue(LitVM* vm, LitValue instance, size_t 
     index = lit_value_checknumber(vm, argv, argc, 0);
     if(index == UINT32_MAX)
     {
-        return false;
+        return FALSE_VALUE;
     }
     return lit_value_objectvalue(lit_ustring_codepointat(vm->state, string, index));
 }

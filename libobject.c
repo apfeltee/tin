@@ -307,10 +307,10 @@ LitValue lit_get_function_name(LitVM* vm, LitValue instance)
     {
         if(lit_value_isobject(instance))
         {
-            return lit_value_objectvalue(lit_string_format(vm->state, "function #", *((double*)lit_value_asobject(instance))));
+            return lit_string_format(vm->state, "function #", *((double*)lit_value_asobject(instance)));
         }
     }
-    return lit_value_objectvalue(lit_string_format(vm->state, "function @", lit_value_objectvalue(name)));
+    return lit_string_format(vm->state, "function @", lit_value_objectvalue(name));
 }
 
 static LitValue objfn_object_class(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -337,7 +337,7 @@ static LitValue objfn_object_tostring(LitVM* vm, LitValue instance, size_t argc,
 {
     (void)argc;
     (void)argv;
-    return lit_value_objectvalue(lit_string_format(vm->state, "@ instance", lit_value_objectvalue(lit_state_getclassfor(vm->state, instance)->name)));
+    return lit_string_format(vm->state, "@ instance", lit_value_objectvalue(lit_state_getclassfor(vm->state, instance)->name));
 }
 
 static void fillmap(LitState* state, LitMap* destmap, LitTable* fromtbl, bool includenullkeys)
@@ -352,7 +352,7 @@ static void fillmap(LitState* state, LitMap* destmap, LitTable* fromtbl, bool in
         if(key != NULL)
         {
             val = fromtbl->entries[i].value;
-            lit_map_set(state, destmap, key, lit_value_objectvalue(val));
+            lit_map_set(state, destmap, key, val);
         }
     }
 }
@@ -446,7 +446,7 @@ static LitValue objfn_object_iterator(LitVM* vm, LitValue instance, size_t argc,
     LitInstance* self;
     LIT_ENSURE_ARGS(vm->state, 1);
     self = lit_value_asinstance(instance);
-    index = argv[0] == NULL_VALUE ? -1 : lit_value_asnumber(argv[0]);
+    index = lit_value_isnull(argv[0]) ? -1 : lit_value_asnumber(argv[0]);
     value = util_table_iterator(&self->fields, index);
     return value == -1 ? NULL_VALUE : lit_value_numbertovalue(vm->state, value);
 }

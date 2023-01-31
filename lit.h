@@ -96,12 +96,7 @@
 #define LIT_BYTECODE_END_NUMBER 2942
 #define LIT_STRING_KEY 48
 
-#define SIGN_BIT ((uint64_t)1 << 63u)
-#define QNAN ((uint64_t)0x7ffc000000000000u)
 
-#define TAG_NULL 1u
-#define TAG_FALSE 2u
-#define TAG_TRUE 3u
 
 #define LIT_TESTS_DIRECTORY "tests"
 
@@ -121,8 +116,6 @@
     lit_gcmem_memrealloc(state, pointer, typesz, 0)
 
 
-#define INTERPRET_RUNTIME_FAIL ((LitInterpretResult){ LITRESULT_INVALID, NULL_VALUE })
-
 #define LIT_GET_FIELD(id) lit_state_getfield(vm->state, &lit_value_asinstance(instance)->fields, id)
 #define LIT_GET_MAP_FIELD(id) lit_state_getmapfield(vm->state, &lit_value_asinstance(instance)->fields, id)
 #define LIT_SET_FIELD(id, value) lit_state_setfield(vm->state, &lit_value_asinstance(instance)->fields, id, value)
@@ -132,21 +125,21 @@
     if(argc != count)                                                       \
     {                                                                            \
         lit_vm_raiseerror(vm, "expected %i argument, got %i", count, argc); \
-        return NULL_VALUE;                                                       \
+        return lit_value_makenull(state);                                                       \
     }
 
 #define LIT_ENSURE_MIN_ARGS(state, count)                                                       \
     if(argc < count)                                                                \
     {                                                                                    \
         lit_vm_raiseerror(state->vm, "expected minimum %i argument, got %i", count, argc); \
-        return NULL_VALUE;                                                               \
+        return lit_value_makenull(state);                                                               \
     }
 
 #define LIT_ENSURE_MAX_ARGS(state, count)                                                       \
     if(argc > count)                                                                \
     {                                                                                    \
         lit_vm_raiseerror(state->vm, "expected maximum %i argument, got %i", count, argc); \
-        return NULL_VALUE;                                                               \
+        return lit_value_makenull(state);                                                               \
     }
 
 
@@ -180,29 +173,88 @@
 
 #define RETURN_RUNTIME_ERROR() return (LitInterpretResult){ LITRESULT_RUNTIME_ERROR, NULL_VALUE };
 
-#if 1
-    #define FALSE_VALUE ((LitValue)(uint64_t)(QNAN | TAG_FALSE))
-    #define TRUE_VALUE ((LitValue)(uint64_t)(QNAN | TAG_TRUE))
-    #define NULL_VALUE ((LitValue)(uint64_t)(QNAN | TAG_NULL))
-#else
-    #define FALSE_VALUE ((LitObject){.type=LITTYPE_BOOL, .boolval=false})
-    #define TRUE_VALUE ((LitObject){.type=LITTYPE_BOOL, .boolval=true})
-    #define NULL_VALUE ((LitObject){.type=LITTYPE_NULL})
+#define INTERPRET_RUNTIME_FAIL ((LitInterpretResult){ LITRESULT_INVALID, NULL_VALUE })
 
-#endif
+#define STATIC_VALUE_NULL ((LitValue)(uint64_t)(QNAN | TAG_NULL))
+#define STATIC_VALUE_FALSE ((LitValue)(uint64_t)(QNAN | TAG_FALSE))
+#define STATIC_VALUE_TRUE ((LitValue)(uint64_t)(QNAN | TAG_TRUE))
 
+#define NULL_VALUE ((LitValue){.type=LITVAL_NULL})
+#define TRUE_VALUE ((LitValue){.type=LITVAL_BOOL, .boolval=true})
+#define FALSE_VALUE ((LitValue){.type=LITVAL_BOOL, .boolval=false})
 
+enum LitObjType
+{
+    LITTYPE_UNDEFINED,
+    LITTYPE_NULL,
+    LITTYPE_STRING,
+    LITTYPE_FUNCTION,
+    LITTYPE_NATIVE_FUNCTION,
+    LITTYPE_NATIVE_PRIMITIVE,
+    LITTYPE_NATIVE_METHOD,
+    LITTYPE_PRIMITIVE_METHOD,
+    LITTYPE_FIBER,
+    LITTYPE_MODULE,
+    LITTYPE_CLOSURE,
+    LITTYPE_UPVALUE,
+    LITTYPE_CLASS,
+    LITTYPE_INSTANCE,
+    LITTYPE_BOUND_METHOD,
+    LITTYPE_ARRAY,
+    LITTYPE_MAP,
+    LITTYPE_USERDATA,
+    LITTYPE_RANGE,
+    LITTYPE_FIELD,
+    LITTYPE_REFERENCE,
+    LITTYPE_NUMBER,
+    LITTYPE_BOOL,
+};
+
+enum LitValType
+{
+    LITVAL_NULL,
+    LITVAL_BOOL,
+    LITVAL_NUMBER,
+    LITVAL_OBJECT,
+};
+
+typedef enum /**/LitValType LitValType;
+typedef enum /**/LitObjType LitObjType;
 typedef struct /**/LitObject LitObject;
 
-typedef uint64_t LitValue;
+//typedef uint64_t LitValue;
 //typedef LitObject LitValue;
+typedef struct LitValue LitValue;
+
+struct LitObject
+{
+    /* the type of this object */
+    LitObjType type;
+    LitObject* next;
+    bool marked;
+    bool mustfree;
+
+};
+
+
+struct LitValue
+{
+    LitValType type;
+    union
+    {
+        bool boolval;
+        //LitNumber* numval;
+        double numval;
+        LitObject* obj;
+    };
+};
 
 
 #include "structs.h"
 
 #include "prot.inc"
 
-#define lit_value_objectvalue(obj) lit_value_objectvalue_actual((uintptr_t)obj)
+#define lit_value_objectvalue(obj) lit_value_objectvalue_actual((LitObject*)obj)
 
 #define lit_value_istype(value, t) \
     (lit_value_isobject(value) && (lit_value_asobject(value) != NULL) && (lit_value_asobject(value)->type == t))
@@ -374,6 +426,25 @@ static inline LitReference* lit_value_asreference(LitValue v)
 {
     return (LitReference*)lit_value_asobject(v);
 }
+
+static inline LitValue lit_value_makefalse(LitState* state)
+{
+    (void)state;
+    return FALSE_VALUE;
+}
+
+static inline LitValue lit_value_maketrue(LitState* state)
+{
+    (void)state;
+    return TRUE_VALUE;
+}
+
+static inline LitValue lit_value_makenull(LitState* state)
+{
+    (void)state;
+    return NULL_VALUE;
+}
+
 
 static inline LitValue OBJECT_CONST_STRING(LitState* state, const char* text)
 {

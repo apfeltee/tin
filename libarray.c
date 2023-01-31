@@ -75,6 +75,8 @@ void lit_datalist_ensuresize(LitState* state, LitDataList* dl, size_t size)
 {
     size_t i;
     size_t old_capacity;
+    LitValue nullval;
+    nullval = NULL_VALUE;
     if(dl->capacity < size)
     {
         old_capacity = dl->capacity;
@@ -82,7 +84,7 @@ void lit_datalist_ensuresize(LitState* state, LitDataList* dl, size_t size)
         dl->values = LIT_GROW_ARRAY(state, dl->values, dl->elemsz, old_capacity, size);
         for(i = old_capacity; i < size; i++)
         {
-            dl->values[i] = NULL_VALUE;
+            dl->values[i] = &nullval;
         }
     }
     if(dl->count < size)
@@ -95,64 +97,90 @@ void lit_datalist_ensuresize(LitState* state, LitDataList* dl, size_t size)
 
 void lit_vallist_init(LitValueList* vl)
 {
-    lit_datalist_init(&vl->list, sizeof(LitValue));
+    vl->values = NULL;
+    vl->capacity = 0;
+    vl->count = 0;
 }
 
 void lit_vallist_destroy(LitState* state, LitValueList* vl)
 {
-    lit_datalist_destroy(state, &vl->list);
+    LIT_FREE_ARRAY(state, sizeof(LitValue), vl->values, vl->capacity);
+    lit_vallist_init(vl);
 }
 
 size_t lit_vallist_size(LitValueList* vl)
 {
-    return lit_datalist_count(&vl->list);
+    return vl->count;
 }
 
 size_t lit_vallist_count(LitValueList* vl)
 {
-    return lit_vallist_size(vl);
+    return vl->count;
 }
 
 size_t lit_vallist_capacity(LitValueList* vl)
 {
-    return lit_datalist_capacity(&vl->list);
+    return vl->capacity;
 }
 
 void lit_vallist_setcount(LitValueList* vl, size_t nc)
 {
-    lit_datalist_setcount(&vl->list, nc);
+    vl->count = nc;
 }
 
 void lit_vallist_clear(LitValueList* vl)
 {
-    lit_datalist_setcount(&vl->list, 0);
+    vl->count = 0;
 }
 
 void lit_vallist_deccount(LitValueList* vl)
 {
-    lit_datalist_deccount(&vl->list);
+    vl->count--;
 }
 
-void lit_vallist_ensuresize(LitState* state, LitValueList* values, size_t size)
+void lit_vallist_ensuresize(LitState* state, LitValueList* vl, size_t size)
 {
-    lit_datalist_ensuresize(state, &values->list, size);
+        size_t i;
+        size_t old_capacity;
+        if(vl->capacity < size)
+        {
+            old_capacity = vl->capacity;
+            vl->capacity = size;
+            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), old_capacity, size);
+            for(i = old_capacity; i < size; i++)
+            {
+                vl->values[i] = NULL_VALUE;
+            }
+        }
+        if(vl->count < size)
+        {
+            vl->count = size;
+        }
 }
 
 
 LitValue lit_vallist_set(LitValueList* vl, size_t idx, LitValue val)
 {
-    lit_datalist_set(&vl->list, idx, val);
+    vl->values[idx] = val;
     return val;
 }
 
 LitValue lit_vallist_get(LitValueList* vl, size_t idx)
 {
-    return (LitValue)lit_datalist_get(&vl->list, idx);
+    return vl->values[idx];
 }
 
 void lit_vallist_push(LitState* state, LitValueList* vl, LitValue value)
 {
-    lit_datalist_push(state, &vl->list, (intptr_t)value);
+        size_t old_capacity;
+        if(vl->capacity < vl->count + 1)
+        {
+            old_capacity = vl->capacity;
+            vl->capacity = LIT_GROW_CAPACITY(old_capacity);
+            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), old_capacity, vl->capacity);
+        }
+        vl->values[vl->count] = value;
+        vl->count++;
 }
 
 /* ---- Array object instance functions */
@@ -186,9 +214,11 @@ LitValue lit_array_pop(LitState* state, LitArray* arr)
 int lit_array_indexof(LitArray* array, LitValue value)
 {
     size_t i;
+    LitValue itm;
     for(i = 0; i < lit_vallist_count(&array->list); i++)
     {
-        if(lit_vallist_get(&array->list, i) == value)
+        itm = lit_vallist_get(&array->list, i);
+        if(&itm == &value)
         {
             return (int)i;
         }

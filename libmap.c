@@ -245,7 +245,7 @@ LitMap* lit_create_map(LitState* state)
 
 bool lit_map_set(LitState* state, LitMap* map, LitString* key, LitValue value)
 {
-    if(value == NULL_VALUE)
+    if(lit_value_isnull(value))
     {
         lit_map_delete(map, key);
         return false;
@@ -345,7 +345,7 @@ static LitValue objfn_map_iterator(LitVM* vm, LitValue instance, size_t argc, Li
     (void)vm;
     int index;
     int value;
-    index = argv[0] == NULL_VALUE ? -1 : lit_value_asnumber(argv[0]);
+    index = lit_value_isnull(argv[0]) ? -1 : lit_value_asnumber(argv[0]);
     value = util_table_iterator(&lit_value_asmap(instance)->values, index);
     return value == -1 ? NULL_VALUE : lit_value_numbertovalue(vm->state, value);
 }

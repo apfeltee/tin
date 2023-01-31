@@ -5,27 +5,28 @@
 #include "lit.h"
 
 #if 1
-    LitObject g_stackmem[1024 * (1024 * 4)];
-    size_t g_objcount = 0;
+static LitObject g_stackmem[1024 * (1024 * 4)];
+static size_t g_objcount = 0;
 #endif
 
 LitObject* lit_gcmem_allocobject(LitState* state, size_t size, LitObjType type, bool islight)
 {
     LitObject* obj;
-    //islight = false;
+    islight = false;
     if(islight)
     {
         #if 0
-            LitObject stkobj; 
-            lit_vallist_push(state, &state->lightobjects, (obj = &stkobj));
+            int ofs = g_objcount; 
+            obj = &g_stackmem[ofs];
+            g_objcount += 1;
         #else
-            obj = &g_stackmem[g_objcount];
-            g_objcount++;
+            goto forcealloc;
         #endif
         obj->mustfree = false;
     }
     else
     {
+        forcealloc:
         obj = (LitObject*)lit_gcmem_memrealloc(state, NULL, 0, size);
         obj->mustfree = true;
     }

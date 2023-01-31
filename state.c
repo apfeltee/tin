@@ -124,7 +124,7 @@ LitValue lit_state_getglobalvalue(LitState* state, LitString* name)
     LitValue global;
     if(!lit_table_get(&state->vm->globals->values, name, &global))
     {
-        return NULL_VALUE;
+        return lit_value_makenull(state);
     }
     return global;
 }
@@ -178,7 +178,7 @@ LitValue lit_state_getinstancemethod(LitState* state, LitValue callee, LitString
     {
         return mthval;
     }
-    return NULL_VALUE;
+    return lit_value_makenull(state);
 }
 
 LitInterpretResult lit_state_callinstancemethod(LitState* state, LitValue callee, LitString* mthname, LitValue* argv, size_t argc)
@@ -199,7 +199,7 @@ LitValue lit_state_getfield(LitState* state, LitTable* table, const char* name)
 
     if(!lit_table_get(table, CONST_STRING(state, name), &value))
     {
-        value = NULL_VALUE;
+        value = lit_value_makenull(state);
     }
 
     return value;
@@ -211,7 +211,7 @@ LitValue lit_state_getmapfield(LitState* state, LitMap* map, const char* name)
 
     if(!lit_table_get(&map->values, CONST_STRING(state, name), &value))
     {
-        value = NULL_VALUE;
+        value = lit_value_makenull(state);
     }
 
     return value;
@@ -306,7 +306,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
             amount = (int)function_arg_count - argc - (vararg ? 1 : 0);
             for(i = 0; i < (size_t)amount; i++)
             {
-                PUSH(NULL_VALUE);
+                PUSH(lit_value_makenull(state));
             }
             if(vararg)
             {
@@ -356,7 +356,7 @@ static inline LitInterpretResult execute_call(LitState* state, LitCallFrame* fra
     }
     fiber = state->vm->fiber;
     result = lit_vm_execfiber(state, fiber);
-    if(fiber->lit_emitter_raiseerror != NULL_VALUE)
+    if(!lit_value_isnull(fiber->lit_emitter_raiseerror))
     {
         result.result = fiber->lit_emitter_raiseerror;
     }
@@ -393,7 +393,7 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
     LitBoundMethod* bound_method;
     LitValue mthval;
     LitValue result;
-    lir.result = NULL_VALUE;
+    lir.result = lit_value_makenull(state);
     lir.type = LITRESULT_OK;
     vm = state->vm;
     if(lit_value_isobject(callee))
@@ -450,7 +450,7 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
                 {
                     lit_value_asnativeprimitive(callee)->function(vm, argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
-                    RETURN_OK(NULL_VALUE);
+                    RETURN_OK(lit_value_makenull(state));
                 }
                 break;
             case LITTYPE_NATIVE_METHOD:
@@ -491,7 +491,7 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
                         lit_value_asprimitivemethod(mthval)->method(vm, bound_method->receiver, argc, fiber->stack_top - argc);
 
                         fiber->stack_top = slot;
-                        RETURN_OK(NULL_VALUE);
+                        RETURN_OK(lit_value_makenull(state));
                     }
                     else
                     {
@@ -504,7 +504,7 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
                 {
                     lit_value_asprimitivemethod(callee)->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
-                    RETURN_OK(NULL_VALUE);
+                    RETURN_OK(lit_value_makenull(state));
                 }
                 break;
             default:
@@ -551,7 +551,7 @@ LitInterpretResult lit_state_findandcallmethod(LitState* state, LitValue callee,
     {
         return lit_state_callmethod(state, callee, mthval, argv, argc, ignfiber);
     }
-    return (LitInterpretResult){ LITRESULT_INVALID, NULL_VALUE };
+    return (LitInterpretResult){ LITRESULT_INVALID, lit_value_makenull(state) };
 }
 
 void lit_state_pushroot(LitState* state, LitObject* object)
@@ -796,7 +796,7 @@ LitInterpretResult lit_state_internexecsource(LitState* state, LitString* module
     module = lit_state_compilemodule(state, module_name, code, len);
     if(module == NULL)
     {
-        return (LitInterpretResult){ LITRESULT_COMPILE_ERROR, NULL_VALUE };
+        return (LitInterpretResult){ LITRESULT_COMPILE_ERROR, lit_value_makenull(state) };
     }
     
     result = lit_vm_execmodule(state, module);
@@ -931,7 +931,7 @@ LitInterpretResult lit_state_dumpfile(LitState* state, const char* file)
     else
     {
         lit_disassemble_module(state, module, source);
-        result = (LitInterpretResult){ LITRESULT_OK, NULL_VALUE };
+        result = (LitInterpretResult){ LITRESULT_OK, lit_value_makenull(state) };
     }
     free((void*)source);
     free((void*)patched_file_name);

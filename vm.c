@@ -105,7 +105,7 @@ bool lit_vmutil_setexitjump(void);
 
 #define vm_returnerror() \
     vm_popgc(state); \
-    return (LitInterpretResult){ LITRESULT_RUNTIME_ERROR, NULL_VALUE };
+    return (LitInterpretResult){ LITRESULT_RUNTIME_ERROR, lit_value_makenull(state) };
 
 
 #define vm_pushgc(state, allow) \
@@ -604,7 +604,7 @@ bool lit_vm_callcallable(LitVM* vm, LitFunction* function, LitClosure* closure, 
             amount = (int)function_arg_count - argc - (vararg ? 1 : 0);
             for(i = 0; i < amount; i++)
             {
-                lit_vm_push(vm, NULL_VALUE);
+                lit_vm_push(vm, lit_value_makenull(vm->state));
             }
             if(vararg)
             {
@@ -1084,7 +1084,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
             }
             op_case(OP_NULL)
             {
-                lit_vmexec_push(fiber, NULL_VALUE);
+                lit_vmexec_push(fiber, lit_value_makenull(vm->state));
                 continue;
             }
             op_case(OP_ARRAY)
@@ -1306,7 +1306,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 name = lit_vmexec_readstringlong(&est);
                 if(!lit_table_get(&vm->globals->values, name, &setval))
                 {
-                    lit_vmexec_push(fiber, NULL_VALUE);
+                    lit_vmexec_push(fiber, lit_value_makenull(vm->state));
                 }
                 else
                 {
@@ -1532,7 +1532,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                         }
                         else
                         {
-                            getval = NULL_VALUE;
+                            getval = lit_value_makenull(vm->state);
                         }
                     }
                 }
@@ -1563,7 +1563,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     }
                     else
                     {
-                        getval = NULL_VALUE;
+                        getval = lit_value_makenull(vm->state);
                     }
                 }
                 else
@@ -1597,7 +1597,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     }
                     else
                     {
-                        getval = NULL_VALUE;
+                        getval = lit_value_makenull(vm->state);
                     }
                 }
                 lit_vmexec_drop(fiber);// Pop field name
@@ -1805,7 +1805,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 }
                 else
                 {
-                    value = NULL_VALUE;
+                    value = lit_value_makenull(vm->state);
                 }
                 lit_vmexec_push(fiber, value);
                 continue;

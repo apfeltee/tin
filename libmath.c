@@ -185,7 +185,7 @@ static LitValue random_constructor(LitVM* vm, LitValue instance, size_t argc, Li
         *data = time(NULL);
     }
 
-    return lit_value_objectvalue(instance);
+    return instance;
 }
 
 static LitValue random_setSeed(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)

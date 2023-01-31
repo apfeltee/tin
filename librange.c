@@ -36,7 +36,7 @@ static LitValue objfn_range_tostring(LitVM* vm, LitValue instance, size_t argc, 
     (void)argv;
     LitRange* range;
     range = lit_value_asrange(instance);
-    return lit_value_objectvalue(lit_string_format(vm->state, "Range(#, #)", range->from, range->to));
+    return lit_string_format(vm->state, "Range(#, #)", range->from, range->to);
 }
 
 static LitValue objfn_range_from(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)

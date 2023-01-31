@@ -289,12 +289,12 @@ static LitValue lit_astopt_evalbinaryop(LitOptimizer* optimizer, LitValue a, Lit
             break;
         case LITTOK_EQUAL_EQUAL:
             {
-                return lit_bool_to_value(optimizer->state, a == b);
+                return lit_bool_to_value(optimizer->state, &a == &b);
             }
             break;
         case LITTOK_BANG_EQUAL:
             {
-                return lit_bool_to_value(optimizer->state, a != b);
+                return lit_bool_to_value(optimizer->state, &a != &b);
             }
             break;
         case LITTOK_IS:
@@ -371,7 +371,7 @@ static LitValue lit_astopt_evalexpr(LitOptimizer* optimizer, LitAstExpression* e
             {
                 uexpr = (LitAstUnaryExpr*)expression;
                 branch = lit_astopt_evalexpr(optimizer, uexpr->right);
-                if(branch != NULL_VALUE)
+                if(!lit_value_isnull(branch))
                 {
                     return lit_astopt_evalunaryop(optimizer, branch, uexpr->op);
                 }
@@ -382,15 +382,15 @@ static LitValue lit_astopt_evalexpr(LitOptimizer* optimizer, LitAstExpression* e
                 bexpr = (LitAstBinaryExpr*)expression;
                 a = lit_astopt_evalexpr(optimizer, bexpr->left);
                 b = lit_astopt_evalexpr(optimizer, bexpr->right);
-                if(a != NULL_VALUE && b != NULL_VALUE)
+                if(!lit_value_isnull(a) && !lit_value_isnull(b))
                 {
                     return lit_astopt_evalbinaryop(optimizer, a, b, bexpr->op);
                 }
-                else if(a != NULL_VALUE)
+                else if(!lit_value_isnull(a))
                 {
                     return lit_astopt_attemptoptbinary(optimizer, bexpr, a, false);
                 }
-                else if(b != NULL_VALUE)
+                else if(!lit_value_isnull(b))
                 {
                     return lit_astopt_attemptoptbinary(optimizer, bexpr, b, true);
                 }
@@ -425,7 +425,7 @@ static void lit_astopt_optexpression(LitOptimizer* optimizer, LitAstExpression**
                 if(lit_astopt_isoptenabled(LITOPTSTATE_LITERAL_FOLDING))
                 {
                     LitValue optimized = lit_astopt_evalexpr(optimizer, expression);
-                    if(optimized != NULL_VALUE)
+                    if(!lit_value_isnull(optimized))
                     {
                         *slot = (LitAstExpression*)lit_ast_make_literalexpr(state, expression->line, optimized);
                         lit_ast_destroyexpression(state, expression);
@@ -525,7 +525,7 @@ static void lit_astopt_optexpression(LitOptimizer* optimizer, LitAstExpression**
             LitAstTernaryExpr* expr = (LitAstTernaryExpr*)expression;
             LitValue optimized = lit_astopt_evalexpr(optimizer, expr->condition);
 
-            if(optimized != NULL_VALUE)
+            if(!lit_value_isnull(optimized))
             {
                 if(lit_value_isfalsey(optimized))
                 {
@@ -567,7 +567,7 @@ static void lit_astopt_optexpression(LitOptimizer* optimizer, LitAstExpression**
 
                 // Not checking here for the enable-ness of constant-folding, since if its off
                 // the constant_value would be NULL_VALUE anyway (:thinkaboutit:)
-                if(variable->constant && variable->constant_value != NULL_VALUE)
+                if(variable->constant && !lit_value_isnull(variable->constant_value))
                 {
                     *slot = (LitAstExpression*)lit_ast_make_literalexpr(state, expression->line, variable->constant_value);
                     lit_ast_destroyexpression(state, expression);
@@ -675,7 +675,7 @@ static void lit_asdtopt_optstatement(LitOptimizer* optimizer, LitAstExpression**
 
             LitValue optimized = empty ? lit_astopt_evalexpr(optimizer, stmt->condition) : NULL_VALUE;
 
-            if((optimized != NULL_VALUE && lit_value_isfalsey(optimized)) || (dead && lit_astopt_isemptyexpr(stmt->if_branch)))
+            if((!lit_value_isnull(optimized) && lit_value_isfalsey(optimized)) || (dead && lit_astopt_isemptyexpr(stmt->if_branch)))
             {
                 lit_ast_destroyexpression(state, stmt->condition);
                 stmt->condition = NULL;
@@ -708,7 +708,7 @@ static void lit_asdtopt_optstatement(LitOptimizer* optimizer, LitAstExpression**
                         {
                             LitValue value = lit_astopt_evalexpr(optimizer, stmt->elseif_conditions->values[i]);
 
-                            if(value != NULL_VALUE && lit_value_isfalsey(value))
+                            if(!lit_value_isnull(value) && lit_value_isfalsey(value))
                             {
                                 lit_ast_destroyexpression(state, stmt->elseif_conditions->values[i]);
                                 stmt->elseif_conditions->values[i] = NULL;
@@ -734,7 +734,7 @@ static void lit_asdtopt_optstatement(LitOptimizer* optimizer, LitAstExpression**
             {
                 LitValue optimized = lit_astopt_evalexpr(optimizer, stmt->condition);
 
-                if(optimized != NULL_VALUE && lit_value_isfalsey(optimized))
+                if(!lit_value_isnull(optimized) && lit_value_isfalsey(optimized))
                 {
                     lit_ast_destroyexpression(optimizer->state, statement);
                     *slot = NULL;
@@ -816,7 +816,7 @@ static void lit_asdtopt_optstatement(LitOptimizer* optimizer, LitAstExpression**
                 {
                     LitValue value = lit_astopt_evalexpr(optimizer, stmt->init);
 
-                    if(value != NULL_VALUE)
+                    if(!lit_value_isnull(value))
                     {
                         variable->constant_value = value;
                     }

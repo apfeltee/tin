@@ -4,5 +4,10 @@ var f = function()
     return "blah";
 };
 
-println(f);
+String.fark = function()
+{
+    
+};
+
+println("".fark);
 
