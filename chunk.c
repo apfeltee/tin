@@ -1,5 +1,5 @@
 
-#include "lit.h"
+#include "priv.h"
 
 void lit_chunk_init(LitChunk* chunk)
 {

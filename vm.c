@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <setjmp.h>
-#include "lit.h"
+#include "priv.h"
 
 #define LIT_VM_INLINE
 
@@ -216,7 +216,7 @@ bool lit_vmutil_setexitjump(void);
         vmexec_raiseerrorfmt("cannot lit_vm_callcallable method '%s' of a non-class", mthname); \
     } \
     lit_vmexec_writeframe(&est, est.ip); \
-    vmexec_advinvokefromclass(klass, CONST_STRING(state, mthname), argc, true, methods, false, instance); \
+    vmexec_advinvokefromclass(klass, lit_string_copyconst(state, mthname), argc, true, methods, false, instance); \
     lit_vmexec_readframe(fiber, &est)
 
 #define vm_binaryop(type, op, op_string) \
@@ -256,7 +256,7 @@ bool lit_vmutil_setexitjump(void);
                            lit_tostring_typename(a), lit_tostring_typename(b)); \
     } \
     lit_vmexec_drop(fiber); \
-    *(fiber->stack_top - 1) = (lit_value_numbertovalue(vm->state, (int)lit_value_asnumber(a) op(int) lit_value_asnumber(b)));
+    *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, (int)lit_value_asnumber(a) op(int) lit_value_asnumber(b)));
 
 #define vm_invokeoperation(ignoring) \
     uint8_t argc = lit_vmexec_readbyte(&est); \
@@ -453,7 +453,7 @@ bool lit_vm_handleruntimeerror(LitVM* vm, LitString* error_string)
     LitValue lit_emitter_raiseerror;
     LitFiber* fiber;
     LitFiber* caller;
-    lit_emitter_raiseerror = lit_value_objectvalue(error_string);
+    lit_emitter_raiseerror = lit_value_makeobject(error_string);
     fiber = vm->fiber;
     while(fiber != NULL)
     {
@@ -608,7 +608,7 @@ bool lit_vm_callcallable(LitVM* vm, LitFunction* function, LitClosure* closure, 
             }
             if(vararg)
             {
-                lit_vm_push(vm, lit_value_objectvalue(lit_create_array(vm->state)));
+                lit_vm_push(vm, lit_value_makeobject(lit_create_array(vm->state)));
             }
         }
         else if(function->vararg)
@@ -623,7 +623,7 @@ bool lit_vm_callcallable(LitVM* vm, LitFunction* function, LitClosure* closure, 
                 lit_vallist_set(&array->list, i, vm->fiber->stack_top[(int)i - (int)vararg_count]);
             }
             vm->fiber->stack_top -= vararg_count;
-            lit_vm_push(vm, lit_value_objectvalue(array));
+            lit_vm_push(vm, lit_value_makeobject(array));
         }
         else
         {
@@ -636,7 +636,7 @@ bool lit_vm_callcallable(LitVM* vm, LitFunction* function, LitClosure* closure, 
         vararg_count = argc - function_arg_count + 1;
         lit_state_pushroot(vm->state, (LitObject*)array);
         lit_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
-        *(fiber->stack_top - 1) = lit_value_objectvalue(array);
+        *(fiber->stack_top - 1) = lit_value_makeobject(array);
         lit_state_poproot(vm->state);
     }
     return true;
@@ -745,10 +745,10 @@ bool lit_vm_callvalue(LitVM* vm, LitFiber* fiber, LitExecState* est, LitValue ca
                 {
                     klass = lit_value_asclass(callee);
                     instance = lit_create_instance(vm->state, klass);
-                    vm->fiber->stack_top[-argc - 1] = lit_value_objectvalue(instance);
+                    vm->fiber->stack_top[-argc - 1] = lit_value_makeobject(instance);
                     if(klass->init_method != NULL)
                     {
-                        return lit_vm_callvalue(vm, fiber, est, lit_value_objectvalue(klass->init_method), argc);
+                        return lit_vm_callvalue(vm, fiber, est, lit_value_makeobject(klass->init_method), argc);
                     }
                     // Remove the arguments, so that they don't mess up the stack
                     // (default constructor has no arguments)
@@ -812,7 +812,7 @@ bool lit_vm_callvalue(LitVM* vm, LitFiber* fiber, LitExecState* est, LitValue ca
         /*
         if(est->frame->function != NULL)
         {
-            fromval =  lit_value_objectvalue(est->frame->function);
+            fromval =  lit_value_makeobject(est->frame->function);
         }
         */
         //fromval = est->slots[0];
@@ -890,7 +890,7 @@ LitInterpretResult lit_vm_execmodule(LitState* state, LitModule* module)
     vm = state->vm;
     fiber = lit_create_fiber(state, module, module->main_function);
     vm->fiber = fiber;
-    lit_vm_push(vm, lit_value_objectvalue(module->main_function));
+    lit_vm_push(vm, lit_value_makeobject(module->main_function));
     result = lit_vm_execfiber(state, fiber);
     return result;
 }
@@ -942,7 +942,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
     LitValue value;
     LitValue peeked;
     LitValue* pval;
-    LitValueList* values;
+    LitValList* values;
     LitExecState est;
     LitVM* vm;
 
@@ -1089,15 +1089,15 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
             }
             op_case(OP_ARRAY)
             {
-                lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_array(state)));
+                lit_vmexec_push(fiber, lit_value_makeobject(lit_create_array(state)));
                 continue;
             }
             op_case(OP_OBJECT)
             {
                 // TODO: use object, or map for literal '{...}' constructs?
                 // objects would be more general-purpose, but don't implement anything map-like.
-                //lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_instance(state, state->objectvalue_class)));
-                lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_map(state)));
+                //lit_vmexec_push(fiber, lit_value_makeobject(lit_create_instance(state, state->objectvalue_class)));
+                lit_vmexec_push(fiber, lit_value_makeobject(lit_create_map(state)));
 
                 continue;
             }
@@ -1109,7 +1109,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 {
                     vmexec_raiseerror("range fields must be numbers");
                 }
-                lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_range(state, lit_value_asnumber(a), lit_value_asnumber(b))));
+                lit_vmexec_push(fiber, lit_value_makeobject(lit_create_range(state, lit_value_asnumber(a), lit_value_asnumber(b))));
                 continue;
             }
             op_case(OP_NEGATE)
@@ -1119,7 +1119,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     arg = lit_vmexec_peek(fiber, 0);
                     vmexec_raiseerror("operand must be a number");
                 }
-                tmpval = lit_value_numbertovalue(vm->state, -lit_value_asnumber(lit_vmexec_pop(fiber)));
+                tmpval = lit_value_makenumber(vm->state, -lit_value_asnumber(lit_vmexec_pop(fiber)));
                 lit_vmexec_push(fiber, tmpval);
                 continue;
             }
@@ -1128,10 +1128,10 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 if(lit_value_isinstance(lit_vmexec_peek(fiber, 0)))
                 {
                     lit_vmexec_writeframe(&est, est.ip);
-                    vmexec_invokefromclass(lit_value_asinstance(lit_vmexec_peek(fiber, 0))->klass, CONST_STRING(state, "!"), 0, false, methods, false);
+                    vmexec_invokefromclass(lit_value_asinstance(lit_vmexec_peek(fiber, 0))->klass, lit_string_copyconst(state, "!"), 0, false, methods, false);
                     continue;
                 }
-                tmpval = lit_bool_to_value(vm->state, lit_value_isfalsey(lit_vmexec_pop(fiber)));
+                tmpval = lit_value_makebool(vm->state, lit_value_isfalsey(lit_vmexec_pop(fiber)));
                 lit_vmexec_push(fiber, tmpval);
                 continue;
             }
@@ -1141,23 +1141,23 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 {
                     vmexec_raiseerror("Operand must be a number");
                 }
-                tmpval = lit_value_numbertovalue(vm->state, ~((int)lit_value_asnumber(lit_vmexec_pop(fiber))));
+                tmpval = lit_value_makenumber(vm->state, ~((int)lit_value_asnumber(lit_vmexec_pop(fiber))));
                 lit_vmexec_push(fiber, tmpval);
                 continue;
             }
             op_case(OP_ADD)
             {
-                vm_binaryop(lit_value_numbertovalue, +, "+");
+                vm_binaryop(lit_value_makenumber, +, "+");
                 continue;
             }
             op_case(OP_SUBTRACT)
             {
-                vm_binaryop(lit_value_numbertovalue, -, "-");
+                vm_binaryop(lit_value_makenumber, -, "-");
                 continue;
             }
             op_case(OP_MULTIPLY)
             {
-                vm_binaryop(lit_value_numbertovalue, *, "*");
+                vm_binaryop(lit_value_makenumber, *, "*");
                 continue;
             }
             op_case(OP_POWER)
@@ -1167,7 +1167,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 if(lit_value_isnumber(a) && lit_value_isnumber(b))
                 {
                     lit_vmexec_drop(fiber);
-                    *(fiber->stack_top - 1) = (lit_value_numbertovalue(vm->state, pow(lit_value_asnumber(a), lit_value_asnumber(b))));
+                    *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, pow(lit_value_asnumber(a), lit_value_asnumber(b))));
                     continue;
                 }
                 vm_invokemethod(a, "**", 1);
@@ -1175,7 +1175,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
             }
             op_case(OP_DIVIDE)
             {
-                vm_binaryop(lit_value_numbertovalue, /, "/");
+                vm_binaryop(lit_value_makenumber, /, "/");
                 continue;
             }
             op_case(OP_FLOOR_DIVIDE)
@@ -1185,7 +1185,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 if(lit_value_isnumber(a) && lit_value_isnumber(b))
                 {
                     lit_vmexec_drop(fiber);
-                    *(fiber->stack_top - 1) = (lit_value_numbertovalue(vm->state, floor(lit_value_asnumber(a) / lit_value_asnumber(b))));
+                    *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, floor(lit_value_asnumber(a) / lit_value_asnumber(b))));
 
                     continue;
                 }
@@ -1200,7 +1200,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 if(lit_value_isnumber(a) && lit_value_isnumber(b))
                 {
                     lit_vmexec_drop(fiber);
-                    *(fiber->stack_top - 1) = lit_value_numbertovalue(vm->state, fmod(lit_value_asnumber(a), lit_value_asnumber(b)));
+                    *(fiber->stack_top - 1) = lit_value_makenumber(vm->state, fmod(lit_value_asnumber(a), lit_value_asnumber(b)));
                     continue;
                 }
                 vm_invokemethod(a, "%", 1);
@@ -1243,7 +1243,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 int uleft = lit_util_numbertoint32(lit_value_asnumber(a));
                 unsigned int uright = lit_util_numbertouint32(lit_value_asnumber(b));
                 int res = uleft << (uright & 0x1F);
-                *(fiber->stack_top - 1) = lit_value_numbertovalue(vm->state, (res));
+                *(fiber->stack_top - 1) = lit_value_makenumber(vm->state, (res));
                 continue;
             }
             op_case(OP_RSHIFT)
@@ -1266,32 +1266,32 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 int uleft = lit_util_numbertoint32(lit_value_asnumber(a));
                 unsigned int uright = lit_util_numbertouint32(lit_value_asnumber(b));
                 int res = uleft >> (uright & 0x1F);
-                *(fiber->stack_top - 1) = lit_value_numbertovalue(vm->state, (res));
+                *(fiber->stack_top - 1) = lit_value_makenumber(vm->state, (res));
                 continue;
             }
             op_case(OP_EQUAL)
             {
-                vm_binaryop(lit_value_numbertovalue, ==, "==");
+                vm_binaryop(lit_value_makenumber, ==, "==");
                 continue;
             }
             op_case(OP_GREATER)
             {
-                vm_binaryop(lit_bool_to_value, >, ">");
+                vm_binaryop(lit_value_makebool, >, ">");
                 continue;
             }
             op_case(OP_GREATER_EQUAL)
             {
-                vm_binaryop(lit_bool_to_value, >=, ">=");
+                vm_binaryop(lit_value_makebool, >=, ">=");
                 continue;
             }
             op_case(OP_LESS)
             {
-                vm_binaryop(lit_bool_to_value, <, "<");
+                vm_binaryop(lit_value_makebool, <, "<");
                 continue;
             }
             op_case(OP_LESS_EQUAL)
             {
-                vm_binaryop(lit_bool_to_value, <=, "<=");
+                vm_binaryop(lit_value_makebool, <=, "<=");
                 continue;
             }
             op_case(OP_SET_GLOBAL)
@@ -1460,7 +1460,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
             {
                 function = lit_value_asfunction(lit_vmexec_readconstantlong(&est));
                 closure = lit_create_closure(state, function);
-                lit_vmexec_push(fiber, lit_value_objectvalue(closure));
+                lit_vmexec_push(fiber, lit_value_makeobject(closure));
                 for(i = 0; i < closure->upvalue_count; i++)
                 {
                     is_local = lit_vmexec_readbyte(&est);
@@ -1486,11 +1486,11 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
             {
                 name = lit_vmexec_readstringlong(&est);
                 klassobj = lit_create_class(state, name);
-                lit_vmexec_push(fiber, lit_value_objectvalue(klassobj));
+                lit_vmexec_push(fiber, lit_value_makeobject(klassobj));
                 klassobj->super = state->objectvalue_class;
                 lit_table_add_all(state, &klassobj->super->methods, &klassobj->methods);
                 lit_table_add_all(state, &klassobj->super->static_fields, &klassobj->static_fields);
-                lit_table_set(state, &vm->globals->values, name, lit_value_objectvalue(klassobj));
+                lit_table_set(state, &vm->globals->values, name, lit_value_makeobject(klassobj));
                 continue;
             }
             op_case(OP_GET_FIELD)
@@ -1520,14 +1520,14 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                                 lit_vmexec_drop(fiber);
                                 lit_vmexec_writeframe(&est, est.ip);
                                 LitField* field = lit_value_asfield(getval);
-                                tmpval =lit_value_objectvalue(field->getter);
+                                tmpval =lit_value_makeobject(field->getter);
                                 vm_callvalue(tmpval, 0);
                                 lit_vmexec_readframe(fiber, &est);
                                 continue;
                             }
                             else
                             {
-                                getval = lit_value_objectvalue(lit_create_bound_method(state, lit_value_objectvalue(instobj), getval));
+                                getval = lit_value_makeobject(lit_create_bound_method(state, lit_value_makeobject(instobj), getval));
                             }
                         }
                         else
@@ -1543,7 +1543,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     {
                         if(lit_value_isnatmethod(getval) || lit_value_isprimmethod(getval))
                         {
-                            getval = lit_value_objectvalue(lit_create_bound_method(state, lit_value_objectvalue(klassobj), getval));
+                            getval = lit_value_makeobject(lit_create_bound_method(state, lit_value_makeobject(klassobj), getval));
                         }
                         else if(lit_value_isfield(getval))
                         {
@@ -1555,7 +1555,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                             }
                             lit_vmexec_drop(fiber);
                             lit_vmexec_writeframe(&est, est.ip);
-                            tmpval = lit_value_objectvalue(field->getter);
+                            tmpval = lit_value_makeobject(field->getter);
                             vm_callvalue(tmpval, 0);
                             lit_vmexec_readframe(fiber, &est);
                             continue;
@@ -1585,14 +1585,14 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                             }
                             lit_vmexec_drop(fiber);
                             lit_vmexec_writeframe(&est, est.ip);
-                            tmpval = lit_value_objectvalue(lit_value_asfield(getval)->getter);
+                            tmpval = lit_value_makeobject(lit_value_asfield(getval)->getter);
                             vm_callvalue(tmpval, 0);
                             lit_vmexec_readframe(fiber, &est);
                             continue;
                         }
                         else if(lit_value_isnatmethod(getval) || lit_value_isprimmethod(getval))
                         {
-                            getval = lit_value_objectvalue(lit_create_bound_method(state, object, getval));
+                            getval = lit_value_makeobject(lit_create_bound_method(state, object, getval));
                         }
                     }
                     else
@@ -1628,7 +1628,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                         lit_vmexec_dropn(fiber, 2);
                         lit_vmexec_push(fiber, value);
                         lit_vmexec_writeframe(&est, est.ip);
-                        tmpval = lit_value_objectvalue(field->setter);
+                        tmpval = lit_value_makeobject(field->setter);
                         vm_callvalue(tmpval, 1);
                         lit_vmexec_readframe(fiber, &est);
                         continue;
@@ -1658,7 +1658,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                         lit_vmexec_dropn(fiber, 2);
                         lit_vmexec_push(fiber, value);
                         lit_vmexec_writeframe(&est, est.ip);
-                        tmpval = lit_value_objectvalue(field->setter);
+                        tmpval = lit_value_makeobject(field->setter);
                         vm_callvalue(tmpval, 1);
                         lit_vmexec_readframe(fiber, &est);
                         continue;
@@ -1692,7 +1692,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                         lit_vmexec_dropn(fiber, 2);
                         lit_vmexec_push(fiber, value);
                         lit_vmexec_writeframe(&est, est.ip);
-                        tmpval = lit_value_objectvalue(field->setter);
+                        tmpval = lit_value_makeobject(field->setter);
                         vm_callvalue(tmpval, 1);
                         lit_vmexec_readframe(fiber, &est);
                         continue;
@@ -1801,7 +1801,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 instval = lit_vmexec_pop(fiber);
                 if(lit_table_get(&klassobj->methods, mthname, &value))
                 {
-                    value = lit_value_objectvalue(lit_create_bound_method(state, instval, value));
+                    value = lit_value_makeobject(lit_create_bound_method(state, instval, value));
                 }
                 else
                 {
@@ -1853,7 +1853,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     instance_klass = (LitClass*)instance_klass->super;
                 }
                 lit_vmexec_dropn(fiber, 2);// Drop the instance and class
-                lit_vmexec_push(fiber, lit_bool_to_value(vm->state, found));
+                lit_vmexec_push(fiber, lit_value_makebool(vm->state, found));
                 continue;
             }
             op_case(OP_POP_LOCALS)
@@ -1884,7 +1884,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 name = lit_vmexec_readstringlong(&est);
                 if(lit_table_get_slot(&vm->globals->values, name, &pval))
                 {
-                    lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_reference(state, pval)));
+                    lit_vmexec_push(fiber, lit_value_makeobject(lit_create_reference(state, pval)));
                 }
                 else
                 {
@@ -1894,17 +1894,17 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
             }
             op_case(OP_REFERENCE_PRIVATE)
             {
-                lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_reference(state, &est.privates[lit_vmexec_readshort(&est)])));
+                lit_vmexec_push(fiber, lit_value_makeobject(lit_create_reference(state, &est.privates[lit_vmexec_readshort(&est)])));
                 continue;
             }
             op_case(OP_REFERENCE_LOCAL)
             {
-                lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_reference(state, &est.slots[lit_vmexec_readshort(&est)])));
+                lit_vmexec_push(fiber, lit_value_makeobject(lit_create_reference(state, &est.slots[lit_vmexec_readshort(&est)])));
                 continue;
             }
             op_case(OP_REFERENCE_UPVALUE)
             {
-                lit_vmexec_push(fiber, lit_value_objectvalue(lit_create_reference(state, est.upvalues[lit_vmexec_readbyte(&est)]->location)));
+                lit_vmexec_push(fiber, lit_value_makeobject(lit_create_reference(state, est.upvalues[lit_vmexec_readbyte(&est)]->location)));
                 continue;
             }
             op_case(OP_REFERENCE_FIELD)
@@ -1929,7 +1929,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     vmexec_raiseerrorfmt("cannot reference field '%s' of a non-instance", name->chars);
                 }
                 lit_vmexec_drop(fiber);// Pop field name
-                fiber->stack_top[-1] = lit_value_objectvalue(lit_create_reference(state, pval));
+                fiber->stack_top[-1] = lit_value_makeobject(lit_create_reference(state, pval));
                 continue;
             }
             op_case(OP_SET_REFERENCE)

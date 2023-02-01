@@ -1,5 +1,5 @@
 
-#include "lit.h"
+#include "priv.h"
 
 LitFiber* lit_create_fiber(LitState* state, LitModule* module, LitFunction* function)
 {
@@ -89,7 +89,7 @@ static LitValue objfn_fiber_constructor(LitVM* vm, LitValue instance, size_t arg
 
     fiber->parent = vm->fiber;
 
-    return lit_value_objectvalue(fiber);
+    return lit_value_makeobject(fiber);
 }
 
 
@@ -98,7 +98,7 @@ static LitValue objfn_fiber_done(LitVM* vm, LitValue instance, size_t argc, LitV
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_bool_to_value(vm->state, util_is_fiber_done(lit_value_asfiber(instance)));
+    return lit_value_makebool(vm->state, util_is_fiber_done(lit_value_asfiber(instance)));
 }
 
 
@@ -116,7 +116,7 @@ static LitValue objfn_fiber_current(LitVM* vm, LitValue instance, size_t argc, L
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_objectvalue(vm->fiber);
+    return lit_value_makeobject(vm->fiber);
 }
 
 
@@ -140,7 +140,7 @@ static bool objfn_fiber_yield(LitVM* vm, LitValue instance, size_t argc, LitValu
     (void)instance;
     if(vm->fiber->parent == NULL)
     {
-        lit_vm_handleruntimeerror(vm, argc == 0 ? CONST_STRING(vm->state, "Fiber was yielded") :
+        lit_vm_handleruntimeerror(vm, argc == 0 ? lit_string_copyconst(vm->state, "Fiber was yielded") :
         lit_value_tostring(vm->state, argv[0]));
         return true;
     }
@@ -149,7 +149,7 @@ static bool objfn_fiber_yield(LitVM* vm, LitValue instance, size_t argc, LitValu
 
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_objectvalue(lit_value_tostring(vm->state, argv[0]));
+    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_makeobject(lit_value_tostring(vm->state, argv[0]));
 
     argv[-1] = NULL_VALUE;
     return true;
@@ -161,7 +161,7 @@ static bool objfn_fiber_yeet(LitVM* vm, LitValue instance, size_t argc, LitValue
     (void)instance;
     if(vm->fiber->parent == NULL)
     {
-        lit_vm_handleruntimeerror(vm, argc == 0 ? CONST_STRING(vm->state, "Fiber was yeeted") :
+        lit_vm_handleruntimeerror(vm, argc == 0 ? lit_string_copyconst(vm->state, "Fiber was yeeted") :
         lit_value_tostring(vm->state, argv[0]));
         return true;
     }
@@ -170,7 +170,7 @@ static bool objfn_fiber_yeet(LitVM* vm, LitValue instance, size_t argc, LitValue
 
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_objectvalue(lit_value_tostring(vm->state, argv[0]));
+    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_makeobject(lit_value_tostring(vm->state, argv[0]));
 
     argv[-1] = NULL_VALUE;
     return true;
@@ -180,7 +180,7 @@ static bool objfn_fiber_yeet(LitVM* vm, LitValue instance, size_t argc, LitValue
 static bool objfn_fiber_abort(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
     (void)instance;
-    lit_vm_handleruntimeerror(vm, argc == 0 ? CONST_STRING(vm->state, "Fiber was aborted") :
+    lit_vm_handleruntimeerror(vm, argc == 0 ? lit_string_copyconst(vm->state, "Fiber was aborted") :
     lit_value_tostring(vm->state, argv[0]));
     argv[-1] = NULL_VALUE;
     return true;
@@ -212,7 +212,7 @@ void lit_open_fiber_library(LitState* state)
         lit_class_bindgetset(state, klass, "current", objfn_fiber_current, NULL, true);
         state->fibervalue_class = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_objectvalue(klass));
+    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
     if(klass->super == NULL)
     {
         lit_class_inheritfrom(state, klass, state->objectvalue_class);

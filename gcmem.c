@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include "lit.h"
+#include "priv.h"
 
 #if 1
 static LitObject g_stackmem[1024 * (1024 * 4)];
@@ -92,7 +92,7 @@ void lit_gcmem_markobject(LitVM* vm, LitObject* object)
 
 #ifdef LIT_LOG_MARKING
     printf("%p mark ", (void*)object);
-    lit_towriter_value(lit_value_objectvalue(object));
+    lit_towriter_value(lit_value_makeobject(object));
     printf("\n");
 #endif
 
@@ -142,7 +142,7 @@ void lit_gcmem_vmmarkroots(LitVM* vm)
     lit_gcmem_marktable(vm, &vm->globals->values);
 }
 
-void lit_gcmem_markarray(LitVM* vm, LitValueList* array)
+void lit_gcmem_markarray(LitVM* vm, LitValList* array)
 {
     size_t i;
     for(i = 0; i < lit_vallist_count(array); i++)
@@ -167,7 +167,7 @@ void lit_gcmem_vmblackobject(LitVM* vm, LitObject* object)
 
 #ifdef LIT_LOG_BLACKING
     printf("%p blacken ", (void*)object);
-    lit_towriter_value(lit_value_objectvalue(object));
+    lit_towriter_value(lit_value_makeobject(object));
     printf("\n");
 #endif
     switch(object->type)
@@ -394,7 +394,7 @@ static LitValue objfn_gc_memory_used(LitVM* vm, LitValue instance, size_t arg_co
     (void)instance;
     (void)arg_count;
     (void)args;
-    return lit_value_numbertovalue(vm->state, vm->state->bytes_allocated);
+    return lit_value_makenumber(vm->state, vm->state->bytes_allocated);
 }
 
 static LitValue objfn_gc_next_round(LitVM* vm, LitValue instance, size_t arg_count, LitValue* args)
@@ -402,7 +402,7 @@ static LitValue objfn_gc_next_round(LitVM* vm, LitValue instance, size_t arg_cou
     (void)instance;
     (void)arg_count;
     (void)args;
-    return lit_value_numbertovalue(vm->state, vm->state->next_gc);
+    return lit_value_makenumber(vm->state, vm->state->next_gc);
 }
 
 static LitValue objfn_gc_trigger(LitVM* vm, LitValue instance, size_t arg_count, LitValue* args)
@@ -415,7 +415,7 @@ static LitValue objfn_gc_trigger(LitVM* vm, LitValue instance, size_t arg_count,
     collected = lit_gcmem_collectgarbage(vm);
     vm->state->allow_gc = false;
 
-    return lit_value_numbertovalue(vm->state, collected);
+    return lit_value_makenumber(vm->state, collected);
 }
 
 void lit_open_gc_library(LitState* state)
@@ -427,7 +427,7 @@ void lit_open_gc_library(LitState* state)
         lit_class_bindgetset(state, klass, "nextRound", objfn_gc_next_round, NULL, true);
         lit_class_bindstaticmethod(state, klass, "trigger", objfn_gc_trigger);
     }
-    lit_state_setglobal(state, klass->name, lit_value_objectvalue(klass));
+    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
     if(klass->super == NULL)
     {
         lit_class_inheritfrom(state, klass, state->objectvalue_class);

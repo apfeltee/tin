@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include "lit.h"
+#include "priv.h"
 
 void lit_preproc_init(LitState* state, LitPreprocessor* preprocessor)
 {
@@ -18,7 +18,7 @@ void lit_preproc_destroy(LitPreprocessor* preprocessor)
 
 void lit_preproc_setdef(LitState* state, const char* name)
 {
-    lit_table_set(state, &state->preprocessor->defined, CONST_STRING(state, name), TRUE_VALUE);
+    lit_table_set(state, &state->preprocessor->defined, lit_string_copyconst(state, name), TRUE_VALUE);
 }
 
 void lit_preproc_override(char* source, int length)

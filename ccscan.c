@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include "lit.h"
+#include "priv.h"
 
 void lit_bytelist_init(LitByteList* bl)
 {
@@ -298,7 +298,7 @@ static LitToken lit_lex_scanstring(LitScanner* scanner, bool interpolation)
         }
     }
     token = lit_lex_maketoken(scanner, string_type);
-    token.value = lit_value_objectvalue(lit_string_copy(state, (const char*)bytes.values, bytes.count));
+    token.value = lit_value_makeobject(lit_string_copy(state, (const char*)bytes.values, bytes.count));
     lit_bytelist_destroy(state, &bytes);
     return token;
 }
@@ -342,15 +342,15 @@ static LitToken lit_lex_makenumbertoken(LitScanner* scanner, bool is_hex, bool i
     errno = 0;
     if(is_hex)
     {
-        value = lit_value_numbertovalue(scanner->state, (double)strtoll(scanner->start, NULL, 16));
+        value = lit_value_makenumber(scanner->state, (double)strtoll(scanner->start, NULL, 16));
     }
     else if(is_binary)
     {
-        value = lit_value_numbertovalue(scanner->state, (int)strtoll(scanner->start + 2, NULL, 2));
+        value = lit_value_makenumber(scanner->state, (int)strtoll(scanner->start + 2, NULL, 2));
     }
     else
     {
-        value = lit_value_numbertovalue(scanner->state, strtod(scanner->start, NULL));
+        value = lit_value_makenumber(scanner->state, strtod(scanner->start, NULL));
     }
 
     if(errno == ERANGE)

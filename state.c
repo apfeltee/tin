@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "lit.h"
+#include "priv.h"
 
 static bool measure_compilation_time;
 static double last_source_time = 0;
@@ -155,7 +155,7 @@ bool lit_state_hasglobal(LitState* state, LitString* name)
 
 void lit_state_defnativefunc(LitState* state, const char* name, LitNativeFunctionFn native)
 {
-    lit_state_pushroot(state, (LitObject*)CONST_STRING(state, name));
+    lit_state_pushroot(state, (LitObject*)lit_string_copyconst(state, name));
     lit_state_pushroot(state, (LitObject*)lit_create_native_function(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
     lit_table_set(state, &state->vm->globals->values, lit_value_asstring(lit_state_peekroot(state, 1)), lit_state_peekroot(state, 0));
     lit_state_poproots(state, 2);
@@ -163,7 +163,7 @@ void lit_state_defnativefunc(LitState* state, const char* name, LitNativeFunctio
 
 void lit_state_defnativeprimitive(LitState* state, const char* name, LitNativePrimitiveFn native)
 {
-    lit_state_pushroot(state, (LitObject*)CONST_STRING(state, name));
+    lit_state_pushroot(state, (LitObject*)lit_string_copyconst(state, name));
     lit_state_pushroot(state, (LitObject*)lit_create_native_primitive(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
     lit_table_set(state, &state->vm->globals->values, lit_value_asstring(lit_state_peekroot(state, 1)), lit_state_peekroot(state, 0));
     lit_state_poproots(state, 2);
@@ -197,7 +197,7 @@ LitValue lit_state_getfield(LitState* state, LitTable* table, const char* name)
 {
     LitValue value;
 
-    if(!lit_table_get(table, CONST_STRING(state, name), &value))
+    if(!lit_table_get(table, lit_string_copyconst(state, name), &value))
     {
         value = lit_value_makenull(state);
     }
@@ -209,7 +209,7 @@ LitValue lit_state_getmapfield(LitState* state, LitMap* map, const char* name)
 {
     LitValue value;
 
-    if(!lit_table_get(&map->values, CONST_STRING(state, name), &value))
+    if(!lit_table_get(&map->values, lit_string_copyconst(state, name), &value))
     {
         value = lit_value_makenull(state);
     }
@@ -219,12 +219,12 @@ LitValue lit_state_getmapfield(LitState* state, LitMap* map, const char* name)
 
 void lit_state_setfield(LitState* state, LitTable* table, const char* name, LitValue value)
 {
-    lit_table_set(state, table, CONST_STRING(state, name), value);
+    lit_table_set(state, table, lit_string_copyconst(state, name), value);
 }
 
 void lit_state_setmapfield(LitState* state, LitMap* map, const char* name, LitValue value)
 {
-    lit_table_set(state, &map->values, CONST_STRING(state, name), value);
+    lit_table_set(state, &map->values, lit_string_copyconst(state, name), value);
 }
 
 bool lit_state_ensurefiber(LitVM* vm, LitFiber* fiber)
@@ -292,7 +292,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
     lit_ensure_fiber_stack(state, fiber, callee->max_slots + (int)(fiber->stack_top - fiber->stack));
     frame = &fiber->frames[fiber->frame_count++];
     frame->slots = fiber->stack_top;
-    PUSH(lit_value_objectvalue(callee));
+    PUSH(lit_value_makeobject(callee));
     for(i = 0; i < argc; i++)
     {
         PUSH(argv[i]);
@@ -310,7 +310,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
             }
             if(vararg)
             {
-                PUSH(lit_value_objectvalue(lit_create_array(vm->state)));
+                PUSH(lit_value_makeobject(lit_create_array(vm->state)));
             }
         }
         else if(callee->vararg)
@@ -324,7 +324,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
             }
 
             fiber->stack_top -= varargc;
-            lit_vm_push(vm, lit_value_objectvalue(array));
+            lit_vm_push(vm, lit_value_makeobject(array));
         }
         else
         {
@@ -336,7 +336,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
         array = lit_create_array(vm->state);
         varargc = argc - function_arg_count + 1;
         lit_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
-        *(fiber->stack_top - 1) = lit_value_objectvalue(array);
+        *(fiber->stack_top - 1) = lit_value_makeobject(array);
     }
     frame->ip = callee->chunk.code;
     frame->closure = NULL;
@@ -464,10 +464,10 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
             case LITTYPE_CLASS:
                 {
                     klass = lit_value_asclass(callee);
-                    *slot = lit_value_objectvalue(lit_create_instance(vm->state, klass));
+                    *slot = lit_value_makeobject(lit_create_instance(vm->state, klass));
                     if(klass->init_method != NULL)
                     {
-                        lir = lit_state_callmethod(state, *slot, lit_value_objectvalue(klass->init_method), argv, argc, ignfiber);
+                        lir = lit_state_callmethod(state, *slot, lit_value_makeobject(klass->init_method), argv, argc, ignfiber);
                     }
                     // TODO: when should this return *slot instead of lir?
                     fiber->stack_top = slot;
@@ -556,7 +556,7 @@ LitInterpretResult lit_state_findandcallmethod(LitState* state, LitValue callee,
 
 void lit_state_pushroot(LitState* state, LitObject* object)
 {
-    lit_state_pushvalueroot(state, lit_value_objectvalue(object));
+    lit_state_pushvalueroot(state, lit_value_makeobject(object));
 }
 
 void lit_state_pushvalueroot(LitState* state, LitValue value)
@@ -772,7 +772,7 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
 LitModule* lit_state_getmodule(LitState* state, const char* name)
 {
     LitValue value;
-    if(lit_table_get(&state->vm->modules->values, CONST_STRING(state, name), &value))
+    if(lit_table_get(&state->vm->modules->values, lit_string_copyconst(state, name), &value))
     {
         return lit_value_asmodule(value);
     }

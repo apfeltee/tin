@@ -1,5 +1,5 @@
 
-#include "lit.h"
+#include "priv.h"
 
 #define LIT_DEBUG_OPTIMIZER
 
@@ -7,7 +7,7 @@
     if(lit_value_isnumber(a) && lit_value_isnumber(b)) \
     { \
         lit_astopt_optdbg("translating constant binary expression of '" # op "' to constant value"); \
-        return lit_value_numbertovalue(optimizer->state, lit_value_asnumber(a) op lit_value_asnumber(b)); \
+        return lit_value_makenumber(optimizer->state, lit_value_asnumber(a) op lit_value_asnumber(b)); \
     } \
     return NULL_VALUE;
 
@@ -15,7 +15,7 @@
     if(lit_value_isnumber(a) && lit_value_isnumber(b)) \
     { \
         lit_astopt_optdbg("translating constant bitwise expression of '" #op "' to constant value"); \
-        return lit_value_numbertovalue(optimizer->state, (int)lit_value_asnumber(a) op(int) lit_value_asnumber(b)); \
+        return lit_value_makenumber(optimizer->state, (int)lit_value_asnumber(a) op(int) lit_value_asnumber(b)); \
     } \
     return NULL_VALUE;
 
@@ -23,7 +23,7 @@
     if(lit_value_isnumber(a) && lit_value_isnumber(b)) \
     { \
         lit_astopt_optdbg("translating constant expression of '" tokstr "' to constant value via lit_vm_callcallable to '" #fn "'"); \
-        return lit_value_numbertovalue(optimizer->state, fn(lit_value_asnumber(a), lit_value_asnumber(b))); \
+        return lit_value_makenumber(optimizer->state, fn(lit_value_asnumber(a), lit_value_asnumber(b))); \
     } \
     return NULL_VALUE;
 
@@ -172,14 +172,14 @@ static LitValue lit_astopt_evalunaryop(LitOptimizer* optimizer, LitValue value, 
                 if(lit_value_isnumber(value))
                 {
                     lit_astopt_optdbg("translating constant unary minus on number to literal value");
-                    return lit_value_numbertovalue(optimizer->state, -lit_value_asnumber(value));
+                    return lit_value_makenumber(optimizer->state, -lit_value_asnumber(value));
                 }
             }
             break;
         case LITTOK_BANG:
             {
                 lit_astopt_optdbg("translating constant expression of '=' to literal value");
-                return lit_bool_to_value(optimizer->state, lit_value_isfalsey(value));
+                return lit_value_makebool(optimizer->state, lit_value_isfalsey(value));
             }
             break;
         case LITTOK_TILDE:
@@ -187,7 +187,7 @@ static LitValue lit_astopt_evalunaryop(LitOptimizer* optimizer, LitValue value, 
                 if(lit_value_isnumber(value))
                 {
                     lit_astopt_optdbg("translating unary tile (~) on number to literal value");
-                    return lit_value_numbertovalue(optimizer->state, ~((int)lit_value_asnumber(value)));
+                    return lit_value_makenumber(optimizer->state, ~((int)lit_value_asnumber(value)));
                 }
             }
             break;
@@ -282,19 +282,19 @@ static LitValue lit_astopt_evalbinaryop(LitOptimizer* optimizer, LitValue a, Lit
             {
                 if(lit_value_isnumber(a) && lit_value_isnumber(b))
                 {
-                    return lit_value_numbertovalue(optimizer->state, floor(lit_value_asnumber(a) / lit_value_asnumber(b)));
+                    return lit_value_makenumber(optimizer->state, floor(lit_value_asnumber(a) / lit_value_asnumber(b)));
                 }
                 return NULL_VALUE;
             }
             break;
         case LITTOK_EQUAL_EQUAL:
             {
-                return lit_bool_to_value(optimizer->state, &a == &b);
+                return lit_value_makebool(optimizer->state, lit_value_compare(optimizer->state, a, b));
             }
             break;
         case LITTOK_BANG_EQUAL:
             {
-                return lit_bool_to_value(optimizer->state, &a != &b);
+                return lit_value_makebool(optimizer->state, !lit_value_compare(optimizer->state, a, b));
             }
             break;
         case LITTOK_IS:
@@ -321,7 +321,7 @@ static LitValue lit_astopt_attemptoptbinary(LitOptimizer* optimizer, LitAstBinar
             if(number == 0)
             {
                 lit_astopt_optdbg("reducing expression to literal '0'");
-                return lit_value_numbertovalue(optimizer->state, 0);
+                return lit_value_makenumber(optimizer->state, 0);
             }
             else if(number == 1)
             {
@@ -794,7 +794,7 @@ static void lit_asdtopt_optstatement(LitOptimizer* optimizer, LitAstExpression**
                 // i++ (or i--)
                 LitAstExpression* var_get = (LitAstExpression*)lit_ast_make_varexpr(state, line, var->name, var->length);
                 LitAstBinaryExpr* assign_value = lit_ast_make_binaryexpr(
-                state, line, var_get, (LitAstExpression*)lit_ast_make_literalexpr(state, line, lit_value_numbertovalue(optimizer->state, 1)),
+                state, line, var_get, (LitAstExpression*)lit_ast_make_literalexpr(state, line, lit_value_makenumber(optimizer->state, 1)),
                 reverse ? LITTOK_MINUS_MINUS : LITTOK_PLUS);
                 assign_value->ignore_left = true;
                 LitAstExpression* increment

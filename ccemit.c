@@ -1,6 +1,6 @@
 
 #include <string.h>
-#include "lit.h"
+#include "priv.h"
 
 static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* expression);
 static void lit_emitter_resolvestmt(LitEmitter* emitter, LitAstExpression* statement);
@@ -390,7 +390,7 @@ static int lit_emitter_addprivate(LitEmitter* emitter, const char* name, size_t 
 
     lit_privlist_push(state, privates, (LitPrivate){ false, constant });
 
-    lit_table_set(state, private_names, lit_string_copy(state, name, length), lit_value_numbertovalue(state, index));
+    lit_table_set(state, private_names, lit_string_copy(state, name, length), lit_value_makenumber(state, index));
     emitter->module->private_count++;
 
     return index;
@@ -895,7 +895,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                             lit_emitter_emit1op(emitter, expr->line, ref ? OP_REFERENCE_GLOBAL : OP_GET_GLOBAL);
                             lit_emitter_emitshort(emitter, expr->line,
                                        lit_emitter_addconstant(emitter, expr->line,
-                                                    lit_value_objectvalue(lit_string_copy(emitter->state, varexpr->name, varexpr->length))));
+                                                    lit_value_makeobject(lit_string_copy(emitter->state, varexpr->name, varexpr->length))));
                         }
                         else
                         {
@@ -948,7 +948,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                                 lit_emitter_emit1op(emitter, expr->line, OP_SET_GLOBAL);
                                 lit_emitter_emitshort(emitter, expr->line,
                                            lit_emitter_addconstant(emitter, expr->line,
-                                                        lit_value_objectvalue(lit_string_copy(emitter->state, e->name, e->length))));
+                                                        lit_value_makeobject(lit_string_copy(emitter->state, e->name, e->length))));
                             }
                             else
                             {
@@ -981,7 +981,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     LitAstGetExpr* e = (LitAstGetExpr*)assignexpr->to;
                     lit_emitter_emitexpression(emitter, e->where);
                     lit_emitter_emitexpression(emitter, assignexpr->value);
-                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_objectvalue(lit_string_copy(emitter->state, e->name, e->length)));
+                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_makeobject(lit_string_copy(emitter->state, e->name, e->length)));
                     lit_emitter_emit2ops(emitter, emitter->last_line, OP_SET_FIELD, OP_POP);
                 }
                 else if(assignexpr->to->type == LITEXPR_SUBSCRIPT)
@@ -1049,7 +1049,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                                         (uint8_t)callexpr->args.count);
                         lit_emitter_emitshort(emitter, emitter->last_line,
                                    lit_emitter_addconstant(emitter, emitter->last_line,
-                                                lit_value_objectvalue(lit_string_copy(emitter->state, e->name, e->length))));
+                                                lit_value_makeobject(lit_string_copy(emitter->state, e->name, e->length))));
                     }
                     else
                     {
@@ -1059,7 +1059,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                         lit_emitter_emitvaryingop(emitter, emitter->last_line,
                                         ((LitAstSuperExpr*)callexpr->callee)->ignore_result ? OP_INVOKE_SUPER_IGNORING : OP_INVOKE_SUPER,
                                         (uint8_t)callexpr->args.count);
-                        lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_objectvalue(e->method)));
+                        lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makeobject(e->method)));
                     }
                 }
                 else
@@ -1120,14 +1120,14 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     if(!getexpr->ignore_emit)
                     {
                         lit_emitter_emitconstant(emitter, emitter->last_line,
-                                      lit_value_objectvalue(lit_string_copy(emitter->state, getexpr->name, getexpr->length)));
+                                      lit_value_makeobject(lit_string_copy(emitter->state, getexpr->name, getexpr->length)));
                         lit_emitter_emit1op(emitter, emitter->last_line, ref ? OP_REFERENCE_FIELD : OP_GET_FIELD);
                     }
                     lit_emitter_patchjump(emitter, getexpr->jump, emitter->last_line);
                 }
                 else if(!getexpr->ignore_emit)
                 {
-                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_objectvalue(lit_string_copy(emitter->state, getexpr->name, getexpr->length)));
+                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_makeobject(lit_string_copy(emitter->state, getexpr->name, getexpr->length)));
                     lit_emitter_emit1op(emitter, emitter->last_line, ref ? OP_REFERENCE_FIELD : OP_GET_FIELD);
                 }
             }
@@ -1137,14 +1137,14 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 LitAstSetExpr* setexpr = (LitAstSetExpr*)expr;
                 lit_emitter_emitexpression(emitter, setexpr->where);
                 lit_emitter_emitexpression(emitter, setexpr->value);
-                lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_objectvalue(lit_string_copy(emitter->state, setexpr->name, setexpr->length)));
+                lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_makeobject(lit_string_copy(emitter->state, setexpr->name, setexpr->length)));
                 lit_emitter_emit1op(emitter, emitter->last_line, OP_SET_FIELD);
             }
             break;
         case LITEXPR_LAMBDA:
             {
                 LitAstLambdaExpr* lambdaexpr = (LitAstLambdaExpr*)expr;
-                LitString* name = lit_value_asstring(lit_string_format(emitter->state, "lambda @:@", lit_value_objectvalue(emitter->module->name),
+                LitString* name = lit_value_asstring(lit_string_format(emitter->state, "lambda @:@", lit_value_makeobject(emitter->module->name),
                                                               lit_string_numbertostring(emitter->state, expr->line)));
                 LitCompiler compiler;
                 lit_compiler_compiler(emitter, &compiler, LITFUNC_REGULAR);
@@ -1172,7 +1172,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 if(function->upvalue_count > 0)
                 {
                     lit_emitter_emit1op(emitter, emitter->last_line, OP_CLOSURE);
-                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_objectvalue(function)));
+                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makeobject(function)));
                     for(size_t i = 0; i < function->upvalue_count; i++)
                     {
                         lit_emitter_emit2bytes(emitter, emitter->last_line, compiler.upvalues[i].isLocal ? 1 : 0, compiler.upvalues[i].index);
@@ -1180,7 +1180,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 }
                 else
                 {
-                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_objectvalue(function));
+                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_makeobject(function));
                 }
             }
             break;
@@ -1258,7 +1258,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_emitargedop(emitter, expr->line, OP_GET_LOCAL, 0);
                     lit_emitter_emitargedop(emitter, expr->line, OP_GET_UPVALUE, index);
                     lit_emitter_emit1op(emitter, expr->line, OP_GET_SUPER_METHOD);
-                    lit_emitter_emitshort(emitter, expr->line, lit_emitter_addconstant(emitter, expr->line, lit_value_objectvalue(superexpr->method)));
+                    lit_emitter_emitshort(emitter, expr->line, lit_emitter_addconstant(emitter, expr->line, lit_value_makeobject(superexpr->method)));
                 }
             }
             break;
@@ -1294,7 +1294,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 }
                 lit_emitter_emitvaryingop(emitter, emitter->last_line, OP_INVOKE, 0);
                 lit_emitter_emitshort(emitter, emitter->last_line,
-                           lit_emitter_addconstant(emitter, emitter->last_line, OBJECT_CONST_STRING(emitter->state, "join")));
+                           lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makestring(emitter->state, "join")));
             }
             break;
         case LITEXPR_REFERENCE:
@@ -1524,7 +1524,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_emitbyteorshort(emitter, emitter->last_line, OP_GET_LOCAL, OP_GET_LOCAL_LONG, iterator);
                     lit_emitter_emitvaryingop(emitter, emitter->last_line, OP_INVOKE, 1);
                     lit_emitter_emitshort(emitter, emitter->last_line,
-                               lit_emitter_addconstant(emitter, emitter->last_line, OBJECT_CONST_STRING(emitter->state, "iterator")));
+                               lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makestring(emitter->state, "iterator")));
                     lit_emitter_emitbyteorshort(emitter, emitter->last_line, OP_SET_LOCAL, OP_SET_LOCAL_LONG, iterator);
                     // If iter is null, just get out of the loop
                     exit_jump = lit_emitter_emitjump(emitter, OP_JUMP_IF_NULL_POPPING, emitter->last_line);
@@ -1537,7 +1537,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_emitbyteorshort(emitter, emitter->last_line, OP_GET_LOCAL, OP_GET_LOCAL_LONG, iterator);
                     lit_emitter_emitvaryingop(emitter, emitter->last_line, OP_INVOKE, 1);
                     lit_emitter_emitshort(emitter, emitter->last_line,
-                               lit_emitter_addconstant(emitter, emitter->last_line, OBJECT_CONST_STRING(emitter->state, "iteratorValue")));
+                               lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makestring(emitter->state, "iteratorValue")));
                     lit_emitter_emitbyteorshort(emitter, emitter->last_line, OP_SET_LOCAL, OP_SET_LOCAL_LONG, localcnt);
                     if(forstmt->body != NULL)
                     {
@@ -1635,7 +1635,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 if(function->upvalue_count > 0)
                 {
                     lit_emitter_emit1op(emitter, emitter->last_line, OP_CLOSURE);
-                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_objectvalue(function)));
+                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makeobject(function)));
                     for(i = 0; i < function->upvalue_count; i++)
                     {
                         lit_emitter_emit2bytes(emitter, emitter->last_line, compiler.upvalues[i].isLocal ? 1 : 0, compiler.upvalues[i].index);
@@ -1643,12 +1643,12 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 }
                 else
                 {
-                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_objectvalue(function));
+                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_makeobject(function));
                 }
                 if(isexport)
                 {
                     lit_emitter_emit1op(emitter, emitter->last_line, OP_SET_GLOBAL);
-                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_objectvalue(name)));
+                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makeobject(name)));
                 }
                 else if(isprivate)
                 {
@@ -1698,14 +1698,14 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 vararg = lit_emitter_emitparamlist(emitter, &mthstmt->parameters, expr->line);
                 lit_emitter_emitexpression(emitter, mthstmt->body);
                 lit_emitter_endscope(emitter, emitter->last_line);
-                function = lit_compiler_end(emitter, lit_value_asstring(lit_string_format(emitter->state, "@:@", lit_value_objectvalue(emitter->class_name), lit_value_objectvalue(mthstmt->name))));
+                function = lit_compiler_end(emitter, lit_value_asstring(lit_string_format(emitter->state, "@:@", lit_value_makeobject(emitter->class_name), lit_value_makeobject(mthstmt->name))));
                 function->arg_count = mthstmt->parameters.count;
                 function->max_slots += function->arg_count;
                 function->vararg = vararg;
                 if(function->upvalue_count > 0)
                 {
                     lit_emitter_emit1op(emitter, emitter->last_line, OP_CLOSURE);
-                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_objectvalue(function)));
+                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makeobject(function)));
                     for(i = 0; i < function->upvalue_count; i++)
                     {
                         lit_emitter_emit2bytes(emitter, emitter->last_line, compiler.upvalues[i].isLocal ? 1 : 0, compiler.upvalues[i].index);
@@ -1713,10 +1713,10 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 }
                 else
                 {
-                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_objectvalue(function));
+                    lit_emitter_emitconstant(emitter, emitter->last_line, lit_value_makeobject(function));
                 }
                 lit_emitter_emit1op(emitter, emitter->last_line, mthstmt->is_static ? OP_STATIC_FIELD : OP_METHOD);
-                lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, expr->line, lit_value_objectvalue(mthstmt->name)));
+                lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, expr->line, lit_value_makeobject(mthstmt->name)));
 
             }
             break;
@@ -1727,10 +1727,10 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 if(clstmt->parent != NULL)
                 {
                     lit_emitter_emit1op(emitter, emitter->last_line, OP_GET_GLOBAL);
-                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_objectvalue(clstmt->parent)));
+                    lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makeobject(clstmt->parent)));
                 }
                 lit_emitter_emit1op(emitter, expr->line, OP_CLASS);
-                lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_objectvalue(clstmt->name)));
+                lit_emitter_emitshort(emitter, emitter->last_line, lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makeobject(clstmt->name)));
                 if(clstmt->parent != NULL)
                 {
                     lit_emitter_emit1op(emitter, emitter->last_line, OP_INHERIT);
@@ -1750,7 +1750,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                         lit_emitter_emit1op(emitter, expr->line, OP_STATIC_FIELD);
                         lit_emitter_emitshort(emitter, expr->line,
                                    lit_emitter_addconstant(emitter, expr->line,
-                                                lit_value_objectvalue(lit_string_copy(emitter->state, var->name, var->length))));
+                                                lit_value_makeobject(lit_string_copy(emitter->state, var->name, var->length))));
                     }
                     else
                     {
@@ -1778,7 +1778,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_emitexpression(emitter, fieldstmt->getter);
                     lit_emitter_endscope(emitter, emitter->last_line);
                     getter = lit_compiler_end(emitter,
-                        lit_value_asstring(lit_string_format(emitter->state, "@:get @", lit_value_objectvalue(emitter->class_name), fieldstmt->name)));
+                        lit_value_asstring(lit_string_format(emitter->state, "@:get @", lit_value_makeobject(emitter->class_name), fieldstmt->name)));
                 }
                 if(fieldstmt->setter != NULL)
                 {
@@ -1788,14 +1788,14 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_emitexpression(emitter, fieldstmt->setter);
                     lit_emitter_endscope(emitter, emitter->last_line);
                     setter = lit_compiler_end(emitter,
-                        lit_value_asstring(lit_string_format(emitter->state, "@:set @", lit_value_objectvalue(emitter->class_name), fieldstmt->name)));
+                        lit_value_asstring(lit_string_format(emitter->state, "@:set @", lit_value_makeobject(emitter->class_name), fieldstmt->name)));
                     setter->arg_count = 1;
                     setter->max_slots++;
                 }
                 field = lit_create_field(emitter->state, (LitObject*)getter, (LitObject*)setter);
-                lit_emitter_emitconstant(emitter, expr->line, lit_value_objectvalue(field));
+                lit_emitter_emitconstant(emitter, expr->line, lit_value_makeobject(field));
                 lit_emitter_emit1op(emitter, expr->line, fieldstmt->is_static ? OP_STATIC_FIELD : OP_DEFINE_FIELD);
-                lit_emitter_emitshort(emitter, expr->line, lit_emitter_addconstant(emitter, expr->line, lit_value_objectvalue(fieldstmt->name)));
+                lit_emitter_emitshort(emitter, expr->line, lit_emitter_addconstant(emitter, expr->line, lit_value_makeobject(fieldstmt->name)));
             }
             break;
         default:
@@ -1882,7 +1882,7 @@ LitModule* lit_emitter_modemit(LitEmitter* emitter, LitAstExprList* statements, 
     }
     if(isnew && !state->had_error)
     {
-        lit_table_set(state, &state->vm->modules->values, module_name, lit_value_objectvalue(module));
+        lit_table_set(state, &state->vm->modules->values, module_name, lit_value_makeobject(module));
     }
     module->ran = true;
     return module;

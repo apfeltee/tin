@@ -1,0 +1,67 @@
+rule cc
+  deps = gcc
+  depfile = $in.d
+  command = g++ -std=c++20 -Wall -Wextra -g3 -ggdb3 -I . -MMD -MF $in.d -c $in -o $out
+  description = [CC] $in -> $out
+
+rule link
+  command = g++ -std=c++20 -g3 -ggdb3 -I . -lm -lreadline -lstdc++fs -o $out $in
+  description = [LINK] $out
+
+build ./ccast.o: cc ./ccast.c
+  depfile = ./ccast.c.d
+build ./ccemit.o: cc ./ccemit.c
+  depfile = ./ccemit.c.d
+build ./ccopt.o: cc ./ccopt.c
+  depfile = ./ccopt.c.d
+build ./ccparser.o: cc ./ccparser.c
+  depfile = ./ccparser.c.d
+build ./ccprepr.o: cc ./ccprepr.c
+  depfile = ./ccprepr.c.d
+build ./ccscan.o: cc ./ccscan.c
+  depfile = ./ccscan.c.d
+build ./chunk.o: cc ./chunk.c
+  depfile = ./chunk.c.d
+build ./debug.o: cc ./debug.c
+  depfile = ./debug.c.d
+build ./error.o: cc ./error.c
+  depfile = ./error.c.d
+build ./gcmem.o: cc ./gcmem.c
+  depfile = ./gcmem.c.d
+build ./libarray.o: cc ./libarray.c
+  depfile = ./libarray.c.d
+build ./libclass.o: cc ./libclass.c
+  depfile = ./libclass.c.d
+build ./libcore.o: cc ./libcore.c
+  depfile = ./libcore.c.d
+build ./libfiber.o: cc ./libfiber.c
+  depfile = ./libfiber.c.d
+build ./libfs.o: cc ./libfs.c
+  depfile = ./libfs.c.d
+build ./libfunc.o: cc ./libfunc.c
+  depfile = ./libfunc.c.d
+build ./libmap.o: cc ./libmap.c
+  depfile = ./libmap.c.d
+build ./libmath.o: cc ./libmath.c
+  depfile = ./libmath.c.d
+build ./libmodule.o: cc ./libmodule.c
+  depfile = ./libmodule.c.d
+build ./libobject.o: cc ./libobject.c
+  depfile = ./libobject.c.d
+build ./librange.o: cc ./librange.c
+  depfile = ./librange.c.d
+build ./libstring.o: cc ./libstring.c
+  depfile = ./libstring.c.d
+build ./main.o: cc ./main.c
+  depfile = ./main.c.d
+build ./state.o: cc ./state.c
+  depfile = ./state.c.d
+build ./util.o: cc ./util.c
+  depfile = ./util.c.d
+build ./value.o: cc ./value.c
+  depfile = ./value.c.d
+build ./vm.o: cc ./vm.c
+  depfile = ./vm.c.d
+build ./writer.o: cc ./writer.c
+  depfile = ./writer.c.d
+build run: link ./ccast.o ./ccemit.o ./ccopt.o ./ccparser.o ./ccprepr.o ./ccscan.o ./chunk.o ./debug.o ./error.o ./gcmem.o ./libarray.o ./libclass.o ./libcore.o ./libfiber.o ./libfs.o ./libfunc.o ./libmap.o ./libmath.o ./libmodule.o ./libobject.o ./librange.o ./libstring.o ./main.o ./state.o ./util.o ./value.o ./vm.o ./writer.o

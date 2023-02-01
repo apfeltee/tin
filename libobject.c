@@ -1,7 +1,7 @@
 
 #include <memory.h>
 #include <math.h>
-#include "lit.h"
+#include "priv.h"
 #include "sds.h"
 
 LitUpvalue* lit_create_upvalue(LitState* state, LitValue* slot)
@@ -77,7 +77,7 @@ void lit_object_destroy(LitState* state, LitObject* object)
     }
 #ifdef LIT_LOG_ALLOCATION
     printf("(");
-    lit_towriter_value(lit_value_objectvalue(object));
+    lit_towriter_value(lit_value_makeobject(object));
     printf(") %p free %s\n", (void*)object, lit_tostring_typename(object->type));
 #endif
 
@@ -267,9 +267,9 @@ LitValue lit_get_function_name(LitVM* vm, LitValue instance)
                 field = lit_value_asfield(instance);
                 if(field->getter != NULL)
                 {
-                    return lit_get_function_name(vm, lit_value_objectvalue(field->getter));
+                    return lit_get_function_name(vm, lit_value_makeobject(field->getter));
                 }
-                return lit_get_function_name(vm, lit_value_objectvalue(field->setter));
+                return lit_get_function_name(vm, lit_value_makeobject(field->setter));
             }
             break;
         case LITTYPE_NATIVE_PRIMITIVE:
@@ -310,14 +310,14 @@ LitValue lit_get_function_name(LitVM* vm, LitValue instance)
             return lit_string_format(vm->state, "function #", *((double*)lit_value_asobject(instance)));
         }
     }
-    return lit_string_format(vm->state, "function @", lit_value_objectvalue(name));
+    return lit_string_format(vm->state, "function @", lit_value_makeobject(name));
 }
 
 static LitValue objfn_object_class(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
     (void)argc;
     (void)argv;
-    return lit_value_objectvalue(lit_state_getclassfor(vm->state, instance));
+    return lit_value_makeobject(lit_state_getclassfor(vm->state, instance));
 }
 
 static LitValue objfn_object_super(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -330,14 +330,14 @@ static LitValue objfn_object_super(LitVM* vm, LitValue instance, size_t argc, Li
     {
         return NULL_VALUE;
     }
-    return lit_value_objectvalue(cl);
+    return lit_value_makeobject(cl);
 }
 
 static LitValue objfn_object_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
     (void)argc;
     (void)argv;
-    return lit_string_format(vm->state, "@ instance", lit_value_objectvalue(lit_state_getclassfor(vm->state, instance)->name));
+    return lit_string_format(vm->state, "@ instance", lit_value_makeobject(lit_state_getclassfor(vm->state, instance)->name));
 }
 
 static void fillmap(LitState* state, LitMap* destmap, LitTable* fromtbl, bool includenullkeys)
@@ -388,12 +388,12 @@ static LitValue objfn_object_tomap(LitVM* vm, LitValue instance, size_t argc, Li
             mclmethods = lit_create_map(vm->state);
             fillmap(vm->state, mclmethods, &(inst->klass->methods), false);
         }
-        lit_map_set(vm->state, mclass, CONST_STRING(vm->state, "statics"), lit_value_objectvalue(mclstatics));
-        lit_map_set(vm->state, mclass, CONST_STRING(vm->state, "methods"), lit_value_objectvalue(mclmethods));
+        lit_map_set(vm->state, mclass, lit_string_copyconst(vm->state, "statics"), lit_value_makeobject(mclstatics));
+        lit_map_set(vm->state, mclass, lit_string_copyconst(vm->state, "methods"), lit_value_makeobject(mclmethods));
     }
-    lit_map_set(vm->state, map, CONST_STRING(vm->state, "instance"), lit_value_objectvalue(minst));
-    lit_map_set(vm->state, map, CONST_STRING(vm->state, "class"), lit_value_objectvalue(mclass));
-    return lit_value_objectvalue(map);
+    lit_map_set(vm->state, map, lit_string_copyconst(vm->state, "instance"), lit_value_makeobject(minst));
+    lit_map_set(vm->state, map, lit_string_copyconst(vm->state, "class"), lit_value_makeobject(mclass));
+    return lit_value_makeobject(map);
 }
 
 static LitValue objfn_object_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -448,7 +448,7 @@ static LitValue objfn_object_iterator(LitVM* vm, LitValue instance, size_t argc,
     self = lit_value_asinstance(instance);
     index = lit_value_isnull(argv[0]) ? -1 : lit_value_asnumber(argv[0]);
     value = util_table_iterator(&self->fields, index);
-    return value == -1 ? NULL_VALUE : lit_value_numbertovalue(vm->state, value);
+    return value == -1 ? NULL_VALUE : lit_value_makenumber(vm->state, value);
 }
 
 
@@ -480,7 +480,7 @@ void lit_open_object_library(LitState* state)
         state->objectvalue_class = klass;
         state->objectvalue_class->super = state->classvalue_class;
     }
-    lit_state_setglobal(state, klass->name, lit_value_objectvalue(klass));
+    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
     if(klass->super == NULL)
     {
         lit_class_inheritfrom(state, klass, state->objectvalue_class);

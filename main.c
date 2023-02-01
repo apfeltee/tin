@@ -321,9 +321,9 @@ int main(int argc, char* argv[])
             arg_array = lit_create_array(state);
             for(i=0; i<fx.poscnt; i++)
             {
-                lit_vallist_push(state, &arg_array->list, OBJECT_CONST_STRING(state, fx.positional[i]));
+                lit_vallist_push(state, &arg_array->list, lit_value_makestring(state, fx.positional[i]));
             }
-            lit_state_setglobal(state, CONST_STRING(state, "args"), lit_value_objectvalue(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_makeobject(arg_array));
             if(opts.codeline)
             {
                 result = lit_state_execsource(state, "<-e>", opts.codeline, strlen(opts.codeline)).type;
@@ -489,7 +489,7 @@ int oldmain(int argc, const char* argv[])
             module_name = num_files_to_run == 0 ? "repl" : files_to_run[0];
             if(dump)
             {
-                module = lit_state_compilemodule(state, CONST_STRING(state, module_name), source, length);
+                module = lit_state_compilemodule(state, lit_string_copyconst(state, module_name), source, length);
                 if(module == NULL)
                 {
                     break;
@@ -543,10 +543,10 @@ int oldmain(int argc, const char* argv[])
             for(j = 0; j < (size_t)args_left; j++)
             {
                 arg_string = argv[i + j + 1];
-                lit_vallist_push(state, &arg_array->list, OBJECT_CONST_STRING(state, arg_string));
+                lit_vallist_push(state, &arg_array->list, lit_value_makestring(state, arg_string));
             }
 
-            lit_state_setglobal(state, CONST_STRING(state, "args"), lit_value_objectvalue(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_makeobject(arg_array));
             break;
         }
         else if(arg[0] == '-')
@@ -572,7 +572,7 @@ int oldmain(int argc, const char* argv[])
             {
                 arg_array = lit_create_array(state);
             }
-            lit_state_setglobal(state, CONST_STRING(state, "args"), lit_value_objectvalue(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_makeobject(arg_array));
             for(i = 0; i < num_files_to_run; i++)
             {
                 file = files_to_run[i];

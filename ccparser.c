@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 #include <setjmp.h>
-#include "lit.h"
+#include "priv.h"
 
 static jmp_buf prs_jmpbuffer;
 static LitParseRule rules[LITTOK_EOF + 1];
@@ -848,7 +848,7 @@ static LitAstExpression* lit_parser_rulecompound(LitParser* parser, LitAstExpres
     rule = lit_parser_getrule(op);
     if(op == LITTOK_PLUS_PLUS || op == LITTOK_MINUS_MINUS)
     {
-        expression = (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, lit_value_numbertovalue(parser->state, 1));
+        expression = (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, lit_value_makenumber(parser->state, 1));
     }
     else
     {
@@ -941,7 +941,7 @@ static LitAstExpression* lit_parser_ruleobject(LitParser* parser, bool can_assig
     {
         lit_parser_ignorenewlines(parser, true);
         lit_parser_consume(parser, LITTOK_IDENTIFIER, "key string after '{'");
-        lit_vallist_push(parser->state, &object->keys, lit_value_objectvalue(lit_string_copy(parser->state, parser->previous.start, parser->previous.length)));
+        lit_vallist_push(parser->state, &object->keys, lit_value_makeobject(lit_string_copy(parser->state, parser->previous.start, parser->previous.length)));
         lit_parser_ignorenewlines(parser, true);
         lit_parser_consume(parser, LITTOK_EQUAL, "'=' after key string");
         lit_parser_ignorenewlines(parser, true);

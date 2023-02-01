@@ -1,14 +1,13 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-#include "lit.h"
+#include "priv.h"
 
-
-LitValue lit_value_objectvalue_actual(LitObject* obj)
+LitValue lit_value_makeobject_actual(LitObject* obj)
 {
-    //return (LitValue)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj));
     LitValue val;
     val.type = LITVAL_OBJECT;
+    val.isfixednumber = false;
     val.obj = obj;
     return val;
 }
@@ -23,7 +22,7 @@ LitObject* lit_value_asobject(LitValue v)
     return v.obj;
 }
 
-LitValue lit_bool_to_value(LitState* state, bool b) 
+LitValue lit_value_makebool(LitState* state, bool b) 
 {
     (void)state;
     if(!b)
@@ -68,48 +67,48 @@ LitObjType lit_value_type(LitValue v)
     return LITTYPE_UNDEFINED;
 }
 
-#define USE_NUMBEROBJECT 0
-
-double lit_value_asnumber(LitValue v)
+double lit_value_asfloatnumber(LitValue v)
 {
-    #if defined(USE_NUMBEROBJECT) && (USE_NUMBEROBJECT == 1)
-        LitObject* tmp;
-        tmp = lit_value_asobject(v);
-        return ((LitNumber*)tmp)->num;
-    #else
-        return v.numval;
-    #endif
+    if(v.isfixednumber)
+    {
+        return v.numfixedval;
+    }
+    return v.numfloatval;
 }
 
-LitValue lit_value_numbertovalue(LitState* state, double num)
+int64_t lit_value_asfixednumber(LitValue v)
+{
+    if(!v.isfixednumber)
+    {
+        return v.numfloatval;
+    }
+    return v.numfixedval;
+}
+
+LitValue lit_value_makenumber(LitState* state, double num)
+{
+    return lit_value_makefloatnumber(state, num);
+}
+
+LitValue lit_value_makefloatnumber(LitState* state, double num)
 {
     (void)state;
     LitValue v;
     v.type = LITVAL_NUMBER;
-    v.numval = num;
+    v.isfixednumber = false;
+    v.numfloatval = num;
     return v;
+}
 
-    #if 0
-        #if defined(USE_NUMBEROBJECT) && (USE_NUMBEROBJECT == 1)
-            #if 1
-                LitNumber* nobj;
-                nobj = (LitNumber*)lit_gcmem_allocobject(state, sizeof(LitNumber), LITTYPE_NUMBER, true);
-                nobj->num = num;
-                return lit_value_objectvalue(nobj);
-            #else
-                LitNumber* n;
-                LitObject o;
-                n = (LitNumber*)&o;
-                o.type = LITTYPE_NUMBER;
-                n->object = o;
-                n->num = num;
-                return lit_value_objectvalue(n);
-            #endif
-        #else
 
-        #endif
-    #endif
-
+LitValue lit_value_makefixednumber(LitState* state, int64_t num)
+{
+    (void)state;
+    LitValue v;
+    v.type = LITVAL_NUMBER;
+    v.isfixednumber = true;
+    v.numfixedval = num;
+    return v;
 }
 
 bool lit_value_isnumber(LitValue v)
@@ -117,11 +116,23 @@ bool lit_value_isnumber(LitValue v)
     return v.type == LITVAL_NUMBER;
 }
 
+bool lit_valcompare_object(LitState* state, const LitValue a, const LitValue b)
+{
+    switch(a.obj->type)
+    {
+        default:
+            {
+                fprintf(stderr, "missing equality comparison for type '%s'", lit_tostring_typename(a));
+            }
+            break;
+    }
+    return false;
+}
 
 bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
 {
-    LitObjType t1;
-    LitObjType t2;
+    LitValType t1;
+    LitValType t2;
     double n1;
     double n2;
     LitInterpretResult inret;
@@ -129,11 +140,11 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
     if(lit_value_isinstance(a))
     {
         args[0] = b;
-        inret = lit_state_callinstancemethod(state, a, CONST_STRING(state, "=="), args, 1);
+        inret = lit_state_callinstancemethod(state, a, lit_string_copyconst(state, "=="), args, 1);
         if(inret.type == LITRESULT_OK)
         {
             /*
-            if(lit_bool_to_value(state, inret.result.) == TRUE_VALUE)
+            if(lit_value_makebool(state, inret.result.) == TRUE_VALUE)
             {
                 return true;
             }
@@ -141,16 +152,34 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
             return false;
         }
     }
-    t1 = lit_value_type(a);
-    t2 = lit_value_type(b);
+    t1 = a.type;
+    t2 = b.type;
     fprintf(stderr, "compare: t1=%d t2=%d\n", t1, t2);
     if(t1 == t2)
     {
-        if(t1 == LITTYPE_NUMBER && t2 == LITTYPE_NUMBER)
+        switch(t1)
         {
-            return (lit_value_asnumber(a) == lit_value_asnumber(b));
+            case LITVAL_NUMBER:
+                {
+                    return (lit_value_asnumber(a) == lit_value_asnumber(b));
+                }
+                break;
+            case LITVAL_NULL:
+                {
+                    return true;
+                }
+                break;
+            case LITVAL_BOOL:
+                {
+                    return a.boolval == b.boolval;
+                }
+                break;
+            case LITVAL_OBJECT:
+                {
+                    return lit_valcompare_object(state, a, b);
+                }
+                break;
         }
-        return (lit_value_compare(state, a, b));
     }
     return false;
 }
@@ -172,7 +201,7 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
     {
         if(lit_value_isnull(object))
         {
-            return CONST_STRING(state, "null");
+            return lit_string_copyconst(state, "null");
         }
         else if(lit_value_isnumber(object))
         {
@@ -180,7 +209,7 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
         }
         else if(lit_value_isbool(object))
         {
-            return CONST_STRING(state, lit_value_asbool(object) ? "true" : "false");
+            return lit_string_copyconst(state, lit_value_asbool(object) ? "true" : "false");
         }
     }
     else if(lit_value_isreference(object))
@@ -189,7 +218,7 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
 
         if(slot == NULL)
         {
-            return CONST_STRING(state, "null");
+            return lit_string_copyconst(state, "null");
         }
         return lit_value_tostring(state, *slot);
     }
@@ -197,7 +226,7 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
     fiber = vm->fiber;
     if(lit_state_ensurefiber(vm, fiber))
     {
-        return CONST_STRING(state, "null");
+        return lit_string_copyconst(state, "null");
     }
     function = state->api_function;
     if(function == NULL)
@@ -211,7 +240,7 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
         function->max_slots = 3;
         lit_chunk_push(state, chunk, OP_INVOKE, 1);
         lit_chunk_emitbyte(state, chunk, 0);
-        lit_chunk_emitshort(state, chunk, lit_chunk_addconst(state, chunk, OBJECT_CONST_STRING(state, "toString")));
+        lit_chunk_emitshort(state, chunk, lit_chunk_addconst(state, chunk, lit_value_makestring(state, "toString")));
         lit_chunk_emitbyte(state, chunk, OP_RETURN);
     }
     lit_ensure_fiber_stack(state, fiber, function->max_slots + (int)(fiber->stack_top - fiber->stack));
@@ -222,12 +251,12 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
     frame->slots = fiber->stack_top;
     frame->result_ignored = false;
     frame->return_to_c = true;
-    PUSH(lit_value_objectvalue(function));
+    PUSH(lit_value_makeobject(function));
     PUSH(object);
     result = lit_vm_execfiber(state, fiber);
     if(result.type != LITRESULT_OK)
     {
-        return CONST_STRING(state, "null");
+        return lit_string_copyconst(state, "null");
     }
     return lit_value_asstring(result.result);
 }
@@ -365,7 +394,7 @@ LitValue lit_value_callnew(LitVM* vm, const char* name, LitValue* args, size_t a
 {
     LitValue value;
     LitClass* klass;
-    if(!lit_table_get(&vm->globals->values, CONST_STRING(vm->state, name), &value))
+    if(!lit_table_get(&vm->globals->values, lit_string_copyconst(vm->state, name), &value))
     {
         lit_vm_raiseerror(vm, "failed to create instance of class %s: class not found", name);
         return lit_value_makenull(vm->state);
@@ -373,7 +402,7 @@ LitValue lit_value_callnew(LitVM* vm, const char* name, LitValue* args, size_t a
     klass = lit_value_asclass(value);
     if(klass->init_method == NULL)
     {
-        return lit_value_objectvalue(lit_create_instance(vm->state, klass));
+        return lit_value_makeobject(lit_create_instance(vm->state, klass));
     }
     return lit_state_callmethod(vm->state, value, value, args, argc, ignfiber).result;
 }

@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include "lit.h"
+#include "priv.h"
 
 void lit_disassemble_module(LitState* state, LitModule* module, const char* source)
 {
@@ -12,7 +12,7 @@ void lit_disassemble_chunk(LitState* state, LitChunk* chunk, const char* name, c
     size_t i;
     size_t offset;
     LitValue value;
-    LitValueList* values;
+    LitValList* values;
     LitFunction* function;
     values = &chunk->constants;
 

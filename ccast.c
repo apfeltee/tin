@@ -1,5 +1,5 @@
 
-#include "lit.h"
+#include "priv.h"
 
 void lit_exprlist_init(LitAstExprList* array)
 {

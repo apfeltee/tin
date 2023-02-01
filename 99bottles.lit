@@ -56,7 +56,7 @@ function song()
     };
     state["getDom"] = function()
     {
-        for( var i = 99; i >= 0 ; i-- )
+        for( var i = 10; i >= 0 ; i-- )
         {
             state["verse"][i]();
         }
