@@ -4,7 +4,7 @@
 #include "priv.h"
 #include "sds.h"
 
-LitUpvalue* lit_create_upvalue(LitState* state, LitValue* slot)
+LitUpvalue* lit_object_makeupvalue(LitState* state, LitValue* slot)
 {
     LitUpvalue* upvalue;
     upvalue = (LitUpvalue*)lit_gcmem_allocobject(state, sizeof(LitUpvalue), LITTYPE_UPVALUE, false);
@@ -14,7 +14,7 @@ LitUpvalue* lit_create_upvalue(LitState* state, LitValue* slot)
     return upvalue;
 }
 
-LitModule* lit_create_module(LitState* state, LitString* name)
+LitModule* lit_object_makemodule(LitState* state, LitString* name)
 {
     LitModule* module;
     module = (LitModule*)lit_gcmem_allocobject(state, sizeof(LitModule), LITTYPE_MODULE, false);
@@ -29,7 +29,7 @@ LitModule* lit_create_module(LitState* state, LitString* name)
     return module;
 }
 
-LitUserdata* lit_create_userdata(LitState* state, size_t size, bool ispointeronly)
+LitUserdata* lit_object_makeuserdata(LitState* state, size_t size, bool ispointeronly)
 {
     LitUserdata* userdata;
     userdata = (LitUserdata*)lit_gcmem_allocobject(state, sizeof(LitUserdata), LITTYPE_USERDATA, false);
@@ -47,7 +47,7 @@ LitUserdata* lit_create_userdata(LitState* state, size_t size, bool ispointeronl
     return userdata;
 }
 
-LitRange* lit_create_range(LitState* state, double from, double to)
+LitRange* lit_object_makerange(LitState* state, double from, double to)
 {
     LitRange* range;
     range = (LitRange*)lit_gcmem_allocobject(state, sizeof(LitRange), LITTYPE_RANGE, false);
@@ -56,7 +56,7 @@ LitRange* lit_create_range(LitState* state, double from, double to)
     return range;
 }
 
-LitReference* lit_create_reference(LitState* state, LitValue* slot)
+LitReference* lit_object_makereference(LitState* state, LitValue* slot)
 {
     LitReference* reference;
     reference = (LitReference*)lit_gcmem_allocobject(state, sizeof(LitReference), LITTYPE_REFERENCE, false);
@@ -223,7 +223,7 @@ void lit_object_destroy(LitState* state, LitObject* object)
             break;
         default:
             {
-                fprintf(stderr, "internal lit_emitter_raiseerror: trying to free something else!\n");
+                fprintf(stderr, "internal error: trying to free something else!\n");
                 UNREACHABLE
             }
             break;
@@ -245,7 +245,7 @@ void lit_object_destroylistof(LitState* state, LitObject* objects)
     state->vm->gray_capacity = 0;
 }
 
-LitValue lit_get_function_name(LitVM* vm, LitValue instance)
+LitValue lit_function_getname(LitVM* vm, LitValue instance)
 {
     LitString* name;
     LitField* field;
@@ -267,9 +267,9 @@ LitValue lit_get_function_name(LitVM* vm, LitValue instance)
                 field = lit_value_asfield(instance);
                 if(field->getter != NULL)
                 {
-                    return lit_get_function_name(vm, lit_value_makeobject(field->getter));
+                    return lit_function_getname(vm, lit_value_makeobject(field->getter));
                 }
-                return lit_get_function_name(vm, lit_value_makeobject(field->setter));
+                return lit_function_getname(vm, lit_value_makeobject(field->setter));
             }
             break;
         case LITTYPE_NATIVE_PRIMITIVE:
@@ -294,7 +294,7 @@ LitValue lit_get_function_name(LitVM* vm, LitValue instance)
             break;
         case LITTYPE_BOUND_METHOD:
             {
-                return lit_get_function_name(vm, lit_value_asboundmethod(instance)->method);
+                return lit_function_getname(vm, lit_value_asboundmethod(instance)->method);
             }
             break;
         default:
@@ -461,7 +461,7 @@ static LitValue objfn_object_iteratorvalue(LitVM* vm, LitValue instance, size_t 
     return util_table_iterator_key(&self->fields, index);
 }
 
-void lit_open_object_library(LitState* state)
+void lit_state_openobjectlibrary(LitState* state)
 {
     LitClass* klass;
     klass = lit_create_classobject(state, "Object");

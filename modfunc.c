@@ -1,7 +1,7 @@
 
 #include "priv.h"
 
-LitFunction* lit_create_function(LitState* state, LitModule* module)
+LitFunction* lit_object_makefunction(LitState* state, LitModule* module)
 {
     LitFunction* function;
     function = (LitFunction*)lit_gcmem_allocobject(state, sizeof(LitFunction), LITTYPE_FUNCTION, false);
@@ -15,7 +15,7 @@ LitFunction* lit_create_function(LitState* state, LitModule* module)
     return function;
 }
 
-LitClosure* lit_create_closure(LitState* state, LitFunction* function)
+LitClosure* lit_object_makeclosure(LitState* state, LitFunction* function)
 {
     size_t i;
     LitClosure* closure;
@@ -34,7 +34,7 @@ LitClosure* lit_create_closure(LitState* state, LitFunction* function)
     return closure;
 }
 
-LitNativeFunction* lit_create_native_function(LitState* state, LitNativeFunctionFn function, LitString* name)
+LitNativeFunction* lit_object_makenativefunction(LitState* state, LitNativeFunctionFn function, LitString* name)
 {
     LitNativeFunction* native;
     native = (LitNativeFunction*)lit_gcmem_allocobject(state, sizeof(LitNativeFunction), LITTYPE_NATIVE_FUNCTION, false);
@@ -43,7 +43,7 @@ LitNativeFunction* lit_create_native_function(LitState* state, LitNativeFunction
     return native;
 }
 
-LitNativePrimFunction* lit_create_native_primitive(LitState* state, LitNativePrimitiveFn function, LitString* name)
+LitNativePrimFunction* lit_object_makenativeprimitive(LitState* state, LitNativePrimitiveFn function, LitString* name)
 {
     LitNativePrimFunction* native;
     native = (LitNativePrimFunction*)lit_gcmem_allocobject(state, sizeof(LitNativePrimFunction), LITTYPE_NATIVE_PRIMITIVE, false);
@@ -52,7 +52,7 @@ LitNativePrimFunction* lit_create_native_primitive(LitState* state, LitNativePri
     return native;
 }
 
-LitNativeMethod* lit_create_native_method(LitState* state, LitNativeMethodFn method, LitString* name)
+LitNativeMethod* lit_object_makenativemethod(LitState* state, LitNativeMethodFn method, LitString* name)
 {
     LitNativeMethod* native;
     native = (LitNativeMethod*)lit_gcmem_allocobject(state, sizeof(LitNativeMethod), LITTYPE_NATIVE_METHOD, false);
@@ -61,7 +61,7 @@ LitNativeMethod* lit_create_native_method(LitState* state, LitNativeMethodFn met
     return native;
 }
 
-LitPrimitiveMethod* lit_create_primitive_method(LitState* state, LitPrimitiveMethodFn method, LitString* name)
+LitPrimitiveMethod* lit_object_makeprimitivemethod(LitState* state, LitPrimitiveMethodFn method, LitString* name)
 {
     LitPrimitiveMethod* native;
     native = (LitPrimitiveMethod*)lit_gcmem_allocobject(state, sizeof(LitPrimitiveMethod), LITTYPE_PRIMITIVE_METHOD, false);
@@ -70,7 +70,7 @@ LitPrimitiveMethod* lit_create_primitive_method(LitState* state, LitPrimitiveMet
     return native;
 }
 
-LitBoundMethod* lit_create_bound_method(LitState* state, LitValue receiver, LitValue method)
+LitBoundMethod* lit_object_makeboundmethod(LitState* state, LitValue receiver, LitValue method)
 {
     LitBoundMethod* bound_method;
     bound_method = (LitBoundMethod*)lit_gcmem_allocobject(state, sizeof(LitBoundMethod), LITTYPE_BOUND_METHOD, false);
@@ -79,7 +79,7 @@ LitBoundMethod* lit_create_bound_method(LitState* state, LitValue receiver, LitV
     return bound_method;
 }
 
-bool lit_is_callable_function(LitValue value)
+bool lit_value_iscallablefunction(LitValue value)
 {
     if(lit_value_isobject(value))
     {
@@ -103,7 +103,7 @@ static LitValue objfn_function_tostring(LitVM* vm, LitValue instance, size_t arg
 {
     (void)argc;
     (void)argv;
-    return lit_get_function_name(vm, instance);
+    return lit_function_getname(vm, instance);
 }
 
 
@@ -111,10 +111,10 @@ static LitValue objfn_function_name(LitVM* vm, LitValue instance, size_t argc, L
 {
     (void)argc;
     (void)argv;
-    return lit_get_function_name(vm, instance);
+    return lit_function_getname(vm, instance);
 }
 
-void lit_open_function_library(LitState* state)
+void lit_state_openfunctionlibrary(LitState* state)
 {
     LitClass* klass;
     klass = lit_create_classobject(state, "Function");

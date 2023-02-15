@@ -218,7 +218,7 @@ static void lit_compiler_compiler(LitEmitter* emitter, LitCompiler* compiler, Li
     compiler->scope_depth = 0;
     compiler->enclosing = (struct LitCompiler*)emitter->compiler;
     compiler->skip_return = false;
-    compiler->function = lit_create_function(emitter->state, emitter->module);
+    compiler->function = lit_object_makefunction(emitter->state, emitter->module);
     compiler->loop_depth = 0;
 
     emitter->compiler = compiler;
@@ -322,11 +322,11 @@ static void lit_emitter_endscope(LitEmitter* emitter, uint16_t line)
     }
 }
 
-static void lit_emitter_raiseerror(LitEmitter* emitter, size_t line, LitError lit_emitter_raiseerror, ...)
+static void lit_emitter_raiseerror(LitEmitter* emitter, size_t line, LitError ecode, ...)
 {
     va_list args;
-    va_start(args, lit_emitter_raiseerror);
-    lit_state_raiseerror(emitter->state, COMPILE_ERROR, lit_vformat_error(emitter->state, line, lit_emitter_raiseerror, args)->chars);
+    va_start(args, ecode);
+    lit_state_raiseerror(emitter->state, COMPILE_ERROR, lit_vformat_error(emitter->state, line, ecode, args)->chars);
     va_end(args);
 }
 
@@ -1830,7 +1830,7 @@ LitModule* lit_emitter_modemit(LitEmitter* emitter, LitAstExprList* statements, 
     }
     else
     {
-        module = lit_create_module(emitter->state, module_name);
+        module = lit_object_makemodule(emitter->state, module_name);
         isnew = true;
     }
     emitter->module = module;

@@ -54,7 +54,7 @@ LitNativeMethod* lit_class_bindmethod(LitState* state, LitClass* cl, const char*
     LitString* nm;
     LitNativeMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_create_native_method(state, fn, nm);
+    mth = lit_object_makenativemethod(state, fn, nm);
     lit_table_set(state, &cl->methods, nm, lit_value_makeobject(mth));
     return mth;
 }
@@ -64,7 +64,7 @@ LitPrimitiveMethod* lit_class_bindprimitive(LitState* state, LitClass* cl, const
     LitString* nm;
     LitPrimitiveMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_create_primitive_method(state, fn, nm);
+    mth = lit_object_makeprimitivemethod(state, fn, nm);
     lit_table_set(state, &cl->methods, nm, lit_value_makeobject(mth));
     return mth;
 }
@@ -74,7 +74,7 @@ LitNativeMethod* lit_class_bindstaticmethod(LitState* state, LitClass* cl, const
     LitString* nm;
     LitNativeMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_create_native_method(state, fn, nm);
+    mth = lit_object_makenativemethod(state, fn, nm);
     lit_table_set(state, &cl->static_fields, nm, lit_value_makeobject(mth));
     return mth;
 }
@@ -84,7 +84,7 @@ LitPrimitiveMethod* lit_class_bindstaticprimitive(LitState* state, LitClass* cl,
     LitString* nm;
     LitPrimitiveMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_create_primitive_method(state, fn, nm);
+    mth = lit_object_makeprimitivemethod(state, fn, nm);
     lit_table_set(state, &cl->static_fields, nm, lit_value_makeobject(mth));
     return mth;
 }
@@ -111,11 +111,11 @@ LitField* lit_class_bindgetset(LitState* state, LitClass* cl, const char* name, 
     nm = lit_string_copy(state, name, strlen(name));
     if(getfn != NULL)
     {
-        mthget = lit_create_native_method(state, getfn, nm);
+        mthget = lit_object_makenativemethod(state, getfn, nm);
     }
     if(setfn != NULL)
     {
-        mthset = lit_create_native_method(state, setfn, nm);
+        mthset = lit_object_makenativemethod(state, setfn, nm);
     }
     if(isstatic)
     {

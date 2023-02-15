@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "priv.h"
 
-LitValue lit_value_makeobject_actual(LitObject* obj)
+LitValue lit_value_fromobject_actual(LitObject* obj)
 {
     LitValue val;
     val.type = LITVAL_OBJECT;
@@ -231,7 +231,7 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
     function = state->api_function;
     if(function == NULL)
     {
-        function = state->api_function = lit_create_function(state, fiber->module);
+        function = state->api_function = lit_object_makefunction(state, fiber->module);
         function->chunk.has_line_info = false;
         function->name = state->api_name;
         chunk = &function->chunk;
@@ -358,35 +358,35 @@ LitValue* lit_value_checkreference(LitVM* vm, LitValue* args, uint8_t arg_count,
     return lit_value_asreference(args[id])->slot;
 }
 
-void lit_value_ensurebool(LitVM* vm, LitValue value, const char* lit_emitter_raiseerror)
+void lit_value_ensurebool(LitVM* vm, LitValue value, const char* emsg)
 {
     if(!lit_value_isbool(value))
     {
-        lit_vm_raiseexitingerror(vm, lit_emitter_raiseerror);
+        lit_vm_raiseexitingerror(vm, emsg);
     }
 }
 
-void lit_value_ensurestring(LitVM* vm, LitValue value, const char* lit_emitter_raiseerror)
+void lit_value_ensurestring(LitVM* vm, LitValue value, const char* emsg)
 {
     if(!lit_value_isstring(value))
     {
-        lit_vm_raiseexitingerror(vm, lit_emitter_raiseerror);
+        lit_vm_raiseexitingerror(vm, emsg);
     }
 }
 
-void lit_value_ensurenumber(LitVM* vm, LitValue value, const char* lit_emitter_raiseerror)
+void lit_value_ensurenumber(LitVM* vm, LitValue value, const char* emsg)
 {
     if(!lit_value_isnumber(value))
     {
-        lit_vm_raiseexitingerror(vm, lit_emitter_raiseerror);
+        lit_vm_raiseexitingerror(vm, emsg);
     }
 }
 
-void lit_value_ensureobjtype(LitVM* vm, LitValue value, LitObjType type, const char* lit_emitter_raiseerror)
+void lit_value_ensureobjtype(LitVM* vm, LitValue value, LitObjType type, const char* emsg)
 {
     if(!lit_value_isobject(value) || lit_value_type(value) != type)
     {
-        lit_vm_raiseexitingerror(vm, lit_emitter_raiseerror);
+        lit_vm_raiseexitingerror(vm, emsg);
     }
 }
 

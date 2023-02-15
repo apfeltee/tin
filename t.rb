@@ -1,87 +1,94 @@
-codes = <<'__eos__'
-    LITERROR_UNCLOSED_MACRO,
-    LITERROR_UNKNOWN_MACRO,
-    LITERROR_UNEXPECTED_CHAR,
-    LITERROR_UNTERMINATED_STRING,
-    LITERROR_INVALID_ESCAPE_CHAR,
-    LITERROR_INTERPOLATION_NESTING_TOO_DEEP,
-    LITERROR_NUMBER_IS_TOO_BIG,
-    LITERROR_CHAR_EXPECTATION_UNMET,
-    LITERROR_EXPECTATION_UNMET,
-    LITERROR_INVALID_ASSIGMENT_TARGET,
-    LITERROR_TOO_MANY_FUNCTION_ARGS,
-    LITERROR_MULTIPLE_ELSE_BRANCHES,
-    LITERROR_VAR_MISSING_IN_FORIN,
-    LITERROR_NO_GETTER_AND_SETTER,
-    LITERROR_STATIC_OPERATOR,
-    LITERROR_SELF_INHERITED_CLASS,
-    LITERROR_STATIC_FIELDS_AFTER_METHODS,
-    LITERROR_MISSING_STATEMENT,
-    LITERROR_EXPECTED_EXPRESSION,
-    LITERROR_DEFAULT_ARG_CENTRED,
-    LITERROR_TOO_MANY_CONSTANTS,
-    LITERROR_TOO_MANY_PRIVATES,
-    LITERROR_VAR_REDEFINED,
-    LITERROR_TOO_MANY_LOCALS,
-    LITERROR_TOO_MANY_UPVALUES,
-    LITERROR_VARIABLE_USED_IN_INIT,
-    LITERROR_JUMP_TOO_BIG,
-    LITERROR_NO_SUPER,
-    LITERROR_THIS_MISSUSE,
-    LITERROR_SUPER_MISSUSE,
-    LITERROR_UNKNOWN_EXPRESSION,
-    LITERROR_UNKNOWN_STATEMENT,
-    LITERROR_LOOP_JUMP_MISSUSE,
-    LITERROR_RETURN_FROM_CONSTRUCTOR,
-    LITERROR_STATIC_CONSTRUCTOR,
-    LITERROR_CONSTANT_MODIFIED,
-    LITERROR_INVALID_REFERENCE_TARGET,
+#!/usr/bin/ruby
+
+require "optparse"
+
+
+def replaceinfile(mapping, file)
+  $stderr.printf("now processing %p ...\n", file)
+  count = 0 
+  data = File.read(file)
+  mapping.each do |old, new|
+    rx = /\b#{old}\b/
+    if data.match?(rx) then
+      data.gsub!(rx, new)
+      count += 1
+    end
+  end
+  if count > 0 then
+    File.write(file, data)
+  end
+end
+
+def replaceinfiles(mapping)
+  Dir.glob("*.{h,c}") do |file|
+    replaceinfile(mapping, file)
+  end
+end
+
+
+SOURCE = <<'__eos__'
+
+    LITERAL_EXPRESSION,
+    BINARY_EXPRESSION,
+    UNARY_EXPRESSION,
+    VAR_EXPRESSION,
+    ASSIGN_EXPRESSION,
+    CALL_EXPRESSION,
+    SET_EXPRESSION,
+    GET_EXPRESSION,
+    LAMBDA_EXPRESSION,
+    ARRAY_EXPRESSION,
+    OBJECT_EXPRESSION,
+    SUBSCRIPT_EXPRESSION,
+    THIS_EXPRESSION,
+    SUPER_EXPRESSION,
+    RANGE_EXPRESSION,
+    TERNARY_EXPRESSION,
+    INTERPOLATION_EXPRESSION,
+    REFERENCE_EXPRESSION,
+
+    EXPRESSION_STATEMENT,
+    BLOCK_STATEMENT,
+    IF_STATEMENT,
+    WHILE_STATEMENT,
+    FOR_STATEMENT,
+    VAR_STATEMENT,
+    CONTINUE_STATEMENT,
+    BREAK_STATEMENT,
+    FUNCTION_STATEMENT,
+    RETURN_STATEMENT,
+    METHOD_STATEMENT,
+    CLASS_STATEMENT,
+    FIELD_STATEMENT
 __eos__
 
-codes = codes.strip.split(",").map(&:strip).reject(&:empty?)
-
-strings = [
-   "unclosed macro.",
-   "unknown macro '%.*s'.",
-   "unexpected character '%c'",
-   "unterminated string",
-   "invalid escape character '%c'",
-   "interpolation nesting is too deep, maximum is %i",
-   "number is too big to be represented by a single literal",
-   "expected '%c' after '%c', got '%c'",
-   "expected %s, got '%.*s'",
-   "invalid assigment target",
-   "function cannot have more than 255 arguments, got %i",
-   "if-statement can have only one else-branch",
-   "for-loops using in-iteration must declare a new variable",
-   "expected declaration of either getter or setter, got none",
-   "operator methods cannot be static or defined in static classes",
-   "class cannot inherit itself",
-   "all static fields must be defined before the methods",
-   "expected statement but got nothing",
-   "expected expression after '%.*s', got '%.*s'",
-   "default arguments must always be in the end of the argument list.",
-   "too many constants for one chunk",
-   "too many private locals for one module",
-   "variable '%.*s' was already declared in this scope",
-   "too many local variables for one function",
-   "too many upvalues for one function",
-   "variable '%.*s' cannot use itself in its initializer",
-   "too much code to jump over",
-   "'super' cannot be used in class '%s', because it does not have a super class",
-   "'this' cannot be used %s",
-   "'super' cannot be used %s",
-   "unknown expression with id '%i'",
-   "unknown statement with id '%i'",
-   "cannot use '%s' outside of loops",
-   "cannot use 'return' in constructors",
-   "constructors cannot be static (at least for now)",
-   "attempt to modify constant '%.*s'",
-   "invalid refence target",
-]
-
-codes.each.with_index do |code, i|
-  str = strings[i]
-  astr = ("(" + code + ") " + str)
-  printf("case %s:\n    return %p;\n", code, astr)
+def makemapping
+  map = {}
+  items = SOURCE.strip.split(",").map(&:strip).reject(&:empty?)
+  items.each.with_index do |str, i|
+    newname = str.gsub(/_(EXPRESSION|STATEMENT)$/, "").gsub(/_/, "")
+    newname = "LIT_EXPR_" + newname
+    if map.key?(str) then
+      $stderr.printf("!!! key %p already exists (was %p)\n", newname, map[str])
+      exit(1)
+    end
+    map[str] = newname
+    
+    $stderr.printf("%p -> %p\n", str, newname)
+  end
+  return map
 end
+
+begin
+  doit = false
+  OptionParser.new{|prs|
+    prs.on("-f", "--doit"){
+      doit = true
+    }
+  }.parse!
+  mapping = makemapping()
+  if doit then
+    replaceinfiles(mapping)
+  end
+end
+

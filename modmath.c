@@ -170,7 +170,7 @@ static size_t* extract_random_data(LitState* state, LitValue instance)
 
 static LitValue random_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
-    LitUserdata* userdata = lit_create_userdata(vm->state, sizeof(size_t), false);
+    LitUserdata* userdata = lit_object_makeuserdata(vm->state, sizeof(size_t), false);
     lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_makeobject(userdata));
 
     size_t* data = (size_t*)userdata->data;

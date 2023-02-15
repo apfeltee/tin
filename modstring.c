@@ -578,6 +578,16 @@ bool lit_string_equal(LitState* state, LitString* a, LitString* b)
 
 LitValue util_invalid_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv);
 
+
+static LitValue objfn_string_fromcharcode(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+{
+    char ch;
+    LitString* s;
+    ch = lit_value_checknumber(vm, argv, argc, 0);
+    s = lit_string_copy(vm->state, &ch, 1);
+    return lit_value_makeobject(s);
+}
+
 static LitValue objfn_string_plus(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
     LitString* selfstr;
@@ -1085,6 +1095,7 @@ void lit_open_string_library(LitState* state)
         {
             lit_class_inheritfrom(state, klass, state->objectvalue_class);
             lit_class_bindconstructor(state, klass, util_invalid_constructor);
+            lit_class_bindstaticmethod(state, klass, "fromCharCode", objfn_string_fromcharcode);
             lit_class_bindmethod(state, klass, "+", objfn_string_plus);
             lit_class_bindmethod(state, klass, "[]", objfn_string_subscript);
             lit_class_bindmethod(state, klass, "<", objfn_string_less);
@@ -1110,6 +1121,7 @@ void lit_open_string_library(LitState* state)
             }
             {
                 lit_class_bindgetset(state, klass, "toByte", objfn_string_tobyte, NULL, false);
+                lit_class_bindgetset(state, klass, "ord", objfn_string_tobyte, NULL, false);
             }
             lit_class_bindmethod(state, klass, "contains", objfn_string_contains);
             lit_class_bindmethod(state, klass, "startsWith", objfn_string_startswith);

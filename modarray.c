@@ -604,7 +604,7 @@ static LitValue objfn_array_sort(LitVM* vm, LitValue instance, size_t argc, LitV
     LitValList* vl;
     vl = &lit_value_asarray(instance)->list;
     /*
-    if(argc == 1 && lit_is_callable_function(argv[0]))
+    if(argc == 1 && lit_value_iscallablefunction(argv[0]))
     {
         util_custom_quick_sort(vm, vl->values, vl->count, argv[0]);
     }

@@ -563,9 +563,9 @@ void lit_open_map_library(LitState* state);
 void lit_open_range_library(LitState* state);
 void lit_open_fiber_library(LitState* state);
 void lit_open_module_library(LitState* state);
-void lit_open_function_library(LitState* state);
+void lit_state_openfunctionlibrary(LitState* state);
 void lit_open_class_library(LitState* state);
-void lit_open_object_library(LitState* state);
+void lit_state_openobjectlibrary(LitState* state);
 
 
 void lit_open_core_library(LitState* state)
@@ -577,14 +577,14 @@ void lit_open_core_library(LitState* state)
     */
     {
         lit_open_class_library(state);
-        lit_open_object_library(state);
+        lit_state_openobjectlibrary(state);
         lit_open_string_library(state);
         lit_open_array_library(state);
         lit_open_map_library(state);
         lit_open_range_library(state);
         lit_open_fiber_library(state);
         lit_open_module_library(state);
-        lit_open_function_library(state);
+        lit_state_openfunctionlibrary(state);
     }
     {
         klass = lit_create_classobject(state, "Number");

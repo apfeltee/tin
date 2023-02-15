@@ -625,7 +625,7 @@ struct LitFiber
     size_t arg_count;
     LitUpvalue* open_upvalues;
     LitModule* module;
-    LitValue lit_emitter_raiseerror;
+    LitValue errorval;
     bool abort;
     bool catcher;
 };
@@ -782,16 +782,14 @@ struct LitVM
 
 #include "prot.inc"
 
-#if 0
-
+#if 1
     #define lit_value_asnumber(v) \
         ( ((v).isfixednumber) ? ((v).numfixedval) : ((v).numfloatval) )
-
 #else
     #define lit_value_asnumber(v) (v).numfloatval
 #endif
 
-#define lit_value_makeobject(obj) lit_value_makeobject_actual((LitObject*)obj)
+#define lit_value_makeobject(obj) lit_value_fromobject_actual((LitObject*)obj)
 
 #define lit_value_istype(value, t) \
     (lit_value_isobject(value) && (lit_value_asobject(value) != NULL) && (lit_value_asobject(value)->type == t))

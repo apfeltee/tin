@@ -1,33 +1,84 @@
+  # LitFunction * lit_create_function(LitState *state, LitModule *module);
+  "lit_create_function": "lit_object_makefunction"
 
-  "LitExpression": "LitAstExpression"
-  "LitLiteralExpr": "LitAstLiteralExpr"
-  "LitBinaryExpr": "LitAstBinaryExpr"
-  "LitUnaryExpr": "LitAstUnaryExpr"
-  "LitVarExpr": "LitAstVarExpr"
-  "LitAssignExpr": "LitAstAssignExpr"
-  "LitCallExpr": "LitAstCallExpr"
-  "LitGetExpr": "LitAstGetExpr"
-  "LitSetExpr": "LitAstSetExpr"
-  "LitLambdaExpr": "LitAstLambdaExpr"
-  "LitArrayExpr": "LitAstArrayExpr"
-  "LitObjectExpr": "LitAstObjectExpr"
-  "LitSubscriptExpr": "LitAstIndexExpr"
-  "LitThisExpr": "LitAstThisExpr"
-  "LitSuperExpr": "LitAstSuperExpr"
-  "LitRangeExpr": "LitAstRangeExpr"
-  "LitTernaryExpr": "LitAstTernaryExpr"
-  "LitInterpolationExpr": "LitAstStrInterExpr"
-  "LitReferenceExpr": "LitAstRefExpr"
-  "LitExpressionExpr": "LitAstExprExpr"
-  "LitBlockExpr": "LitAstBlockExpr"
-  "LitAssignVarExpr": "LitAstAssignVarExpr"
-  "LitIfExpr": "LitAstIfExpr"
-  "LitWhileExpr": "LitAstWhileExpr"
-  "LitForExpr": "LitAstForExpr"
-  "LitContinueExpr": "LitAstContinueExpr"
-  "LitBreakExpr": "LitAstBreakExpr"
-  "LitFunctionExpr": "LitAstFunctionExpr"
-  "LitReturnExpr": "LitAstReturnExpr"
-  "LitMethodExpr": "LitAstMethodExpr"
-  "LitClassExpr": "LitAstClassExpr"
-  "LitFieldExpr": "LitAstFieldExpr"
+  # LitClosure * lit_create_closure(LitState *state, LitFunction *function);
+  "lit_create_closure": "lit_object_makeclosure"
+
+  # LitNativeFunction * lit_create_native_function(LitState *state, LitNativeFunctionFn function, LitString *name);
+  "lit_create_native_function": "lit_object_makenativefunction"
+
+  # LitNativePrimFunction * lit_create_native_primitive(LitState *state, LitNativePrimitiveFn function, LitString *name);
+  "lit_create_native_primitive": "lit_object_makenativeprimitive"
+
+  # LitNativeMethod * lit_create_native_method(LitState *state, LitNativeMethodFn method, LitString *name);
+  "lit_create_native_method": "lit_object_makenativemethod"
+
+  # LitPrimitiveMethod * lit_create_primitive_method(LitState *state, LitPrimitiveMethodFn method, LitString *name);
+  "lit_create_primitive_method": "lit_object_makeprimitivemethod"
+
+  # LitBoundMethod * lit_create_bound_method(LitState *state, LitValue receiver, LitValue method);
+  "lit_create_bound_method": "lit_object_makeboundmethod"
+
+  # _Bool lit_is_callable_function(LitValue value);
+  "lit_is_callable_function": "lit_value_iscallablefunction"
+
+  # static LitValue objfn_function_tostring(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_function_tostring": "objfn_function_tostring"
+
+  # static LitValue objfn_function_name(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_function_name": "objfn_function_name"
+
+  # void lit_open_function_library(LitState *state);
+  "lit_open_function_library": "lit_state_openfunctionlibrary"
+
+  # LitUpvalue * lit_create_upvalue(LitState *state, LitValue *slot);
+  "lit_create_upvalue": "lit_object_makeupvalue"
+
+  # LitModule * lit_create_module(LitState *state, LitString *name);
+  "lit_create_module": "lit_object_makemodule"
+
+  # LitUserdata * lit_create_userdata(LitState *state, size_t size, _Bool ispointeronly);
+  "lit_create_userdata": "lit_object_makeuserdata"
+
+  # LitRange * lit_create_range(LitState *state, double from, double to);
+  "lit_create_range": "lit_object_makerange"
+
+  # LitReference * lit_create_reference(LitState *state, LitValue *slot);
+  "lit_create_reference": "lit_object_makereference"
+
+  # void lit_object_destroy(LitState *state, LitObject *object);
+  "lit_object_destroy": "lit_object_destroy"
+
+  # void lit_object_destroylistof(LitState *state, LitObject *objects);
+  "lit_object_destroylistof": "lit_object_destroylistof"
+
+  # LitValue lit_get_function_name(LitVM *vm, LitValue instance);
+  "lit_get_function_name": "lit_function_getname"
+
+  # static LitValue objfn_object_class(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_object_class": "objfn_object_class"
+
+  # static LitValue objfn_object_super(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_object_super": "objfn_object_super"
+
+  # static LitValue objfn_object_tostring(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_object_tostring": "objfn_object_tostring"
+
+  # static void fillmap(LitState *state, LitMap *destmap, LitTable *fromtbl, _Bool includenullkeys);
+  "fillmap": "fillmap"
+
+  # static LitValue objfn_object_tomap(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_object_tomap": "objfn_object_tomap"
+
+  # static LitValue objfn_object_subscript(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_object_subscript": "objfn_object_subscript"
+
+  # static LitValue objfn_object_iterator(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_object_iterator": "objfn_object_iterator"
+
+  # static LitValue objfn_object_iteratorvalue(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
+  "objfn_object_iteratorvalue": "objfn_object_iteratorvalue"
+
+  # void lit_open_object_library(LitState *state);
+  "lit_open_object_library": "lit_state_openobjectlibrary"
+

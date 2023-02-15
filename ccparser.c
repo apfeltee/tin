@@ -282,24 +282,24 @@ static void lit_parser_raisestring(LitParser* parser, LitToken* token, const cha
     lit_parser_sync(parser);
 }
 
-static void lit_parser_raiseat(LitParser* parser, LitToken* token, LitError lit_emitter_raiseerror, va_list args)
+static void lit_parser_raiseat(LitParser* parser, LitToken* token, LitError ecode, va_list args)
 {
-    lit_parser_raisestring(parser, token, lit_vformat_error(parser->state, token->line, lit_emitter_raiseerror, args)->chars);
+    lit_parser_raisestring(parser, token, lit_vformat_error(parser->state, token->line, ecode, args)->chars);
 }
 
-static void lit_parser_raiseatcurrent(LitParser* parser, LitError lit_emitter_raiseerror, ...)
+static void lit_parser_raiseatcurrent(LitParser* parser, LitError ecode, ...)
 {
     va_list args;
-    va_start(args, lit_emitter_raiseerror);
-    lit_parser_raiseat(parser, &parser->current, lit_emitter_raiseerror, args);
+    va_start(args, ecode);
+    lit_parser_raiseat(parser, &parser->current, ecode, args);
     va_end(args);
 }
 
-static void lit_parser_raiseerror(LitParser* parser, LitError lit_emitter_raiseerror, ...)
+static void lit_parser_raiseerror(LitParser* parser, LitError ecode, ...)
 {
     va_list args;
-    va_start(args, lit_emitter_raiseerror);
-    lit_parser_raiseat(parser, &parser->previous, lit_emitter_raiseerror, args);
+    va_start(args, ecode);
+    lit_parser_raiseat(parser, &parser->previous, ecode, args);
     va_end(args);
 }
 
@@ -425,7 +425,7 @@ static void lit_parser_ignorenewlines(LitParser* parser, bool checksemi)
     lit_parser_matchnewline(parser);
 }
 
-static void lit_parser_consume(LitParser* parser, LitTokType type, const char* lit_emitter_raiseerror)
+static void lit_parser_consume(LitParser* parser, LitTokType type, const char* onerror)
 {
     bool line;
     size_t olen;
@@ -440,7 +440,7 @@ static void lit_parser_consume(LitParser* parser, LitTokType type, const char* l
     line = parser->previous.type == LITTOK_NEW_LINE;
     olen = (line ? 8 : parser->previous.length);
     otext = (line ? "new line" : parser->previous.start);
-    fmt = lit_format_error(parser->state, parser->current.line, LITERROR_EXPECTATION_UNMET, lit_emitter_raiseerror, olen, otext)->chars;
+    fmt = lit_format_error(parser->state, parser->current.line, LITERROR_EXPECTATION_UNMET, onerror, olen, otext)->chars;
     lit_parser_raisestring(parser, &parser->current,fmt);
 }
 

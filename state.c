@@ -156,7 +156,7 @@ bool lit_state_hasglobal(LitState* state, LitString* name)
 void lit_state_defnativefunc(LitState* state, const char* name, LitNativeFunctionFn native)
 {
     lit_state_pushroot(state, (LitObject*)lit_string_copyconst(state, name));
-    lit_state_pushroot(state, (LitObject*)lit_create_native_function(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
+    lit_state_pushroot(state, (LitObject*)lit_object_makenativefunction(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
     lit_table_set(state, &state->vm->globals->values, lit_value_asstring(lit_state_peekroot(state, 1)), lit_state_peekroot(state, 0));
     lit_state_poproots(state, 2);
 }
@@ -164,7 +164,7 @@ void lit_state_defnativefunc(LitState* state, const char* name, LitNativeFunctio
 void lit_state_defnativeprimitive(LitState* state, const char* name, LitNativePrimitiveFn native)
 {
     lit_state_pushroot(state, (LitObject*)lit_string_copyconst(state, name));
-    lit_state_pushroot(state, (LitObject*)lit_create_native_primitive(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
+    lit_state_pushroot(state, (LitObject*)lit_object_makenativeprimitive(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
     lit_table_set(state, &state->vm->globals->values, lit_value_asstring(lit_state_peekroot(state, 1)), lit_state_peekroot(state, 0));
     lit_state_poproots(state, 2);
 }
@@ -356,9 +356,9 @@ static inline LitInterpretResult execute_call(LitState* state, LitCallFrame* fra
     }
     fiber = state->vm->fiber;
     result = lit_vm_execfiber(state, fiber);
-    if(!lit_value_isnull(fiber->lit_emitter_raiseerror))
+    if(!lit_value_isnull(fiber->errorval))
     {
-        result.result = fiber->lit_emitter_raiseerror;
+        result.result = fiber->errorval;
     }
     return result;
 }

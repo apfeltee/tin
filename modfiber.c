@@ -30,7 +30,7 @@ LitFiber* lit_create_fiber(LitState* state, LitModule* module, LitFunction* func
     fiber->arg_count = 0;
     fiber->module = module;
     fiber->catcher = false;
-    fiber->lit_emitter_raiseerror = NULL_VALUE;
+    fiber->errorval = NULL_VALUE;
     fiber->open_upvalues = NULL;
     fiber->abort = false;
     frame = &fiber->frames[0];
@@ -107,7 +107,7 @@ static LitValue objfn_fiber_error(LitVM* vm, LitValue instance, size_t argc, Lit
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_asfiber(instance)->lit_emitter_raiseerror;
+    return lit_value_asfiber(instance)->errorval;
 }
 
 
@@ -205,7 +205,7 @@ void lit_open_fiber_library(LitState* state)
         lit_class_bindprimitive(state, klass, "run", objfn_fiber_run);
         lit_class_bindprimitive(state, klass, "try", objfn_fiber_try);
         lit_class_bindgetset(state, klass, "done", objfn_fiber_done, NULL, false);
-        lit_class_bindgetset(state, klass, "lit_emitter_raiseerror", objfn_fiber_error, NULL, false);
+        lit_class_bindgetset(state, klass, "error", objfn_fiber_error, NULL, false);
         lit_class_bindstaticprimitive(state, klass, "yield", objfn_fiber_yield);
         lit_class_bindstaticprimitive(state, klass, "yeet", objfn_fiber_yeet);
         lit_class_bindstaticprimitive(state, klass, "abort", objfn_fiber_abort);

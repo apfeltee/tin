@@ -1,13 +1,13 @@
 /* libobject.c */
-LitUpvalue *lit_create_upvalue(LitState *state, LitValue *slot);
-LitModule *lit_create_module(LitState *state, LitString *name);
-LitUserdata *lit_create_userdata(LitState *state, size_t size, bool ispointeronly);
-LitRange *lit_create_range(LitState *state, double from, double to);
-LitReference *lit_create_reference(LitState *state, LitValue *slot);
+LitUpvalue *lit_object_makeupvalue(LitState *state, LitValue *slot);
+LitModule *lit_object_makemodule(LitState *state, LitString *name);
+LitUserdata *lit_object_makeuserdata(LitState *state, size_t size, bool ispointeronly);
+LitRange *lit_object_makerange(LitState *state, double from, double to);
+LitReference *lit_object_makereference(LitState *state, LitValue *slot);
 void lit_object_destroy(LitState *state, LitObject *object);
 void lit_object_destroylistof(LitState *state, LitObject *objects);
-LitValue lit_get_function_name(LitVM *vm, LitValue instance);
-void lit_open_object_library(LitState *state);
+LitValue lit_function_getname(LitVM *vm, LitValue instance);
+void lit_state_openobjectlibrary(LitState *state);
 /* ccast.c */
 void lit_exprlist_init(LitAstExprList *array);
 void lit_exprlist_destroy(LitState *state, LitAstExprList *array);
@@ -177,10 +177,10 @@ char *lit_util_patchfilename(char *file_name);
 char *lit_util_copystring(const char *string);
 /* error.c */
 const char *lit_error_getformatstring(LitError e);
-LitString *lit_vformat_error(LitState *state, size_t line, LitError lit_emitter_raiseerror, va_list args);
-LitString *lit_format_error(LitState *state, size_t line, LitError lit_emitter_raiseerror, ...);
+LitString *lit_vformat_error(LitState *state, size_t line, LitError ecode, va_list args);
+LitString *lit_format_error(LitState *state, size_t line, LitError ecode, ...);
 /* value.c */
-LitValue lit_value_makeobject_actual(LitObject* obj);
+LitValue lit_value_fromobject_actual(LitObject* obj);
 bool lit_value_isobject(LitValue v);
 LitObject *lit_value_asobject(LitValue v);
 LitValue lit_value_makebool(LitState *state, bool b);
@@ -209,10 +209,10 @@ const char *lit_value_getstring(LitVM *vm, LitValue *args, uint8_t arg_count, ui
 LitString *lit_value_checkobjstring(LitVM *vm, LitValue *args, uint8_t arg_count, uint8_t id);
 LitInstance *lit_value_checkinstance(LitVM *vm, LitValue *args, uint8_t arg_count, uint8_t id);
 LitValue *lit_value_checkreference(LitVM *vm, LitValue *args, uint8_t arg_count, uint8_t id);
-void lit_value_ensurebool(LitVM *vm, LitValue value, const char *lit_emitter_raiseerror);
-void lit_value_ensurestring(LitVM *vm, LitValue value, const char *lit_emitter_raiseerror);
-void lit_value_ensurenumber(LitVM *vm, LitValue value, const char *lit_emitter_raiseerror);
-void lit_value_ensureobjtype(LitVM *vm, LitValue value, LitObjType type, const char *lit_emitter_raiseerror);
+void lit_value_ensurebool(LitVM *vm, LitValue value, const char *emsg);
+void lit_value_ensurestring(LitVM *vm, LitValue value, const char *emsg);
+void lit_value_ensurenumber(LitVM *vm, LitValue value, const char *emsg);
+void lit_value_ensureobjtype(LitVM *vm, LitValue value, LitObjType type, const char *emsg);
 LitValue lit_value_callnew(LitVM *vm, const char *name, LitValue *args, size_t argc, bool ignfiber);
 /* libmap.c */
 void lit_table_init(LitState *state, LitTable *table);
@@ -409,12 +409,12 @@ const char *lit_tostring_optok(LitTokType t);
 void lit_towriter_expr(LitState *state, LitWriter *wr, LitAstExpression *expr);
 void lit_towriter_ast(LitState *state, LitWriter *wr, LitAstExprList *exlist);
 /* libfunc.c */
-LitFunction *lit_create_function(LitState *state, LitModule *module);
-LitClosure *lit_create_closure(LitState *state, LitFunction *function);
-LitNativeFunction *lit_create_native_function(LitState *state, LitNativeFunctionFn function, LitString *name);
-LitNativePrimFunction *lit_create_native_primitive(LitState *state, LitNativePrimitiveFn function, LitString *name);
-LitNativeMethod *lit_create_native_method(LitState *state, LitNativeMethodFn method, LitString *name);
-LitPrimitiveMethod *lit_create_primitive_method(LitState *state, LitPrimitiveMethodFn method, LitString *name);
-LitBoundMethod *lit_create_bound_method(LitState *state, LitValue receiver, LitValue method);
-bool lit_is_callable_function(LitValue value);
-void lit_open_function_library(LitState *state);
+LitFunction *lit_object_makefunction(LitState *state, LitModule *module);
+LitClosure *lit_object_makeclosure(LitState *state, LitFunction *function);
+LitNativeFunction *lit_object_makenativefunction(LitState *state, LitNativeFunctionFn function, LitString *name);
+LitNativePrimFunction *lit_object_makenativeprimitive(LitState *state, LitNativePrimitiveFn function, LitString *name);
+LitNativeMethod *lit_object_makenativemethod(LitState *state, LitNativeMethodFn method, LitString *name);
+LitPrimitiveMethod *lit_object_makeprimitivemethod(LitState *state, LitPrimitiveMethodFn method, LitString *name);
+LitBoundMethod *lit_object_makeboundmethod(LitState *state, LitValue receiver, LitValue method);
+bool lit_value_iscallablefunction(LitValue value);
+void lit_state_openfunctionlibrary(LitState *state);

@@ -46,7 +46,7 @@ static double g_tmpdouble;
 
 static void* lit_util_instancedataset(LitVM* vm, LitValue instance, size_t typsz, CleanupFunc cleanup)
 {
-    LitUserdata* userdata = lit_create_userdata(vm->state, typsz, false);
+    LitUserdata* userdata = lit_object_makeuserdata(vm->state, typsz, false);
     userdata->cleanup_fn = cleanup;
     lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_makeobject(userdata));
     return userdata->data;
@@ -264,7 +264,7 @@ static void lit_ioutil_writefunction(FILE* file, LitFunction* function)
 static LitFunction* lit_ioutil_readfunction(LitState* state, LitEmulatedFile* file, LitModule* module)
 {
     LitFunction* function;
-    function = lit_create_function(state, module);
+    function = lit_object_makefunction(state, module);
     lit_ioutil_readchunk(state, file, module, &function->chunk);
     function->name = lit_emufile_readstring(state, file);
     function->arg_count = lit_emufile_readuint8(file);
@@ -457,7 +457,7 @@ LitModule* lit_ioutil_readmodule(LitState* state, const char* input, size_t len)
     LitModule* first = NULL;
     for(j = 0; j < module_count; j++)
     {
-        module = lit_create_module(state, lit_emufile_readstring(state, &file));
+        module = lit_object_makemodule(state, lit_emufile_readstring(state, &file));
         privates = &module->private_names->values;
         privates_count = lit_emufile_readuint16(&file);
         enabled = !((bool)lit_emufile_readuint8(&file));
@@ -542,7 +542,7 @@ static LitValue objmethod_file_constructor(LitVM* vm, LitValue instance, size_t 
             hnd = fopen(path, mode);
             if(hnd == NULL)
             {
-                lit_vm_raiseexitingerror(vm, "Failed to open file %s with mode %s (C lit_emitter_raiseerror: %s)", path, mode, strerror(errno));
+                lit_vm_raiseexitingerror(vm, "Failed to open file %s with mode %s (C error: %s)", path, mode, strerror(errno));
             }
             data = (LitFileData*)lit_util_instancedataset(vm, instance, sizeof(LitFileData), lit_userfile_cleanup);
             data->path = (char*)path;
@@ -893,7 +893,7 @@ static void lit_userfile_makehandle(LitState* state, LitValue fileval, const cha
         hstd->name = name;
         hstd->canread = canread;
         hstd->canwrite = canwrite; 
-        userhnd = lit_create_userdata(state, sizeof(LitStdioHandle), true);
+        userhnd = lit_object_makeuserdata(state, sizeof(LitStdioHandle), true);
         userhnd->data = hstd;
         userhnd->canfree = false;
         userhnd->cleanup_fn = lit_userfile_destroyhandle;

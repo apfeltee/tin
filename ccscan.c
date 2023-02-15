@@ -52,14 +52,14 @@ static LitToken lit_lex_maketoken(LitScanner* scanner, LitTokType type)
     return token;
 }
 
-static LitToken lit_lex_makeerrortoken(LitScanner* scanner, LitError lit_emitter_raiseerror, ...)
+static LitToken lit_lex_makeerrortoken(LitScanner* scanner, LitError ecode, ...)
 {
     va_list args;
     LitToken token;
     LitString* result;
     scanner->had_error = true;
-    va_start(args, lit_emitter_raiseerror);
-    result = lit_vformat_error(scanner->state, scanner->line, lit_emitter_raiseerror, args);
+    va_start(args, ecode);
+    result = lit_vformat_error(scanner->state, scanner->line, ecode, args);
     va_end(args);
     token.type = LITTOK_ERROR;
     token.start = result->chars;
