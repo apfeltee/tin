@@ -635,21 +635,6 @@ struct LitOptimizer
     bool mark_used;
 };
 
-struct LitPreprocessor
-{
-    LitState* state;
-    LitTable defined;
-    /*
-	 * A little bit dirty hack:
-	 * We need to store pointers (8 bytes in size),
-	 * and so that we don't have to declare a new
-	 * array type, that we will use only once,
-	 * I'm using LitValList here, because LitValue
-	 * also has the same size (8 bytes)
-	 */
-    LitValList open_ifs;
-};
-
 
 static inline bool lit_is_digit(char c)
 {

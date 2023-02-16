@@ -48,7 +48,7 @@ static void* lit_util_instancedataset(LitVM* vm, LitValue instance, size_t typsz
 {
     LitUserdata* userdata = lit_object_makeuserdata(vm->state, typsz, false);
     userdata->cleanup_fn = cleanup;
-    lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_makeobject(userdata));
+    lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_fromobject(userdata));
     return userdata->data;
 }
 
@@ -384,15 +384,15 @@ static void lit_ioutil_readchunk(LitState* state, LitEmulatedFile* file, LitModu
             {
                 case LITTYPE_STRING:
                     {
-                        //chunk->constants.values[i] = lit_value_makeobject(lit_emufile_readstring(state, file));
-                        lit_vallist_set(&chunk->constants, i, lit_value_makeobject(lit_emufile_readstring(state, file)));
+                        //chunk->constants.values[i] = lit_value_fromobject(lit_emufile_readstring(state, file));
+                        lit_vallist_set(&chunk->constants, i, lit_value_fromobject(lit_emufile_readstring(state, file)));
 
                     }
                     break;
                 case LITTYPE_FUNCTION:
                     {
-                        //chunk->constants.values[i] = lit_value_makeobject(lit_ioutil_readfunction(state, file, module));
-                        lit_vallist_set(&chunk->constants, i, lit_value_makeobject(lit_ioutil_readfunction(state, file, module)));
+                        //chunk->constants.values[i] = lit_value_fromobject(lit_ioutil_readfunction(state, file, module));
+                        lit_vallist_set(&chunk->constants, i, lit_value_fromobject(lit_ioutil_readfunction(state, file, module)));
                     }
                     break;
                 default:
@@ -473,7 +473,7 @@ LitModule* lit_ioutil_readmodule(LitState* state, const char* input, size_t len)
             }
         }
         module->main_function = lit_ioutil_readfunction(state, &file, module);
-        lit_table_set(state, &state->vm->modules->values, module->name, lit_value_makeobject(module));
+        lit_table_set(state, &state->vm->modules->values, module->name, lit_value_fromobject(module));
         if(j == 0)
         {
             first = module;
@@ -695,7 +695,7 @@ static LitValue objmethod_file_readall(LitVM* vm, LitValue instance, size_t argc
     }
     result->hash = lit_util_hashstring(result->chars, actuallength);
     lit_state_regstring(vm->state, result);
-    return lit_value_makeobject(result);
+    return lit_value_fromobject(result);
 }
 
 static LitValue objmethod_file_readline(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -715,7 +715,7 @@ static LitValue objmethod_file_readline(LitVM* vm, LitValue instance, size_t arg
         LIT_FREE(vm->state, sizeof(char), line);
         return NULL_VALUE;
     }
-    return lit_value_makeobject(lit_string_take(vm->state, line, strlen(line) - 1, false));
+    return lit_value_fromobject(lit_string_take(vm->state, line, strlen(line) - 1, false));
 }
 
 static LitValue objmethod_file_readbyte(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -763,7 +763,7 @@ static LitValue objmethod_file_readstring(LitVM* vm, LitValue instance, size_t a
     LitFileData* data = (LitFileData*)lit_util_instancedataget(vm, instance);
     LitString* string = lit_ioutil_readstring(vm->state, data->handle);
 
-    return string == NULL ? NULL_VALUE : lit_value_makeobject(string);
+    return string == NULL ? NULL_VALUE : lit_value_fromobject(string);
 }
 
 static LitValue objmethod_file_getlastmodified(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -822,7 +822,7 @@ static LitValue objfunction_directory_listfiles(LitVM* vm, LitValue instance, si
         DIR* dir = opendir(lit_value_checkstring(vm, argv, argc, 0));
         if(dir == NULL)
         {
-            return lit_value_makeobject(array);
+            return lit_value_fromobject(array);
         }
         while((ep = readdir(dir)))
         {
@@ -834,7 +834,7 @@ static LitValue objfunction_directory_listfiles(LitVM* vm, LitValue instance, si
         closedir(dir);
     }
     #endif
-    return lit_value_makeobject(array);
+    return lit_value_fromobject(array);
 }
 
 static LitValue objfunction_directory_listdirs(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -865,7 +865,7 @@ static LitValue objfunction_directory_listdirs(LitVM* vm, LitValue instance, siz
         }
         lit_fs_dirclose(&rd);
     }
-    return lit_value_makeobject(array);
+    return lit_value_fromobject(array);
 }
 
 static void lit_userfile_destroyhandle(LitState* state, LitUserdata* userdata, bool mark)
@@ -899,8 +899,8 @@ static void lit_userfile_makehandle(LitState* state, LitValue fileval, const cha
         userhnd->cleanup_fn = lit_userfile_destroyhandle;
         varname = lit_string_copyconst(state, name);
         descname = lit_string_copyconst(state, name);
-        args[0] = lit_value_makeobject(userhnd);
-        args[1] = lit_value_makeobject(descname);
+        args[0] = lit_value_fromobject(userhnd);
+        args[1] = lit_value_fromobject(descname);
         res = lit_state_callvalue(state, fileval, args, 2, false);
         //fprintf(stderr, "lit_userfile_makehandle(%s, hnd=%p): res.type=%d, res.result=%s\n", name, hnd, res.type, lit_tostring_typename(res.result));
         lit_state_setglobal(state, varname, res.result);
@@ -946,7 +946,7 @@ void lit_open_file_library(LitState* state)
             lit_class_bindmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
             lit_class_bindgetset(state, klass, "exists", objmethod_file_exists, NULL, false);
         }
-        lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
         if(klass->super == NULL)
         {
             lit_class_inheritfrom(state, klass, state->objectvalue_class);
@@ -959,7 +959,7 @@ void lit_open_file_library(LitState* state)
             lit_class_bindstaticmethod(state, klass, "listFiles", objfunction_directory_listfiles);
             lit_class_bindstaticmethod(state, klass, "listDirectories", objfunction_directory_listdirs);
         }
-        lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
         if(klass->super == NULL)
         {
             lit_class_inheritfrom(state, klass, state->objectvalue_class);

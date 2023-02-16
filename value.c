@@ -118,6 +118,8 @@ bool lit_value_isnumber(LitValue v)
 
 bool lit_valcompare_object(LitState* state, const LitValue a, const LitValue b)
 {
+    (void)state;
+    (void)b;
     switch(a.obj->type)
     {
         default:
@@ -161,6 +163,14 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
         {
             case LITVAL_NUMBER:
                 {
+                    if(a.isfixednumber && b.isfixednumber)
+                    {
+                        return (lit_value_asfixednumber(a) == lit_value_asfixednumber(b));
+                    }
+                    else if(!a.isfixednumber && !b.isfixednumber)
+                    {
+                        return (lit_value_asfloatnumber(a) == lit_value_asfloatnumber(b));
+                    }
                     return (lit_value_asnumber(a) == lit_value_asnumber(b));
                 }
                 break;
@@ -251,7 +261,7 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
     frame->slots = fiber->stack_top;
     frame->result_ignored = false;
     frame->return_to_c = true;
-    PUSH(lit_value_makeobject(function));
+    PUSH(lit_value_fromobject(function));
     PUSH(object);
     result = lit_vm_execfiber(state, fiber);
     if(result.type != LITRESULT_OK)
@@ -402,7 +412,7 @@ LitValue lit_value_callnew(LitVM* vm, const char* name, LitValue* args, size_t a
     klass = lit_value_asclass(value);
     if(klass->init_method == NULL)
     {
-        return lit_value_makeobject(lit_create_instance(vm->state, klass));
+        return lit_value_fromobject(lit_create_instance(vm->state, klass));
     }
     return lit_state_callmethod(vm->state, value, value, args, argc, ignfiber).result;
 }

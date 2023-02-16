@@ -5,7 +5,8 @@ var B64_KEYCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567
 function indexof(str, ch)
 {
     var i = 0;
-    for(i=0; i<str.length; i++)
+    var len = str.length;
+    for(i=0; i<len; i++)
     {
         if(str[i] == ch)
         {
@@ -27,62 +28,65 @@ function strcharat(str, idx)
 
 function util_utf8_encode(string)
 {
-    var utftext = "";
-    for (var n = 0; n < string.length; n++)
+    var buf = [];
+    var n = 0;
+    var len = string.length;
+    for(n = 0; n < len; n++)
     {
         var c = strcharat(string, n);
+        println("c = ", c);
         if (c < 128)
         {
-            utftext += strfromcharcode(c);
+            buf.push(strfromcharcode(c));
         }
         else if((c > 127) && (c < 2048))
         {
-            utftext += strfromcharcode((c >> 6) | 192);
-            utftext += strfromcharcode((c & 63) | 128);
+            buf.push(strfromcharcode((c >> 6) | 192));
+            buf.push(strfromcharcode((c & 63) | 128));
         }
         else
         {
-            utftext += strfromcharcode((c >> 12) | 224);
-            utftext += strfromcharcode(((c >> 6) & 63) | 128);
-            utftext += strfromcharcode((c & 63) | 128);
+            buf.push(strfromcharcode((c >> 12) | 224));
+            buf.push(strfromcharcode(((c >> 6) & 63) | 128));
+            buf.push(strfromcharcode((c & 63) | 128));
         }
     }
-    return utftext;
+    return buf.join("");
 }
 
-function util_utf8_decode(utftext)
+function util_utf8_decode(string)
 {
-    var string = "";
+    var buf = [];
     var i = 0;
     var c = c1 = c2 = 0;
-    while ( i < utftext.length )
+    while(i < string.length)
     {
-        c = strcharat(utftext, i);
+        c = strcharat(string, i);
         if (c < 128)
         {
-            string += strfromcharcode(c);
+            buf.push(strfromcharcode(c));
             i++;
         }
         else if((c > 191) && (c < 224))
         {
-            c2 = strcharat(utftext, i+1);
-            string += strfromcharcode(((c & 31) << 6) | (c2 & 63));
+            c2 = strcharat(string, i+1);
+            buf.push(strfromcharcode(((c & 31) << 6) | (c2 & 63)));
             i += 2;
         }
         else
         {
-            c2 = strcharat(utftext, i+1);
-            c3 = strcharat(utftext, i+2);
-            string += strfromcharcode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+            c2 = strcharat(string, i+1);
+            c3 = strcharat(string, i+2);
+            buf.push(strfromcharcode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63)));
             i += 3;
         }
     }
-    return string;
+    return buf.join("");
 }
 
 function b64encode(input)
 {
-    var output = "";
+    var buf = [];
     var i = 0;
     input = util_utf8_encode(input);
     while (i < input.length)
@@ -94,6 +98,7 @@ function b64encode(input)
         var enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
         var enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
         var enc4 = chr3 & 63;
+        /*
         //if (isNaN(chr2 != chr2)
         if(chr2 != chr2)
         {
@@ -104,17 +109,21 @@ function b64encode(input)
         {
             enc4 = 64;
         }
-        output = output + B64_KEYCHARS.charAt(enc1) + B64_KEYCHARS.charAt(enc2) + B64_KEYCHARS.charAt(enc3) + B64_KEYCHARS.charAt(enc4);
+        */
+        buf.push(B64_KEYCHARS.charAt(enc1));
+        buf.push(B64_KEYCHARS.charAt(enc2));
+        buf.push(B64_KEYCHARS.charAt(enc3));
+        buf.push(B64_KEYCHARS.charAt(enc4));
     }
-
-    return output;
+    return buf.join("");
 }
 
 function b64decode(input)
 {
-    var output = "";
+    var buf = [];
     var i = 0;
-    while (i < input.length)
+    var len = input.length;
+    while (i < len)
     {
         var enc1 = indexof(B64_KEYCHARS, input.charAt(i++));
         var enc2 = indexof(B64_KEYCHARS, input.charAt(i++));
@@ -123,18 +132,17 @@ function b64decode(input)
         var chr1 = (enc1 << 2) | (enc2 >> 4);
         var chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
         var chr3 = ((enc3 & 3) << 6) | enc4;
-        output = output + strfromcharcode(chr1);
+        buf.push(strfromcharcode(chr1));
         if (enc3 != 64)
         {
-            output = output + strfromcharcode(chr2);
+            buf.push(strfromcharcode(chr2));
         }
         if (enc4 != 64)
         {
-            output = output + strfromcharcode(chr3);
+            buf.push(strfromcharcode(chr3));
         }
     }
-    output = util_utf8_decode(output);
-    return output;
+    return util_utf8_decode(buf.join(""));
 }
 
 
@@ -143,11 +151,11 @@ function b64decode(input)
 const string = "Learning JavaScript";
 
 // encode the String
-const encs = b64encode(string);
+var encs = b64encode(string);
 println(encs);
 
 // decode the String
 
-//const decs = b64decode(encs);
-//println(decs);
+var decs = b64decode(encs);
+println(decs);
 

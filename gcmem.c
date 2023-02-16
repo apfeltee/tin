@@ -4,7 +4,7 @@
 #include <time.h>
 #include "priv.h"
 
-#if 1
+#if 0
 static LitObject g_stackmem[1024 * (1024 * 4)];
 static size_t g_objcount = 0;
 #endif
@@ -92,7 +92,7 @@ void lit_gcmem_markobject(LitVM* vm, LitObject* object)
 
 #ifdef LIT_LOG_MARKING
     printf("%p mark ", (void*)object);
-    lit_towriter_value(lit_value_makeobject(object));
+    lit_towriter_value(lit_value_fromobject(object));
     printf("\n");
 #endif
 
@@ -137,7 +137,6 @@ void lit_gcmem_vmmarkroots(LitVM* vm)
     lit_gcmem_markobject(vm, (LitObject*)state->api_name);
     lit_gcmem_markobject(vm, (LitObject*)state->api_function);
     lit_gcmem_markobject(vm, (LitObject*)state->api_fiber);
-    lit_gcmem_marktable(vm, &state->preprocessor->defined);
     lit_gcmem_marktable(vm, &vm->modules->values);
     lit_gcmem_marktable(vm, &vm->globals->values);
 }
@@ -167,7 +166,7 @@ void lit_gcmem_vmblackobject(LitVM* vm, LitObject* object)
 
 #ifdef LIT_LOG_BLACKING
     printf("%p blacken ", (void*)object);
-    lit_towriter_value(lit_value_makeobject(object));
+    lit_towriter_value(lit_value_fromobject(object));
     printf("\n");
 #endif
     switch(object->type)
@@ -427,7 +426,7 @@ void lit_open_gc_library(LitState* state)
         lit_class_bindgetset(state, klass, "nextRound", objfn_gc_next_round, NULL, true);
         lit_class_bindstaticmethod(state, klass, "trigger", objfn_gc_trigger);
     }
-    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
     if(klass->super == NULL)
     {
         lit_class_inheritfrom(state, klass, state->objectvalue_class);

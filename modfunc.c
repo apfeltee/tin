@@ -125,7 +125,7 @@ void lit_state_openfunctionlibrary(LitState* state)
         lit_class_bindgetset(state, klass, "name", objfn_function_name, NULL, false);
         state->functionvalue_class = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
     if(klass->super == NULL)
     {
         lit_class_inheritfrom(state, klass, state->objectvalue_class);

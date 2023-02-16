@@ -275,7 +275,6 @@ int main(int argc, char* argv[])
 {
     int i;
     bool cmdfailed;
-    bool replexit;
     const char* dm;
     const char* filename;
     LitArray* arg_array;
@@ -283,7 +282,6 @@ int main(int argc, char* argv[])
     FlagContext_t fx;
     Options_t opts;
     LitResult result;
-    replexit = false;
     cmdfailed = false;
     result = LITRESULT_OK;
     populate_flags(argc, 1, argv, "ed", &fx);
@@ -323,7 +321,7 @@ int main(int argc, char* argv[])
             {
                 lit_vallist_push(state, &arg_array->list, lit_value_makestring(state, fx.positional[i]));
             }
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_makeobject(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(arg_array));
             if(opts.codeline)
             {
                 result = lit_state_execsource(state, "<-e>", opts.codeline, strlen(opts.codeline)).type;
@@ -349,7 +347,6 @@ int main(int argc, char* argv[])
 int oldmain(int argc, const char* argv[])
 {
     int i;
-    int ec;
     int args_left;
     int num_files_to_run;
     char c;
@@ -374,8 +371,6 @@ int oldmain(int argc, const char* argv[])
     LitModule* module;
     LitResult result;
     LitArray* arg_array;
-
-    ec = 0;
     state = lit_make_state();
     lit_open_libraries(state);
     num_files_to_run = 0;
@@ -414,11 +409,7 @@ int oldmain(int argc, const char* argv[])
     {
         args_left = argc - i - 1;
         arg = argv[i];
-        if(arg[0] == '-' && arg[1] == 'D')
-        {
-            lit_preproc_setdef(state, arg + 2);
-        }
-        else if(arg[0] == '-' && arg[1] == 'O')
+        if(arg[0] == '-' && arg[1] == 'O')
         {
             enable_optimization = true;
 
@@ -546,7 +537,7 @@ int oldmain(int argc, const char* argv[])
                 lit_vallist_push(state, &arg_array->list, lit_value_makestring(state, arg_string));
             }
 
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_makeobject(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(arg_array));
             break;
         }
         else if(arg[0] == '-')
@@ -572,7 +563,7 @@ int oldmain(int argc, const char* argv[])
             {
                 arg_array = lit_create_array(state);
             }
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_makeobject(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(arg_array));
             for(i = 0; i < num_files_to_run; i++)
             {
                 file = files_to_run[i];

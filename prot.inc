@@ -122,12 +122,6 @@ void lit_class_setstaticfield(LitState *state, LitClass *cl, const char *name, L
 LitField *lit_class_bindgetset(LitState *state, LitClass *cl, const char *name, LitNativeMethodFn getfn, LitNativeMethodFn setfn, bool isstatic);
 void lit_class_inheritfrom(LitState *state, LitClass *current, LitClass *other);
 void lit_open_class_library(LitState *state);
-/* ccprepr.c */
-void lit_preproc_init(LitState *state, LitPreprocessor *preprocessor);
-void lit_preproc_destroy(LitPreprocessor *preprocessor);
-void lit_preproc_setdef(LitState *state, const char *name);
-void lit_preproc_override(char *source, int length);
-bool lit_preproc_run(LitPreprocessor *preprocessor, char *source);
 /* libfiber.c */
 LitFiber *lit_create_fiber(LitState *state, LitModule *module, LitFunction *function);
 void lit_ensure_fiber_stack(LitState *state, LitFiber *fiber, size_t needed);
@@ -393,6 +387,7 @@ void lit_astopt_setoptlevel(LitOptLevel level);
 const char *lit_astopt_getoptname(LitOptimization optimization);
 const char *lit_astopt_getoptdescr(LitOptimization optimization);
 const char *lit_astopt_getoptleveldescr(LitOptLevel level);
+
 /* writer.c */
 void lit_writer_init_file(LitState *state, LitWriter *wr, FILE *fh, bool forceflush);
 void lit_writer_init_string(LitState *state, LitWriter *wr);

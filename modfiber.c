@@ -89,7 +89,7 @@ static LitValue objfn_fiber_constructor(LitVM* vm, LitValue instance, size_t arg
 
     fiber->parent = vm->fiber;
 
-    return lit_value_makeobject(fiber);
+    return lit_value_fromobject(fiber);
 }
 
 
@@ -116,7 +116,7 @@ static LitValue objfn_fiber_current(LitVM* vm, LitValue instance, size_t argc, L
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makeobject(vm->fiber);
+    return lit_value_fromobject(vm->fiber);
 }
 
 
@@ -149,7 +149,7 @@ static bool objfn_fiber_yield(LitVM* vm, LitValue instance, size_t argc, LitValu
 
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_makeobject(lit_value_tostring(vm->state, argv[0]));
+    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_fromobject(lit_value_tostring(vm->state, argv[0]));
 
     argv[-1] = NULL_VALUE;
     return true;
@@ -170,7 +170,7 @@ static bool objfn_fiber_yeet(LitVM* vm, LitValue instance, size_t argc, LitValue
 
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_makeobject(lit_value_tostring(vm->state, argv[0]));
+    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : lit_value_fromobject(lit_value_tostring(vm->state, argv[0]));
 
     argv[-1] = NULL_VALUE;
     return true;
@@ -212,7 +212,7 @@ void lit_open_fiber_library(LitState* state)
         lit_class_bindgetset(state, klass, "current", objfn_fiber_current, NULL, true);
         state->fibervalue_class = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
     if(klass->super == NULL)
     {
         lit_class_inheritfrom(state, klass, state->objectvalue_class);

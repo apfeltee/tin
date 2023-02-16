@@ -130,7 +130,7 @@ void util_run_fiber(LitVM* vm, LitFiber* fiber, LitValue* argv, size_t argc, boo
         fiber->arg_count = argc;
         lit_ensure_fiber_stack(vm->state, fiber, frame->function->max_slots + 1 + (int)(fiber->stack_top - fiber->stack));
         frame->slots = fiber->stack_top;
-        lit_vm_push(vm, lit_value_makeobject(frame->function));
+        lit_vm_push(vm, lit_value_fromobject(frame->function));
         vararg = frame->function->vararg;
         objfn_function_arg_count = frame->function->arg_count;
         to = objfn_function_arg_count - (vararg ? 1 : 0);
@@ -142,7 +142,7 @@ void util_run_fiber(LitVM* vm, LitFiber* fiber, LitValue* argv, size_t argc, boo
         if(vararg)
         {
             array = lit_create_array(vm->state);
-            lit_vm_push(vm, lit_value_makeobject(array));
+            lit_vm_push(vm, lit_value_fromobject(array));
             vararg_count = argc - objfn_function_arg_count + 1;
             if(vararg_count > 0)
             {
@@ -217,7 +217,7 @@ bool util_interpret(LitVM* vm, LitModule* module)
     if(frame->ip == frame->function->chunk.code)
     {
         frame->slots = fiber->stack_top;
-        lit_vm_push(vm, lit_value_makeobject(frame->function));
+        lit_vm_push(vm, lit_value_fromobject(frame->function));
     }
     return true;
 }
@@ -439,7 +439,7 @@ static LitValue objfn_number_tochar(LitVM* vm, LitValue instance, size_t argc, L
     (void)argc;
     (void)argv;
     ch = lit_value_asnumber(instance);
-    return lit_value_makeobject(lit_string_copy(vm->state, &ch, 1));
+    return lit_value_fromobject(lit_string_copy(vm->state, &ch, 1));
 }
 
 static LitValue objfn_bool_compare(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -596,7 +596,7 @@ void lit_open_core_library(LitState* state)
             lit_class_bindgetset(state, klass, "chr", objfn_number_tochar, NULL, false);
             state->numbervalue_class = klass;
         }
-        lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
         if(klass->super == NULL)
         {
             lit_class_inheritfrom(state, klass, state->objectvalue_class);
@@ -611,7 +611,7 @@ void lit_open_core_library(LitState* state)
             lit_class_bindmethod(state, klass, "toString", objfn_bool_tostring);
             state->boolvalue_class = klass;
         }
-        lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
         if(klass->super == NULL)
         {
             lit_class_inheritfrom(state, klass, state->objectvalue_class);
@@ -624,6 +624,6 @@ void lit_open_core_library(LitState* state)
         lit_state_defnativefunc(state, "println", cfn_println);
         //lit_state_defnativeprimitive(state, "require", cfn_require);
         lit_state_defnativeprimitive(state, "eval", cfn_eval);
-        lit_state_setglobal(state, lit_string_copyconst(state, "globals"), lit_value_makeobject(state->vm->globals));
+        lit_state_setglobal(state, lit_string_copyconst(state, "globals"), lit_value_fromobject(state->vm->globals));
     }
 }

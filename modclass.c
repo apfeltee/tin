@@ -55,7 +55,7 @@ LitNativeMethod* lit_class_bindmethod(LitState* state, LitClass* cl, const char*
     LitNativeMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
     mth = lit_object_makenativemethod(state, fn, nm);
-    lit_table_set(state, &cl->methods, nm, lit_value_makeobject(mth));
+    lit_table_set(state, &cl->methods, nm, lit_value_fromobject(mth));
     return mth;
 }
 
@@ -65,7 +65,7 @@ LitPrimitiveMethod* lit_class_bindprimitive(LitState* state, LitClass* cl, const
     LitPrimitiveMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
     mth = lit_object_makeprimitivemethod(state, fn, nm);
-    lit_table_set(state, &cl->methods, nm, lit_value_makeobject(mth));
+    lit_table_set(state, &cl->methods, nm, lit_value_fromobject(mth));
     return mth;
 }
 
@@ -75,7 +75,7 @@ LitNativeMethod* lit_class_bindstaticmethod(LitState* state, LitClass* cl, const
     LitNativeMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
     mth = lit_object_makenativemethod(state, fn, nm);
-    lit_table_set(state, &cl->static_fields, nm, lit_value_makeobject(mth));
+    lit_table_set(state, &cl->static_fields, nm, lit_value_fromobject(mth));
     return mth;
 }
 
@@ -85,7 +85,7 @@ LitPrimitiveMethod* lit_class_bindstaticprimitive(LitState* state, LitClass* cl,
     LitPrimitiveMethod* mth;
     nm = lit_string_copy(state, name, strlen(name));
     mth = lit_object_makeprimitivemethod(state, fn, nm);
-    lit_table_set(state, &cl->static_fields, nm, lit_value_makeobject(mth));
+    lit_table_set(state, &cl->static_fields, nm, lit_value_fromobject(mth));
     return mth;
 }
 
@@ -122,7 +122,7 @@ LitField* lit_class_bindgetset(LitState* state, LitClass* cl, const char* name, 
         tbl = &cl->static_fields;
     }
     field = lit_create_field(state, (LitObject*)mthget, (LitObject*)mthset);
-    lit_table_set(state, tbl, nm, lit_value_makeobject(field)); 
+    lit_table_set(state, tbl, nm, lit_value_fromobject(field)); 
     return field;
 }
 
@@ -154,7 +154,7 @@ static LitValue objfn_class_tostring(LitVM* vm, LitValue instance, size_t argc, 
 {
     (void)argc;
     (void)argv;
-    return lit_string_format(vm->state, "class @", lit_value_makeobject(lit_value_asclass(instance)->name));
+    return lit_string_format(vm->state, "class @", lit_value_fromobject(lit_value_asclass(instance)->name));
 }
 
 static LitValue objfn_class_iterator(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -223,7 +223,7 @@ static LitValue objfn_class_super(LitVM* vm, LitValue instance, size_t argc, Lit
     {
         return NULL_VALUE;
     }
-    return lit_value_makeobject(super);
+    return lit_value_fromobject(super);
 }
 
 static LitValue objfn_class_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -283,7 +283,7 @@ static LitValue objfn_class_name(LitVM* vm, LitValue instance, size_t argc, LitV
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_makeobject(lit_value_asclass(instance)->name);
+    return lit_value_fromobject(lit_value_asclass(instance)->name);
 }
 
 void lit_open_class_library(LitState* state)
@@ -302,7 +302,7 @@ void lit_open_class_library(LitState* state)
         lit_class_bindgetset(state, klass, "name", objfn_class_name, NULL, true);
         state->classvalue_class = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
 }
 
 

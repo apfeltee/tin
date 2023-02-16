@@ -65,8 +65,6 @@ LitState* lit_make_state()
     state->root_capacity = 0;
     state->last_module = NULL;
     lit_writer_init_file(state, &state->debugwriter, stdout, true);
-    state->preprocessor = (LitPreprocessor*)malloc(sizeof(LitPreprocessor));
-    lit_preproc_init(state, state->preprocessor);
     state->scanner = (LitScanner*)malloc(sizeof(LitScanner));
     state->parser = (LitParser*)malloc(sizeof(LitParser));
     lit_parser_init(state, (LitParser*)state->parser);
@@ -90,8 +88,6 @@ int64_t lit_destroy_state(LitState* state)
         state->roots = NULL;
     }
     lit_api_destroy(state);
-    lit_preproc_destroy(state->preprocessor);
-    free(state->preprocessor);
     free(state->scanner);
     lit_parser_destroy(state->parser);
     free(state->parser);
@@ -292,7 +288,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
     lit_ensure_fiber_stack(state, fiber, callee->max_slots + (int)(fiber->stack_top - fiber->stack));
     frame = &fiber->frames[fiber->frame_count++];
     frame->slots = fiber->stack_top;
-    PUSH(lit_value_makeobject(callee));
+    PUSH(lit_value_fromobject(callee));
     for(i = 0; i < argc; i++)
     {
         PUSH(argv[i]);
@@ -310,7 +306,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
             }
             if(vararg)
             {
-                PUSH(lit_value_makeobject(lit_create_array(vm->state)));
+                PUSH(lit_value_fromobject(lit_create_array(vm->state)));
             }
         }
         else if(callee->vararg)
@@ -324,7 +320,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
             }
 
             fiber->stack_top -= varargc;
-            lit_vm_push(vm, lit_value_makeobject(array));
+            lit_vm_push(vm, lit_value_fromobject(array));
         }
         else
         {
@@ -336,7 +332,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
         array = lit_create_array(vm->state);
         varargc = argc - function_arg_count + 1;
         lit_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
-        *(fiber->stack_top - 1) = lit_value_makeobject(array);
+        *(fiber->stack_top - 1) = lit_value_fromobject(array);
     }
     frame->ip = callee->chunk.code;
     frame->closure = NULL;
@@ -464,10 +460,10 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
             case LITTYPE_CLASS:
                 {
                     klass = lit_value_asclass(callee);
-                    *slot = lit_value_makeobject(lit_create_instance(vm->state, klass));
+                    *slot = lit_value_fromobject(lit_create_instance(vm->state, klass));
                     if(klass->init_method != NULL)
                     {
-                        lir = lit_state_callmethod(state, *slot, lit_value_makeobject(klass->init_method), argv, argc, ignfiber);
+                        lir = lit_state_callmethod(state, *slot, lit_value_fromobject(klass->init_method), argv, argc, ignfiber);
                     }
                     // TODO: when should this return *slot instead of lir?
                     fiber->stack_top = slot;
@@ -556,7 +552,7 @@ LitInterpretResult lit_state_findandcallmethod(LitState* state, LitValue callee,
 
 void lit_state_pushroot(LitState* state, LitObject* object)
 {
-    lit_state_pushvalueroot(state, lit_value_makeobject(object));
+    lit_state_pushvalueroot(state, lit_value_fromobject(object));
 }
 
 void lit_state_pushvalueroot(LitState* state, LitValue value)
@@ -673,8 +669,11 @@ LitClass* lit_state_getclassfor(LitState* state, LitValue value)
                     {
                         return lit_state_getclassfor(state, *slot);
                     }
-
                     return state->objectvalue_class;
+                }
+                break;
+            default:
+                {
                 }
                 break;
         }
@@ -725,15 +724,6 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
         if(measure_compilation_time)
         {
             total_t = t = clock();
-        }
-        if(!lit_preproc_run(state->preprocessor, code))
-        {
-            return NULL;
-        }
-        if(measure_compilation_time)
-        {
-            printf("-----------------------\nPreprocessing:  %gms\n", (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
-            t = clock();
         }
         lit_exprlist_init(&statements);
         if(lit_parser_parsesource(state->parser, module_name->chars, code, &statements))

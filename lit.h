@@ -272,7 +272,6 @@ typedef enum /**/LitResult LitResult;
 typedef enum /**/LitErrType LitErrType;
 typedef enum /**/LitFuncType LitFuncType;
 typedef struct /**/LitScanner LitScanner;
-typedef struct /**/LitPreprocessor LitPreprocessor;
 typedef struct /**/LitExecState LitExecState;
 typedef struct /**/LitVM LitVM;
 typedef struct /**/LitParser LitParser;
@@ -395,7 +394,7 @@ struct LitValue
 {
     LitValType type;
     bool isfixednumber;
-    struct
+    union
     {
         bool boolval;
         int64_t numfixedval;
@@ -727,7 +726,6 @@ struct LitState
     LitValue* roots;
     size_t root_count;
     size_t root_capacity;
-    LitPreprocessor* preprocessor;
     LitScanner* scanner;
     LitParser* parser;
     LitEmitter* emitter;
@@ -782,14 +780,25 @@ struct LitVM
 
 #include "prot.inc"
 
-#if 1
-    #define lit_value_asnumber(v) \
-        ( ((v).isfixednumber) ? ((v).numfixedval) : ((v).numfloatval) )
-#else
-    #define lit_value_asnumber(v) (v).numfloatval
-#endif
+/*
+#define lit_value_asnumber(v) \
+    ( (lit_value_isnumber(v) ? (\
+            ((v).isfixednumber) ? \
+                ((v).numfixedval) : \
+                ((v).numfloatval) \
+            ) : ( \
+                lit_value_isnull(v) ? 0 : ( \
+                    lit_value_isbool(v) ? lit_value_asbool(v) : 0 \
+                )\
+            )))
 
-#define lit_value_makeobject(obj) lit_value_fromobject_actual((LitObject*)obj)
+*/
+#define lit_value_asnumber(v) \
+        ( \
+            ((v).isfixednumber) ? ((v).numfixedval) : ((v).numfloatval) )
+
+
+#define lit_value_fromobject(obj) lit_value_fromobject_actual((LitObject*)obj)
 
 #define lit_value_istype(value, t) \
     (lit_value_isobject(value) && (lit_value_asobject(value) != NULL) && (lit_value_asobject(value)->type == t))
@@ -983,7 +992,7 @@ static inline LitValue lit_value_makenull(LitState* state)
 
 static inline LitValue lit_value_makestring(LitState* state, const char* text)
 {
-    return lit_value_makeobject(lit_string_copy((state), (text), strlen(text)));
+    return lit_value_fromobject(lit_string_copy((state), (text), strlen(text)));
 }
 
 static inline LitString* lit_string_copyconst(LitState* state, const char* text)

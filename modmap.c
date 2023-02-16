@@ -231,7 +231,7 @@ LitValue util_table_iterator_key(LitTable* table, int index)
     {
         return NULL_VALUE;
     }
-    return lit_value_makeobject(table->entries[index].key);
+    return lit_value_fromobject(table->entries[index].key);
 }
 
 LitMap* lit_create_map(LitState* state)
@@ -282,7 +282,7 @@ static LitValue objfn_map_constructor(LitVM* vm, LitValue instance, size_t argc,
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makeobject(lit_create_map(vm->state));
+    return lit_value_fromobject(lit_create_map(vm->state));
 }
 
 static LitValue objfn_map_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -366,7 +366,7 @@ static LitValue objfn_map_clone(LitVM* vm, LitValue instance, size_t argc, LitVa
     state = vm->state;
     map = lit_create_map(state);
     lit_table_add_all(state, &lit_value_asmap(instance)->values, &map->values);
-    return lit_value_makeobject(map);
+    return lit_value_fromobject(map);
 }
 
 static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -476,7 +476,7 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
     buffer[olength] = '\0';
     LIT_FREE(vm->state, sizeof(LitString*), keys);
     LIT_FREE(vm->state, sizeof(LitString*), values_converted);
-    return lit_value_makeobject(lit_string_take(vm->state, buffer, olength, false));
+    return lit_value_fromobject(lit_string_take(vm->state, buffer, olength, false));
 }
 
 static LitValue objfn_map_length(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
@@ -504,7 +504,7 @@ void lit_open_map_library(LitState* state)
         lit_class_bindgetset(state, klass, "length", objfn_map_length, NULL, false);
         state->mapvalue_class = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
     if(klass->super == NULL)
     {
         lit_class_inheritfrom(state, klass, state->objectvalue_class);

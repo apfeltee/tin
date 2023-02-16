@@ -298,7 +298,7 @@ static LitToken lit_lex_scanstring(LitScanner* scanner, bool interpolation)
         }
     }
     token = lit_lex_maketoken(scanner, string_type);
-    token.value = lit_value_makeobject(lit_string_copy(state, (const char*)bytes.values, bytes.count));
+    token.value = lit_value_fromobject(lit_string_copy(state, (const char*)bytes.values, bytes.count));
     lit_bytelist_destroy(state, &bytes);
     return token;
 }
@@ -577,6 +577,7 @@ static LitToken lit_lex_scanidentifier(LitScanner* scanner)
 
 LitToken lit_lex_rollback(LitScanner* scanner)
 {
+    (void)scanner;
     //scanner->current--;
 }
 

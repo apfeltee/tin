@@ -941,7 +941,7 @@ static LitAstExpression* lit_parser_ruleobject(LitParser* parser, bool can_assig
     {
         lit_parser_ignorenewlines(parser, true);
         lit_parser_consume(parser, LITTOK_IDENTIFIER, "key string after '{'");
-        lit_vallist_push(parser->state, &object->keys, lit_value_makeobject(lit_string_copy(parser->state, parser->previous.start, parser->previous.length)));
+        lit_vallist_push(parser->state, &object->keys, lit_value_fromobject(lit_string_copy(parser->state, parser->previous.start, parser->previous.length)));
         lit_parser_ignorenewlines(parser, true);
         lit_parser_consume(parser, LITTOK_EQUAL, "'=' after key string");
         lit_parser_ignorenewlines(parser, true);

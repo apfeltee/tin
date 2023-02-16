@@ -171,7 +171,7 @@ static size_t* extract_random_data(LitState* state, LitValue instance)
 static LitValue random_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
     LitUserdata* userdata = lit_object_makeuserdata(vm->state, sizeof(size_t), false);
-    lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_makeobject(userdata));
+    lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_fromobject(userdata));
 
     size_t* data = (size_t*)userdata->data;
 
@@ -360,7 +360,7 @@ void lit_open_math_library(LitState* state)
             lit_class_bindstaticmethod(state, klass, "log", math_log);
             lit_class_bindstaticmethod(state, klass, "exp", math_exp);
         }
-        lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
         if(klass->super == NULL)
         {
             lit_class_inheritfrom(state, klass, state->objectvalue_class);
@@ -384,7 +384,7 @@ void lit_open_math_library(LitState* state)
             lit_class_bindstaticmethod(state, klass, "chance", random_chance);
             lit_class_bindstaticmethod(state, klass, "pick", random_pick);
         }
-        lit_state_setglobal(state, klass->name, lit_value_makeobject(klass));
+        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
         if(klass->super == NULL)
         {
             lit_class_inheritfrom(state, klass, state->objectvalue_class);

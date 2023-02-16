@@ -149,9 +149,11 @@ int lit_util_doubletoint(double n)
 int lit_util_numbertoint32(double n)
 {
     /* magic. no idea. */
+    bool isf;
     double two32 = 4294967296.0;
     double two31 = 2147483648.0;
-    if(!isfinite(n) || n == 0)
+    isf = isfinite(n);
+    if(!isf || (n == 0))
     {
         return 0;
     }
