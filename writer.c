@@ -127,7 +127,7 @@ static const char* lit_object_type_names[] =
 
 
 
-static void print_array(LitState* state, LitWriter* wr, LitArray* array, size_t size)
+void lit_towriter_array(LitState* state, LitWriter* wr, LitArray* array, size_t size)
 {
     size_t i;
     lit_writer_writeformat(wr, "(%u) [", (unsigned int)size);
@@ -157,7 +157,7 @@ static void print_array(LitState* state, LitWriter* wr, LitArray* array, size_t 
     lit_writer_writestring(wr, "]");
 }
 
-static void print_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
+void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
 {
     bool had_before;
     size_t i;
@@ -292,7 +292,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
                     lit_writer_writeformat(wr, "<instance '%s' ", lit_value_asinstance(value)->klass->name->chars);
                     map = lit_value_asmap(value);
                     size = map->values.count;
-                    print_map(state, wr, map, size);
+                    lit_towriter_map(state, wr, map, size);
                     lit_writer_writestring(wr, ">");
                 }
                 break;
@@ -309,7 +309,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
                     #else
                         array = lit_value_asarray(value);
                         size = lit_vallist_count(&array->list);
-                        print_array(state, wr, array, size);
+                        lit_towriter_array(state, wr, array, size);
                     #endif
                 }
                 break;
@@ -320,7 +320,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
                     #else
                         map = lit_value_asmap(value);
                         size = map->values.count;
-                        print_map(state, wr, map, size);
+                        lit_towriter_map(state, wr, map, size);
                     #endif
                 }
                 break;

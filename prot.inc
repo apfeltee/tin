@@ -389,13 +389,16 @@ const char *lit_astopt_getoptdescr(LitOptimization optimization);
 const char *lit_astopt_getoptleveldescr(LitOptLevel level);
 
 /* writer.c */
-void lit_writer_init_file(LitState *state, LitWriter *wr, FILE *fh, bool forceflush);
+/* writer.c */
+void lit_writer_init_file(LitState *state, LitWriter *wr, FILE *fh, _Bool forceflush);
 void lit_writer_init_string(LitState *state, LitWriter *wr);
 void lit_writer_writebyte(LitWriter *wr, int byte);
 void lit_writer_writestringl(LitWriter *wr, const char *str, size_t len);
 void lit_writer_writestring(LitWriter *wr, const char *str);
 void lit_writer_writeformat(LitWriter *wr, const char *fmt, ...);
 LitString *lit_writer_get_string(LitWriter *wr);
+void lit_towriter_array(LitState *state, LitWriter *wr, LitArray *array, size_t size);
+void lit_towriter_map(LitState *state, LitWriter *wr, LitMap *map, size_t size);
 void lit_towriter_object(LitState *state, LitWriter *wr, LitValue value);
 void lit_towriter_value(LitState *state, LitWriter *wr, LitValue value);
 const char *lit_tostring_typename(LitValue value);
@@ -403,6 +406,7 @@ const char *lit_tostring_exprtype(LitExprType t);
 const char *lit_tostring_optok(LitTokType t);
 void lit_towriter_expr(LitState *state, LitWriter *wr, LitAstExpression *expr);
 void lit_towriter_ast(LitState *state, LitWriter *wr, LitAstExprList *exlist);
+
 /* libfunc.c */
 LitFunction *lit_object_makefunction(LitState *state, LitModule *module);
 LitClosure *lit_object_makeclosure(LitState *state, LitFunction *function);

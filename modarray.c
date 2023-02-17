@@ -646,70 +646,12 @@ static LitValue objfn_array_tostring(LitVM* vm, LitValue instance, size_t argc, 
 {
     (void)argc;
     (void)argv;
-    bool has_more;
-    size_t i;
-    size_t value_amount;
-    size_t olength;
-    char* buffer;
     LitArray* self;
-    LitValList* vl;
-    LitValue val;
-    LitState* state;
-    LitString* rt;
-    LitString* part;
-    LitString* stringified;
-    static const char* recstring = "(recursion)";
+    LitWriter wr;
     self = lit_value_asarray(instance);
-    vl = &self->list;
-    state = vm->state;
-    if(lit_vallist_count(vl) == 0)
-    {
-        return lit_value_makestring(state, "[]");
-    }
-    has_more = lit_vallist_count(vl) > LIT_CONTAINER_OUTPUT_MAX;
-    value_amount = has_more ? LIT_CONTAINER_OUTPUT_MAX : lit_vallist_count(vl);
-    // "[ ]"
-    olength = 3;
-    if(has_more)
-    {
-        olength += 3;
-    }
-    buffer = sdsempty();
-    buffer = sdsMakeRoomFor(buffer, olength+1);
-    buffer = sdscat(buffer, "[");
-    for(i = 0; i < value_amount; i++)
-    {
-        val = lit_vallist_get(vl, (has_more && i == value_amount - 1) ? lit_vallist_count(vl) - 1 : i);
-        if(lit_value_isarray(val) && (lit_value_asarray(val) == self))
-        {
-            stringified = lit_string_copy(state, recstring, strlen(recstring));
-        }
-        else
-        {
-            stringified = lit_value_tostring(state, val);
-        }
-        part = stringified;
-        buffer = sdscatlen(buffer, part->chars, lit_string_getlength(part));
-        if(has_more && i == value_amount - 2)
-        {
-            buffer = sdscat(buffer, " ... ");
-        }
-        else
-        {
-            if(i == (value_amount - 1))
-            {
-                buffer = sdscat(buffer, " ]");
-            }
-            else
-            {
-                buffer = sdscat(buffer, ", ");
-            }
-        }
-    }
-    // should be lit_string_take, but it doesn't get picked up by the GC for some reason
-    //rt = lit_string_take(vm->state, buffer, olength);
-    rt = lit_string_take(vm->state, buffer, olength, true);
-    return lit_value_fromobject(rt);
+    lit_writer_init_string(vm->state, &wr);
+    lit_towriter_array(vm->state, &wr, self, lit_array_count(self));
+    return lit_value_fromobject(lit_writer_get_string(&wr));
 }
 
 static LitValue objfn_array_pop(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)

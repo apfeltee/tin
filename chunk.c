@@ -19,7 +19,6 @@ void lit_chunk_destroy(LitState* state, LitChunk* chunk)
 {
     LIT_FREE_ARRAY(state, sizeof(uint8_t), chunk->code, chunk->capacity);
     LIT_FREE_ARRAY(state, sizeof(uint16_t), chunk->lines, chunk->line_capacity);
-
     lit_vallist_destroy(state, &chunk->constants);
     lit_chunk_init(chunk);
 }

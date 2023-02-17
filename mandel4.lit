@@ -7,14 +7,14 @@ for(var y = -1.0; y < 1.0; y = y + 0.05)
         var v = 0.0;
         var u2 = u * u;
         var v2 = v * v;
-        var k = 1;
+        var k = 1
         while(k < 100 && u2 + v2 < 4.0)
         {
             v = 2.0 * u * v + y;
             u = u2 - v2 + x;
             u2 = u * u;
             v2 = v * v;
-            k++;
+            k++
         }
         if(k < 40)
         {

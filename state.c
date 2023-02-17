@@ -437,7 +437,7 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
         {
             case LITTYPE_NATIVE_FUNCTION:
                 {
-                    LitValue result = lit_value_asnativefunction(callee)->function(vm, argc, fiber->stack_top - argc);
+                    result = lit_value_asnativefunction(callee)->function(vm, argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
                     RETURN_OK(result);
                 }

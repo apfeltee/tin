@@ -916,6 +916,39 @@ static LitValue objfn_string_byteat(LitVM* vm, LitValue instance, size_t argc, L
     return lit_value_makenumber(vm->state, lit_value_asstring(instance)->chars[idx]);
 }
 
+
+static LitValue objfn_string_indexof(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+{
+    int i;
+    int len;
+    char findme;
+    LitString* self;
+    findme = -1;
+    if(lit_value_isstring(argv[0]))
+    {
+        findme = lit_value_checkobjstring(vm, argv, argc, 0)->chars[0];
+    }
+    else
+    {
+        if(lit_value_isnull(argv[0]))
+        {
+            return lit_value_makefixednumber(vm->state, -1);
+        }
+        findme = lit_value_checknumber(vm, argv, argc, 0);
+    }
+    self = lit_value_asstring(instance);
+    len = lit_string_getlength(self);
+    for(i=0; i<len; i++)
+    {
+        if(self->chars[i] == findme)
+        {
+            return lit_value_makefixednumber(vm->state, i);
+        }
+    }
+    return lit_value_makefixednumber(vm->state, -1);
+}
+
+
 static LitValue objfn_string_length(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
     (void)vm;
@@ -1104,6 +1137,7 @@ void lit_open_string_library(LitState* state)
             lit_class_bindmethod(state, klass, "==", objfn_string_compare);
             lit_class_bindmethod(state, klass, "toString", objfn_string_tostring);
             // js-isms
+            lit_class_bindmethod(state, klass, "indexOf", objfn_string_indexof);
             lit_class_bindmethod(state, klass, "charCodeAt", objfn_string_byteat);
             lit_class_bindmethod(state, klass, "charAt", objfn_string_subscript);
             {

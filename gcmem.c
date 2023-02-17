@@ -44,6 +44,7 @@ LitObject* lit_gcmem_allocobject(LitState* state, size_t size, LitObjType type, 
 void* lit_gcmem_memrealloc(LitState* state, void* pointer, size_t old_size, size_t new_size)
 {
     void* ptr;
+    ptr = NULL;
     state->bytes_allocated += (int64_t)new_size - (int64_t)old_size;
     if(new_size > old_size)
     {

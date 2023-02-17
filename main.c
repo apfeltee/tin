@@ -26,8 +26,8 @@
 
 enum
 {
-    MAX_RESTARGS = 1024,
-    MAX_OPTS = 1024,
+    MAX_RESTARGS = 64,
+    MAX_OPTS = 64/4,
 };
 
 typedef struct Flag_t Flag_t;
