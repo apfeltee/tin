@@ -89,12 +89,12 @@ void lit_varlist_destroy(LitState* state, LitVarList* array)
 
 void lit_varlist_push(LitState* state, LitVarList* array, LitVariable value)
 {
-    size_t old_capacity;
+    size_t oldcapacity;
     if(array->capacity < array->count + 1)
     {
-        old_capacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(old_capacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitVariable), old_capacity, array->capacity);
+        oldcapacity = array->capacity;
+        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
+        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitVariable), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;

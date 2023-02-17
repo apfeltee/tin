@@ -196,22 +196,22 @@ int lit_util_closestpowof2(int n)
 char* lit_util_patchfilename(char* file_name)
 {
     int i;
-    int name_length;
+    int namelength;
     char c;
-    name_length = strlen(file_name);
+    namelength = strlen(file_name);
     // Check, if our file_name ends with .lit or lbc, and remove it
-    if(name_length > 4 && (memcmp(file_name + name_length - 4, ".lit", 4) == 0 || memcmp(file_name + name_length - 4, ".lbc", 4) == 0))
+    if(namelength > 4 && (memcmp(file_name + namelength - 4, ".lit", 4) == 0 || memcmp(file_name + namelength - 4, ".lbc", 4) == 0))
     {
-        file_name[name_length - 4] = '\0';
-        name_length -= 4;
+        file_name[namelength - 4] = '\0';
+        namelength -= 4;
     }
     // Check, if our file_name starts with ./ and remove it (useless, and makes the module name be ..main)
-    if(name_length > 2 && memcmp(file_name, "./", 2) == 0)
+    if(namelength > 2 && memcmp(file_name, "./", 2) == 0)
     {
         file_name += 2;
-        name_length -= 2;
+        namelength -= 2;
     }
-    for(i = 0; i < name_length; i++)
+    for(i = 0; i < namelength; i++)
     {
         c = file_name[i];
         if(c == '/' || c == '\\')
@@ -225,9 +225,9 @@ char* lit_util_patchfilename(char* file_name)
 char* lit_util_copystring(const char* string)
 {
     size_t length;
-    char* new_string;
+    char* newstring;
     length = strlen(string) + 1;
-    new_string = (char*)malloc(length);
-    memcpy(new_string, string, length);
-    return new_string;
+    newstring = (char*)malloc(length);
+    memcpy(newstring, string, length);
+    return newstring;
 }

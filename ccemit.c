@@ -56,9 +56,9 @@ void lit_privlist_push(LitState* state, LitPrivList* array, LitPrivate value)
 {
     if(array->capacity < array->count + 1)
     {
-        size_t old_capacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(old_capacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitPrivate), old_capacity, array->capacity);
+        size_t oldcapacity = array->capacity;
+        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
+        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitPrivate), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -80,9 +80,9 @@ void lit_loclist_push(LitState* state, LitLocList* array, LitLocal value)
 {
     if(array->capacity < array->count + 1)
     {
-        size_t old_capacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(old_capacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitLocal), old_capacity, array->capacity);
+        size_t oldcapacity = array->capacity;
+        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
+        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitLocal), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -406,14 +406,14 @@ static int lit_emitter_resolveprivate(LitEmitter* emitter, const char* name, siz
         LitValue index;
         lit_table_get(private_names, key, &index);
 
-        int number_index = lit_value_asnumber(index);
+        int numberindex = lit_value_asnumber(index);
 
-        if(!emitter->privates.values[number_index].initialized)
+        if(!emitter->privates.values[numberindex].initialized)
         {
             lit_emitter_raiseerror(emitter, line, LITERROR_VARIABLE_USED_IN_INIT, length, name);
         }
 
-        return number_index;
+        return numberindex;
     }
 
     return -1;
@@ -471,7 +471,7 @@ static int lit_emitter_resolvelocal(LitEmitter* emitter, LitCompiler* compiler, 
     return -1;
 }
 
-static int lit_emitter_addupvalue(LitEmitter* emitter, LitCompiler* compiler, uint8_t index, size_t line, bool is_local)
+static int lit_emitter_addupvalue(LitEmitter* emitter, LitCompiler* compiler, uint8_t index, size_t line, bool islocal)
 {
     size_t upvalue_count = compiler->function->upvalue_count;
 
@@ -479,7 +479,7 @@ static int lit_emitter_addupvalue(LitEmitter* emitter, LitCompiler* compiler, ui
     {
         LitCompilerUpvalue* upvalue = &compiler->upvalues[i];
 
-        if(upvalue->index == index && upvalue->isLocal == is_local)
+        if(upvalue->index == index && upvalue->isLocal == islocal)
         {
             return i;
         }
@@ -491,7 +491,7 @@ static int lit_emitter_addupvalue(LitEmitter* emitter, LitCompiler* compiler, ui
         return 0;
     }
 
-    compiler->upvalues[upvalue_count].isLocal = is_local;
+    compiler->upvalues[upvalue_count].isLocal = islocal;
     compiler->upvalues[upvalue_count].index = index;
 
     return compiler->function->upvalue_count++;
@@ -682,18 +682,18 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
     int index;
     size_t start;
     size_t else_jump;
-    size_t exit_jump;
-    size_t body_jump;
+    size_t exitjump;
+    size_t bodyjump;
     size_t end_jump;
     size_t i;
-    size_t increment_start;
+    size_t incrstart;
     size_t localcnt;
     size_t iterator;
     size_t line;
     size_t sequence;
     uint16_t local_count;
     uint8_t super;
-    uint64_t* end_jumps;
+    uint64_t* endjumps;
 
     
     if(expr == NULL)
@@ -1157,14 +1157,14 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 bool vararg = lit_emitter_emitparamlist(emitter, &lambdaexpr->parameters, expr->line);
                 if(lambdaexpr->body != NULL)
                 {
-                    bool single_expression = lambdaexpr->body->type == LITEXPR_EXPRESSION;
-                    if(single_expression)
+                    bool singleexpr = lambdaexpr->body->type == LITEXPR_EXPRESSION;
+                    if(singleexpr)
                     {
                         compiler.skip_return = true;
                         ((LitAstExprExpr*)lambdaexpr->body)->pop = false;
                     }
                     lit_emitter_emitexpression(emitter, lambdaexpr->body);
-                    if(single_expression)
+                    if(singleexpr)
                     {
                         lit_emitter_emit1op(emitter, emitter->last_line, OP_RETURN);
                     }
@@ -1392,9 +1392,9 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_emitexpression(emitter, ifstmt->if_branch);
                     end_jump = lit_emitter_emitjump(emitter, OP_JUMP, emitter->last_line);
                 }
-                /* important: end_jumps must be N*sizeof(uint64_t) - merely allocating N isn't enough! */
-                //uint64_t end_jumps[ifstmt->elseif_branches == NULL ? 1 : ifstmt->elseif_branches->count];
-                end_jumps = (uint64_t*)malloc(sizeof(uint64_t) * (ifstmt->elseif_branches == NULL ? 1 : ifstmt->elseif_branches->count));
+                /* important: endjumps must be N*sizeof(uint64_t) - merely allocating N isn't enough! */
+                //uint64_t endjumps[ifstmt->elseif_branches == NULL ? 1 : ifstmt->elseif_branches->count];
+                endjumps = (uint64_t*)malloc(sizeof(uint64_t) * (ifstmt->elseif_branches == NULL ? 1 : ifstmt->elseif_branches->count));
                 if(ifstmt->elseif_branches != NULL)
                 {
                     for(i = 0; i < ifstmt->elseif_branches->count; i++)
@@ -1409,7 +1409,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                         else_jump = lit_emitter_emitjump(emitter, OP_JUMP_IF_FALSE, emitter->last_line);
                         lit_emitter_emitexpression(emitter, ifstmt->elseif_branches->values[i]);
 
-                        end_jumps[i] = lit_emitter_emitjump(emitter, OP_JUMP, emitter->last_line);
+                        endjumps[i] = lit_emitter_emitjump(emitter, OP_JUMP, emitter->last_line);
                     }
                 }
                 if(ifstmt->else_branch != NULL)
@@ -1433,10 +1433,10 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                         {
                             continue;
                         }
-                        lit_emitter_patchjump(emitter, end_jumps[i], ifstmt->elseif_branches->values[i]->line);
+                        lit_emitter_patchjump(emitter, endjumps[i], ifstmt->elseif_branches->values[i]->line);
                     }
                 }
-                free(end_jumps);
+                free(endjumps);
             }
             break;
         case LITEXPR_WHILE:
@@ -1446,11 +1446,11 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                 emitter->loop_start = start;
                 emitter->compiler->loop_depth++;
                 lit_emitter_emitexpression(emitter, whilestmt->condition);
-                exit_jump = lit_emitter_emitjump(emitter, OP_JUMP_IF_FALSE, expr->line);
+                exitjump = lit_emitter_emitjump(emitter, OP_JUMP_IF_FALSE, expr->line);
                 lit_emitter_emitexpression(emitter, whilestmt->body);
                 lit_emitter_patchloopjumps(emitter, &emitter->continues, emitter->last_line);
                 lit_emitter_emitloop(emitter, start, emitter->last_line);
-                lit_emitter_patchjump(emitter, exit_jump, emitter->last_line);
+                lit_emitter_patchjump(emitter, exitjump, emitter->last_line);
                 lit_emitter_patchloopjumps(emitter, &emitter->breaks, emitter->last_line);
                 emitter->compiler->loop_depth--;
             }
@@ -1471,21 +1471,21 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                         lit_emitter_emitexpression(emitter, forstmt->init);
                     }
                     start = emitter->chunk->count;
-                    exit_jump = 0;
+                    exitjump = 0;
                     if(forstmt->condition != NULL)
                     {
                         lit_emitter_emitexpression(emitter, forstmt->condition);
-                        exit_jump = lit_emitter_emitjump(emitter, OP_JUMP_IF_FALSE, emitter->last_line);
+                        exitjump = lit_emitter_emitjump(emitter, OP_JUMP_IF_FALSE, emitter->last_line);
                     }
                     if(forstmt->increment != NULL)
                     {
-                        body_jump = lit_emitter_emitjump(emitter, OP_JUMP, emitter->last_line);
-                        increment_start = emitter->chunk->count;
+                        bodyjump = lit_emitter_emitjump(emitter, OP_JUMP, emitter->last_line);
+                        incrstart = emitter->chunk->count;
                         lit_emitter_emitexpression(emitter, forstmt->increment);
                         lit_emitter_emit1op(emitter, emitter->last_line, OP_POP);
                         lit_emitter_emitloop(emitter, start, emitter->last_line);
-                        start = increment_start;
-                        lit_emitter_patchjump(emitter, body_jump, emitter->last_line);
+                        start = incrstart;
+                        lit_emitter_patchjump(emitter, bodyjump, emitter->last_line);
                     }
                     emitter->loop_start = start;
                     lit_emitter_beginscope(emitter);
@@ -1509,7 +1509,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_emitloop(emitter, start, emitter->last_line);
                     if(forstmt->condition != NULL)
                     {
-                        lit_emitter_patchjump(emitter, exit_jump, emitter->last_line);
+                        lit_emitter_patchjump(emitter, exitjump, emitter->last_line);
                     }
                 }
                 else
@@ -1532,7 +1532,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                                lit_emitter_addconstant(emitter, emitter->last_line, lit_value_makestring(emitter->state, "iterator")));
                     lit_emitter_emitbyteorshort(emitter, emitter->last_line, OP_SET_LOCAL, OP_SET_LOCAL_LONG, iterator);
                     // If iter is null, just get out of the loop
-                    exit_jump = lit_emitter_emitjump(emitter, OP_JUMP_IF_NULL_POPPING, emitter->last_line);
+                    exitjump = lit_emitter_emitjump(emitter, OP_JUMP_IF_NULL_POPPING, emitter->last_line);
                     lit_emitter_beginscope(emitter);
                     // var i = seq.iteratorValue(iter)
                     var = (LitAstAssignVarExpr*)forstmt->var;
@@ -1562,7 +1562,7 @@ static bool lit_emitter_emitexpression(LitEmitter* emitter, LitAstExpression* ex
                     lit_emitter_patchloopjumps(emitter, &emitter->continues, emitter->last_line);
                     lit_emitter_endscope(emitter, emitter->last_line);
                     lit_emitter_emitloop(emitter, start, emitter->last_line);
-                    lit_emitter_patchjump(emitter, exit_jump, emitter->last_line);
+                    lit_emitter_patchjump(emitter, exitjump, emitter->last_line);
                 }
                 lit_emitter_patchloopjumps(emitter, &emitter->breaks, emitter->last_line);
                 lit_emitter_endscope(emitter, emitter->last_line);
@@ -1817,10 +1817,10 @@ LitModule* lit_emitter_modemit(LitEmitter* emitter, LitAstExprList* statements, 
 {
     size_t i;
     size_t total;
-    size_t old_privates_count;
+    size_t oldprivatescnt;
     bool isnew;
     LitState* state;        
-    LitValue module_value;
+    LitValue modulevalue;
     LitModule* module;
     LitPrivList* privates;
     LitCompiler compiler;
@@ -1829,9 +1829,9 @@ LitModule* lit_emitter_modemit(LitEmitter* emitter, LitAstExprList* statements, 
     emitter->emit_reference = 0;
     state = emitter->state;
     isnew = false;
-    if(lit_table_get(&emitter->state->vm->modules->values, module_name, &module_value))
+    if(lit_table_get(&emitter->state->vm->modules->values, module_name, &modulevalue))
     {
-        module = lit_value_asmodule(module_value);
+        module = lit_value_asmodule(modulevalue);
     }
     else
     {
@@ -1839,13 +1839,13 @@ LitModule* lit_emitter_modemit(LitEmitter* emitter, LitAstExprList* statements, 
         isnew = true;
     }
     emitter->module = module;
-    old_privates_count = module->private_count;
-    if(old_privates_count > 0)
+    oldprivatescnt = module->private_count;
+    if(oldprivatescnt > 0)
     {
         privates = &emitter->privates;
-        privates->count = old_privates_count - 1;
+        privates->count = oldprivatescnt - 1;
         lit_privlist_push(state, privates, (LitPrivate){ true, false });
-        for(i = 0; i < old_privates_count; i++)
+        for(i = 0; i < oldprivatescnt; i++)
         {
             privates->values[i].initialized = true;
         }
@@ -1874,8 +1874,8 @@ LitModule* lit_emitter_modemit(LitEmitter* emitter, LitAstExprList* statements, 
     }
     else
     {
-        module->privates = LIT_GROW_ARRAY(emitter->state, module->privates, sizeof(LitValue), old_privates_count, module->private_count);
-        for(i = old_privates_count; i < module->private_count; i++)
+        module->privates = LIT_GROW_ARRAY(emitter->state, module->privates, sizeof(LitValue), oldprivatescnt, module->private_count);
+        for(i = oldprivatescnt; i < module->private_count; i++)
         {
             module->privates[i] = NULL_VALUE;
         }

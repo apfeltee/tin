@@ -41,12 +41,12 @@ LitObject* lit_gcmem_allocobject(LitState* state, size_t size, LitObjType type, 
     return obj;
 }
 
-void* lit_gcmem_memrealloc(LitState* state, void* pointer, size_t old_size, size_t new_size)
+void* lit_gcmem_memrealloc(LitState* state, void* pointer, size_t oldsize, size_t newsize)
 {
     void* ptr;
     ptr = NULL;
-    state->bytes_allocated += (int64_t)new_size - (int64_t)old_size;
-    if(new_size > old_size)
+    state->bytes_allocated += (int64_t)newsize - (int64_t)oldsize;
+    if(newsize > oldsize)
     {
 #ifdef LIT_STRESS_TEST_GC
         lit_gcmem_collectgarbage(state->vm);
@@ -56,12 +56,12 @@ void* lit_gcmem_memrealloc(LitState* state, void* pointer, size_t old_size, size
             lit_gcmem_collectgarbage(state->vm);
         }
     }
-    if(new_size == 0)
+    if(newsize == 0)
     {
         free(pointer);
         return NULL;
     }
-    ptr = (void*)realloc(pointer, new_size);
+    ptr = (void*)realloc(pointer, newsize);
     if(ptr == NULL)
     {
         lit_state_raiseerror(state, RUNTIME_ERROR, "Fatal error:\nOut of memory\nProgram terminated");
@@ -162,7 +162,7 @@ void lit_gcmem_vmblackobject(LitVM* vm, LitObject* object)
     LitModule* module;
     LitClosure* closure;
     LitClass* klass;
-    LitBoundMethod* bound_method;
+    LitBoundMethod* boundmethod;
     LitField* field;
 
 #ifdef LIT_LOG_BLACKING
@@ -277,9 +277,9 @@ void lit_gcmem_vmblackobject(LitVM* vm, LitObject* object)
             break;
         case LITTYPE_BOUND_METHOD:
             {
-                bound_method = (LitBoundMethod*)object;
-                lit_gcmem_markvalue(vm, bound_method->receiver);
-                lit_gcmem_markvalue(vm, bound_method->method);
+                boundmethod = (LitBoundMethod*)object;
+                lit_gcmem_markvalue(vm, boundmethod->receiver);
+                lit_gcmem_markvalue(vm, boundmethod->method);
             }
             break;
         case LITTYPE_ARRAY:

@@ -52,7 +52,7 @@ static size_t print_constant_op(LitState* state, LitWriter* wr, const char* name
         constant = chunk->code[offset + 1];
     }
     lit_writer_writeformat(wr, "%s%-16s%s %4d '", COLOR_YELLOW, name, COLOR_RESET, constant);
-    lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant));
+    lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant), true);
     lit_writer_writeformat(wr, "'\n");
     return offset + (big ? 3 : 2);
 }
@@ -95,7 +95,7 @@ static size_t print_invoke_op(LitState* state, LitWriter* wr, const char* name, 
     constant = chunk->code[offset + 2];
     constant |= chunk->code[offset + 3];
     lit_writer_writeformat(wr, "%s%-16s%s (%d args) %4d '", COLOR_YELLOW, name, COLOR_RESET, arg_count, constant);
-    lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant));
+    lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant), true);
     lit_writer_writeformat(wr, "'\n");
     return offset + 4;
 }
@@ -103,17 +103,17 @@ static size_t print_invoke_op(LitState* state, LitWriter* wr, const char* name, 
 size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offset, const char* source)
 {
     bool same;
-    int is_local;
+    int islocal;
     size_t j;
     size_t line;
     size_t index;
     int16_t constant;
     uint8_t instruction;
     char c;
-    char* next_line;
-    char* prev_line;
-    char* output_line;
-    char* current_line;
+    char* nextline;
+    char* prevline;
+    char* outputline;
+    char* currentline;
     LitWriter* wr;
     LitFunction* function;
     wr = &state->debugwriter;
@@ -122,21 +122,21 @@ size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offs
     if(!same && source != NULL)
     {
         index = 0;
-        current_line = (char*)source;
-        while(current_line)
+        currentline = (char*)source;
+        while(currentline)
         {
-            next_line = strchr(current_line, '\n');
-            prev_line = current_line;
+            nextline = strchr(currentline, '\n');
+            prevline = currentline;
             index++;
-            current_line = next_line ? (next_line + 1) : NULL;
+            currentline = nextline ? (nextline + 1) : NULL;
             if(index == line)
             {
-                output_line = prev_line ? prev_line : next_line;
-                while((c = *output_line) && (c == '\t' || c == ' '))
+                outputline = prevline ? prevline : nextline;
+                while((c = *outputline) && (c == '\t' || c == ' '))
                 {
-                    output_line++;
+                    outputline++;
                 }
-                lit_writer_writeformat(wr, "%s        %.*s%s\n", COLOR_RED, next_line ? (int)(next_line - output_line) : (int)strlen(prev_line), output_line, COLOR_RESET);
+                lit_writer_writeformat(wr, "%s        %.*s%s\n", COLOR_RED, nextline ? (int)(nextline - outputline) : (int)strlen(prevline), outputline, COLOR_RESET);
                 break;
             }
         }
@@ -258,14 +258,14 @@ size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offs
                 offset++;
                 constant |= chunk->code[offset];
                 lit_writer_writeformat(wr, "%-16s %4d ", "OP_CLOSURE", constant);
-                lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant));
+                lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant), true);
                 lit_writer_writeformat(wr, "\n");
                 function = lit_value_asfunction(lit_vallist_get(&chunk->constants, constant));
                 for(j = 0; j < function->upvalue_count; j++)
                 {
-                    is_local = chunk->code[offset++];
+                    islocal = chunk->code[offset++];
                     index = chunk->code[offset++];
-                    lit_writer_writeformat(wr, "%04d      |                     %s %d\n", (int)(offset - 2), is_local ? "local" : "upvalue", (int)index);
+                    lit_writer_writeformat(wr, "%04d      |                     %s %d\n", (int)(offset - 2), islocal ? "local" : "upvalue", (int)index);
                 }
                 return offset;
             }

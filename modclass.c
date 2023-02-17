@@ -129,14 +129,14 @@ LitField* lit_class_bindgetset(LitState* state, LitClass* cl, const char* name, 
 
 /*
 
-    #define LIT_INHERIT_CLASS(super_klass)                                \
-        klass->super = (LitClass*)super_klass;                            \
+    #define LIT_INHERIT_CLASS(superklass)                                \
+        klass->super = (LitClass*)superklass;                            \
         if(klass->init_method == NULL)                                    \
         {                                                                 \
-            klass->init_method = super_klass->init_method;                \
+            klass->init_method = superklass->init_method;                \
         }                                                                 \
-        lit_table_add_all(state, &super_klass->methods, &klass->methods); \
-        lit_table_add_all(state, &super_klass->static_fields, &klass->static_fields);
+        lit_table_add_all(state, &superklass->methods, &klass->methods); \
+        lit_table_add_all(state, &superklass->static_fields, &klass->static_fields);
 */
 
 void lit_class_inheritfrom(LitState* state, LitClass* current, LitClass* other)

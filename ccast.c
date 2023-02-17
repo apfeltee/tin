@@ -16,11 +16,12 @@ void lit_exprlist_destroy(LitState* state, LitAstExprList* array)
 
 void lit_exprlist_push(LitState* state, LitAstExprList* array, LitAstExpression* value)
 {
+    size_t oldcapacity;
     if(array->capacity < array->count + 1)
     {
-        size_t old_capacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(old_capacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstExpression*), old_capacity, array->capacity);
+        oldcapacity = array->capacity;
+        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
+        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstExpression*), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -43,9 +44,9 @@ void lit_paramlist_push(LitState* state, LitAstParamList* array, LitAstParameter
 {
     if(array->capacity < array->count + 1)
     {
-        size_t old_capacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(old_capacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstParameter), old_capacity, array->capacity);
+        size_t oldcapacity = array->capacity;
+        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
+        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstParameter), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -58,37 +59,34 @@ void lit_paramlist_destroyvalues(LitState* state, LitAstParamList* parameters)
     {
         lit_ast_destroyexpression(state, parameters->values[i].default_value);
     }
-
     lit_paramlist_destroy(state, parameters);
 }
 
 void lit_ast_destroyexprlist(LitState* state, LitAstExprList* expressions)
 {
+    size_t i;
     if(expressions == NULL)
     {
         return;
     }
-
-    for(size_t i = 0; i < expressions->count; i++)
+    for(i = 0; i < expressions->count; i++)
     {
         lit_ast_destroyexpression(state, expressions->values[i]);
     }
-
     lit_exprlist_destroy(state, expressions);
 }
 
 void lit_ast_destroystmtlist(LitState* state, LitAstExprList* statements)
 {
+    size_t i;
     if(statements == NULL)
     {
         return;
     }
-
-    for(size_t i = 0; i < statements->count; i++)
+    for(i = 0; i < statements->count; i++)
     {
         lit_ast_destroyexpression(state, statements->values[i]);
     }
-
     lit_exprlist_destroy(state, statements);
 }
 
@@ -98,67 +96,53 @@ void lit_ast_destroyexpression(LitState* state, LitAstExpression* expression)
     {
         return;
     }
-
     switch(expression->type)
     {
         case LITEXPR_LITERAL:
-        {
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstLiteralExpr), 0);
-            break;
-        }
-
-        case LITEXPR_BINARY:
-        {
-            LitAstBinaryExpr* expr = (LitAstBinaryExpr*)expression;
-
-            if(!expr->ignore_left)
             {
-                lit_ast_destroyexpression(state, expr->left);
+                lit_gcmem_memrealloc(state, expression, sizeof(LitAstLiteralExpr), 0);
             }
-
-            lit_ast_destroyexpression(state, expr->right);
-
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstBinaryExpr), 0);
             break;
-        }
+        case LITEXPR_BINARY:
+            {
+                LitAstBinaryExpr* expr = (LitAstBinaryExpr*)expression;
+                if(!expr->ignore_left)
+                {
+                    lit_ast_destroyexpression(state, expr->left);
+                }
+                lit_ast_destroyexpression(state, expr->right);
+                lit_gcmem_memrealloc(state, expression, sizeof(LitAstBinaryExpr), 0);
+            }
+            break;
 
         case LITEXPR_UNARY:
-        {
-            lit_ast_destroyexpression(state, ((LitAstUnaryExpr*)expression)->right);
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstUnaryExpr), 0);
-
+            {
+                lit_ast_destroyexpression(state, ((LitAstUnaryExpr*)expression)->right);
+                lit_gcmem_memrealloc(state, expression, sizeof(LitAstUnaryExpr), 0);
+            }
             break;
-        }
-
         case LITEXPR_VAREXPR:
-        {
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstVarExpr), 0);
+            {
+                lit_gcmem_memrealloc(state, expression, sizeof(LitAstVarExpr), 0);
+            }
             break;
-        }
-
         case LITEXPR_ASSIGN:
-        {
-            LitAstAssignExpr* expr = (LitAstAssignExpr*)expression;
-
-            lit_ast_destroyexpression(state, expr->to);
-            lit_ast_destroyexpression(state, expr->value);
-
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstAssignExpr), 0);
+            {
+                LitAstAssignExpr* expr = (LitAstAssignExpr*)expression;
+                lit_ast_destroyexpression(state, expr->to);
+                lit_ast_destroyexpression(state, expr->value);
+                lit_gcmem_memrealloc(state, expression, sizeof(LitAstAssignExpr), 0);
+            }
             break;
-        }
-
         case LITEXPR_CALL:
-        {
-            LitAstCallExpr* expr = (LitAstCallExpr*)expression;
-
-            lit_ast_destroyexpression(state, expr->callee);
-            lit_ast_destroyexpression(state, expr->init);
-
-            lit_ast_destroyexprlist(state, &expr->args);
-
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstCallExpr), 0);
+            {
+                LitAstCallExpr* expr = (LitAstCallExpr*)expression;
+                lit_ast_destroyexpression(state, expr->callee);
+                lit_ast_destroyexpression(state, expr->init);
+                lit_ast_destroyexprlist(state, &expr->args);
+                lit_gcmem_memrealloc(state, expression, sizeof(LitAstCallExpr), 0);
+            }
             break;
-        }
 
         case LITEXPR_GET:
         {

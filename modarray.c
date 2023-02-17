@@ -60,12 +60,12 @@ intptr_t lit_datalist_set(LitDataList* dl, size_t idx, intptr_t val)
 
 void lit_datalist_push(LitState* state, LitDataList* dl, intptr_t value)
 {
-    size_t old_capacity;
+    size_t oldcapacity;
     if(dl->capacity < (dl->count + 1))
     {
-        old_capacity = dl->capacity;
-        dl->capacity = LIT_GROW_CAPACITY(old_capacity);
-        dl->values = LIT_GROW_ARRAY(state, dl->values, dl->elemsz, old_capacity, dl->capacity);
+        oldcapacity = dl->capacity;
+        dl->capacity = LIT_GROW_CAPACITY(oldcapacity);
+        dl->values = LIT_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
     }
     dl->values[dl->count] = value;
     dl->count++;
@@ -74,13 +74,13 @@ void lit_datalist_push(LitState* state, LitDataList* dl, intptr_t value)
 void lit_datalist_ensuresize(LitState* state, LitDataList* dl, size_t size)
 {
     size_t i;
-    size_t old_capacity;
+    size_t oldcapacity;
     if(dl->capacity < size)
     {
-        old_capacity = dl->capacity;
+        oldcapacity = dl->capacity;
         dl->capacity = size;
-        dl->values = LIT_GROW_ARRAY(state, dl->values, dl->elemsz, old_capacity, size);
-        for(i = old_capacity; i < size; i++)
+        dl->values = LIT_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, size);
+        for(i = oldcapacity; i < size; i++)
         {
             dl->values[i] = 0;
         }
@@ -139,13 +139,13 @@ void lit_vallist_deccount(LitValList* vl)
 void lit_vallist_ensuresize(LitState* state, LitValList* vl, size_t size)
 {
         size_t i;
-        size_t old_capacity;
+        size_t oldcapacity;
         if(vl->capacity < size)
         {
-            old_capacity = vl->capacity;
+            oldcapacity = vl->capacity;
             vl->capacity = size;
-            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), old_capacity, size);
-            for(i = old_capacity; i < size; i++)
+            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), oldcapacity, size);
+            for(i = oldcapacity; i < size; i++)
             {
                 vl->values[i] = NULL_VALUE;
             }
@@ -170,12 +170,12 @@ LitValue lit_vallist_get(LitValList* vl, size_t idx)
 
 void lit_vallist_push(LitState* state, LitValList* vl, LitValue value)
 {
-        size_t old_capacity;
+        size_t oldcapacity;
         if(vl->capacity < vl->count + 1)
         {
-            old_capacity = vl->capacity;
-            vl->capacity = LIT_GROW_CAPACITY(old_capacity);
-            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), old_capacity, vl->capacity);
+            oldcapacity = vl->capacity;
+            vl->capacity = LIT_GROW_CAPACITY(oldcapacity);
+            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), oldcapacity, vl->capacity);
         }
         vl->values[vl->count] = value;
         vl->count++;

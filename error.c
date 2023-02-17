@@ -89,19 +89,19 @@ const char* lit_error_getformatstring(LitError e)
 LitString* lit_vformat_error(LitState* state, size_t line, LitError ecode, va_list args)
 {
     int error_id;
-    size_t buffer_size;
+    size_t buffersize;
     char* buffer;
     const char* error_message;
     LitString* rt;
-    va_list args_copy;
+    va_list argscopy;
     error_id = (int)ecode;
     error_message = lit_error_getformatstring(error_id);
-    va_copy(args_copy, args);
-    buffer_size = vsnprintf(NULL, 0, error_message, args_copy) + 1;
-    va_end(args_copy);
-    buffer = (char*)malloc(buffer_size+1);
-    vsnprintf(buffer, buffer_size, error_message, args);
-    buffer[buffer_size - 1] = '\0';
+    va_copy(argscopy, args);
+    buffersize = vsnprintf(NULL, 0, error_message, argscopy) + 1;
+    va_end(argscopy);
+    buffer = (char*)malloc(buffersize+1);
+    vsnprintf(buffer, buffersize, error_message, args);
+    buffer[buffersize - 1] = '\0';
     if(line != 0)
     {
         rt = lit_value_asstring(lit_string_format(state, "[err # line #]: $", (double)error_id, (double)line, (const char*)buffer));

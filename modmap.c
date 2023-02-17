@@ -79,7 +79,7 @@ static void adjust_capacity(LitState* state, LitTable* table, int capacity)
 
 bool lit_table_set(LitState* state, LitTable* table, LitString* key, LitValue value)
 {
-    bool is_new;
+    bool isnew;
     int capacity;
     LitTableEntry* entry;
     if(table->count + 1 > (table->capacity + 1) * TABLE_MAX_LOAD)
@@ -88,14 +88,14 @@ bool lit_table_set(LitState* state, LitTable* table, LitString* key, LitValue va
         adjust_capacity(state, table, capacity);
     }
     entry = find_entry(table->entries, table->capacity, key);
-    is_new = entry->key == NULL;
-    if(is_new && lit_value_isnull(entry->value))
+    isnew = entry->key == NULL;
+    if(isnew && lit_value_isnull(entry->value))
     {
         table->count++;
     }
     entry->key = key;
     entry->value = value;
-    return is_new;
+    return isnew;
 }
 
 bool lit_table_get(LitTable* table, LitString* key, LitValue* value)
@@ -373,13 +373,13 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
 {
     (void)argc;
     (void)argv;
-    bool has_wrapper;
-    bool has_more;
+    bool haswrapper;
+    bool hasmore;
     size_t i;
     size_t index;
-    size_t value_amount;
+    size_t valueamount;
     size_t olength;
-    size_t buffer_index;
+    size_t bufferindex;
     char* buffer;
     LitState* state;
     LitMap* map;
@@ -389,7 +389,7 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
     LitString* strobval;
     LitString* key;
     LitString* value;
-    LitString** values_converted;
+    LitString** valuesconverted;
     LitString** keys;
     state = vm->state;
     map = lit_value_asmap(instance);
@@ -398,13 +398,13 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
     {
         return lit_value_makestring(state, "{}");
     }
-    has_wrapper = map->index_fn != NULL;
-    has_more = values->count > LIT_CONTAINER_OUTPUT_MAX;
-    value_amount = has_more ? LIT_CONTAINER_OUTPUT_MAX : values->count;
-    values_converted = LIT_ALLOCATE(vm->state, sizeof(LitString*), value_amount+1);
-    keys = LIT_ALLOCATE(vm->state, sizeof(LitString*), value_amount+1);
+    haswrapper = map->index_fn != NULL;
+    hasmore = values->count > LIT_CONTAINER_OUTPUT_MAX;
+    valueamount = hasmore ? LIT_CONTAINER_OUTPUT_MAX : values->count;
+    valuesconverted = LIT_ALLOCATE(vm->state, sizeof(LitString*), valueamount+1);
+    keys = LIT_ALLOCATE(vm->state, sizeof(LitString*), valueamount+1);
     olength = 3;
-    if(has_more)
+    if(hasmore)
     {
         olength += SINGLE_LINE_MAPS_ENABLED ? 5 : 6;
     }
@@ -416,66 +416,66 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
         if(entry->key != NULL)
         {
             // Special hidden key
-            field = has_wrapper ? map->index_fn(vm, map, entry->key, NULL) : entry->value;
+            field = haswrapper ? map->index_fn(vm, map, entry->key, NULL) : entry->value;
             // This lit_parser_check is required to prevent infinite loops when playing with Module.privates and such
             strobval = (lit_value_ismap(field) && lit_value_asmap(field)->index_fn != NULL) ? lit_string_copyconst(state, "map") : lit_value_tostring(state, field);
             lit_state_pushroot(state, (LitObject*)strobval);
-            values_converted[i] = strobval;
+            valuesconverted[i] = strobval;
             keys[i] = entry->key;
             olength += (
                 lit_string_getlength(entry->key) + 3 + lit_string_getlength(strobval) +
                 #ifdef SINGLE_LINE_MAPS
-                    (i == value_amount - 1 ? 1 : 2)
+                    (i == valueamount - 1 ? 1 : 2)
                 #else
-                    (i == value_amount - 1 ? 2 : 3)
+                    (i == valueamount - 1 ? 2 : 3)
                 #endif
             );
             i++;
         }
-    } while(i < value_amount);
+    } while(i < valueamount);
     buffer = LIT_ALLOCATE(vm->state, sizeof(char), olength+1);
     #ifdef SINGLE_LINE_MAPS
     memcpy(buffer, "{ ", 2);
     #else
     memcpy(buffer, "{\n", 2);
     #endif
-    buffer_index = 2;
-    for(i = 0; i < value_amount; i++)
+    bufferindex = 2;
+    for(i = 0; i < valueamount; i++)
     {
         key = keys[i];
-        value = values_converted[i];
+        value = valuesconverted[i];
         #ifndef SINGLE_LINE_MAPS
-        buffer[buffer_index++] = '\t';
+        buffer[bufferindex++] = '\t';
         #endif
-        memcpy(&buffer[buffer_index], key->chars, lit_string_getlength(key));
-        buffer_index += lit_string_getlength(key);
-        memcpy(&buffer[buffer_index], " = ", 3);
-        buffer_index += 3;
-        memcpy(&buffer[buffer_index], value->chars, lit_string_getlength(value));
-        buffer_index += lit_string_getlength(value);
-        if(has_more && i == value_amount - 1)
+        memcpy(&buffer[bufferindex], key->chars, lit_string_getlength(key));
+        bufferindex += lit_string_getlength(key);
+        memcpy(&buffer[bufferindex], " = ", 3);
+        bufferindex += 3;
+        memcpy(&buffer[bufferindex], value->chars, lit_string_getlength(value));
+        bufferindex += lit_string_getlength(value);
+        if(hasmore && i == valueamount - 1)
         {
             #ifdef SINGLE_LINE_MAPS
-            memcpy(&buffer[buffer_index], ", ... }", 7);
+            memcpy(&buffer[bufferindex], ", ... }", 7);
             #else
-            memcpy(&buffer[buffer_index], ",\n\t...\n}", 8);
+            memcpy(&buffer[bufferindex], ",\n\t...\n}", 8);
             #endif
-            buffer_index += 8;
+            bufferindex += 8;
         }
         else
         {
             #ifdef SINGLE_LINE_MAPS
-            memcpy(&buffer[buffer_index], (i == value_amount - 1) ? " }" : ", ", 2);
+            memcpy(&buffer[bufferindex], (i == valueamount - 1) ? " }" : ", ", 2);
             #else
-            memcpy(&buffer[buffer_index], (i == value_amount - 1) ? "\n}" : ",\n", 2);
+            memcpy(&buffer[bufferindex], (i == valueamount - 1) ? "\n}" : ",\n", 2);
             #endif
-            buffer_index += 2;
+            bufferindex += 2;
         }
         lit_state_poproot(state);
     }
     buffer[olength] = '\0';
     LIT_FREE(vm->state, sizeof(LitString*), keys);
-    LIT_FREE(vm->state, sizeof(LitString*), values_converted);
+    LIT_FREE(vm->state, sizeof(LitString*), valuesconverted);
     return lit_value_fromobject(lit_string_take(vm->state, buffer, olength, false));
 }
 

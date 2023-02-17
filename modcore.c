@@ -59,14 +59,14 @@ void util_custom_quick_sort(LitVM* vm, LitValue* l, int length, LitValue callee)
         return;
     }
     state = vm->state;
-    int pivot_index = length / 2;
+    int pivotindex = length / 2;
     int i;
     int j;
-    LitValue pivot = l[pivot_index];
+    LitValue pivot = l[pivotindex];
     for(i = 0, j = length - 1;; i++, j--)
     {
-        //while(i < pivot_index && COMPARE(state, callee, l[i], pivot))
-        while(i < pivot_index)
+        //while(i < pivotindex && COMPARE(state, callee, l[i], pivot))
+        while(i < pivotindex)
         {
             if((rt = COMPARE(state, callee, l[i], pivot)).type != LITRESULT_OK)
             {
@@ -78,8 +78,8 @@ void util_custom_quick_sort(LitVM* vm, LitValue* l, int length, LitValue callee)
             }
             i++;
         }
-        //while(j > pivot_index && COMPARE(state, callee, pivot, l[j]))
-        while(j > pivot_index)
+        //while(j > pivotindex && COMPARE(state, callee, pivot, l[j]))
+        while(j > pivotindex)
         {
             if((rt = COMPARE(state, callee, pivot, l[j])).type != LITRESULT_OK)
             {
@@ -113,7 +113,7 @@ void util_run_fiber(LitVM* vm, LitFiber* fiber, LitValue* argv, size_t argc, boo
     bool vararg;
     int i;
     int to;
-    int vararg_count;
+    int varargcount;
     int objfn_function_arg_count;
     LitArray* array;
     LitCallFrame* frame;
@@ -143,11 +143,11 @@ void util_run_fiber(LitVM* vm, LitFiber* fiber, LitValue* argv, size_t argc, boo
         {
             array = lit_create_array(vm->state);
             lit_vm_push(vm, lit_value_fromobject(array));
-            vararg_count = argc - objfn_function_arg_count + 1;
-            if(vararg_count > 0)
+            varargcount = argc - objfn_function_arg_count + 1;
+            if(varargcount > 0)
             {
-                lit_vallist_ensuresize(vm->state, &array->list, vararg_count);
-                for(i = 0; i < vararg_count; i++)
+                lit_vallist_ensuresize(vm->state, &array->list, varargcount);
+                for(i = 0; i < varargcount; i++)
                 {
                     lit_vallist_set(&array->list, i, argv[i + objfn_function_arg_count - 1]);
                 }
@@ -171,23 +171,23 @@ void util_basic_quick_sort(LitState* state, LitValue* clist, int length)
 {
     int i;
     int j;
-    int pivot_index;
+    int pivotindex;
     LitValue tmp;
     LitValue pivot;
     if(length < 2)
     {
         return;
     }
-    pivot_index = length / 2;
-    pivot = clist[pivot_index];
+    pivotindex = length / 2;
+    pivot = clist[pivotindex];
     for(i = 0, j = length - 1;; i++, j--)
     {
-        while(i < pivot_index && compare(state, clist[i], pivot))
+        while(i < pivotindex && compare(state, clist[i], pivot))
         {
             i++;
         }
 
-        while(j > pivot_index && compare(state, pivot, clist[j]))
+        while(j > pivotindex && compare(state, pivot, clist[j]))
         {
             j--;
         }

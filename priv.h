@@ -604,8 +604,8 @@ struct LitParser
     LitToken previous;
     LitToken current;
     LitCompiler* compiler;
-    uint8_t expression_root_count;
-    uint8_t statement_root_count;
+    uint8_t exprrootcnt;
+    uint8_t stmtrootcnt;
 };
 
 struct LitEmulatedFile
@@ -634,18 +634,6 @@ struct LitOptimizer
     int depth;
     bool mark_used;
 };
-
-
-static inline bool lit_is_digit(char c)
-{
-    return c >= '0' && c <= '9';
-}
-
-static inline bool lit_is_alpha(char c)
-{
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
-}
-
 
 static inline void lit_vm_push(LitVM* vm, LitValue value)
 {

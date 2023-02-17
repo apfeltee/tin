@@ -51,7 +51,7 @@ struct FlagContext_t
 typedef struct Options_t Options_t;
 
 // Used for clean up on Ctrl+C / Ctrl+Z
-static LitState* repl_state;
+static LitState* replstate;
 
 static bool populate_flags(int argc, int begin, char** argv, const char* expectvalue, FlagContext_t* fx)
 {
@@ -235,10 +235,10 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
     return true;
 }
 
-void interupt_handler(int signal_id)
+void interupt_handler(int signalid)
 {
-    (void)signal_id;
-    lit_destroy_state(repl_state);
+    (void)signalid;
+    lit_destroy_state(replstate);
     printf("\nExiting.\n");
     exit(0);
 }
@@ -248,7 +248,7 @@ static int run_repl(LitState* state)
 {
     fprintf(stderr, "in repl...\n");
     char* line;
-    repl_state = state;
+    replstate = state;
     signal(SIGINT, interupt_handler);
     //signal(SIGTSTP, interupt_handler);
     lit_astopt_setoptlevel(LITOPTLEVEL_REPL);
@@ -277,7 +277,7 @@ int main(int argc, char* argv[])
     bool cmdfailed;
     const char* dm;
     const char* filename;
-    LitArray* arg_array;
+    LitArray* argarray;
     LitState* state;
     FlagContext_t fx;
     Options_t opts;
@@ -316,12 +316,12 @@ int main(int argc, char* argv[])
     {
         if((fx.poscnt > 0) || (opts.codeline != NULL))
         {
-            arg_array = lit_create_array(state);
+            argarray = lit_create_array(state);
             for(i=0; i<fx.poscnt; i++)
             {
-                lit_vallist_push(state, &arg_array->list, lit_value_makestring(state, fx.positional[i]));
+                lit_vallist_push(state, &argarray->list, lit_value_makestring(state, fx.positional[i]));
             }
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(argarray));
             if(opts.codeline)
             {
                 result = lit_state_execsource(state, "<-e>", opts.codeline, strlen(opts.codeline)).type;
@@ -347,33 +347,33 @@ int main(int argc, char* argv[])
 int oldmain(int argc, const char* argv[])
 {
     int i;
-    int args_left;
-    int num_files_to_run;
+    int argsleft;
+    int numfilestorun;
     char c;
     bool found;
     bool dump;
-    bool show_repl;
+    bool showrepl;
     bool evaled;
-    bool showed_help;
+    bool showedhelp;
     bool enable_optimization;
     size_t j;
     size_t length;
     char* file;
-    char* bytecode_file;
+    char* bytecodefile;
     char* source;
     char* optimization_name;
-    const char* arg_string;
+    const char* argstring;
     const char* string;
     const char* arg;
     const char* module_name;
-    char* files_to_run[128];
+    char* filestorun[128];
     LitState* state;
     LitModule* module;
     LitResult result;
-    LitArray* arg_array;
+    LitArray* argarray;
     state = lit_make_state();
     lit_open_libraries(state);
-    num_files_to_run = 0;
+    numfilestorun = 0;
     result = LITRESULT_OK;
     dump = false;
     for(i = 1; i < argc; i++)
@@ -397,17 +397,17 @@ int oldmain(int argc, const char* argv[])
             }
             continue;
         }
-        files_to_run[num_files_to_run++] = (char*)arg;
-        fprintf(stderr, "num_files_to_run=%d, (argc+1)=%d\n", num_files_to_run, argc+1);
+        filestorun[numfilestorun++] = (char*)arg;
+        fprintf(stderr, "numfilestorun=%d, (argc+1)=%d\n", numfilestorun, argc+1);
     }
-    arg_array = NULL;
-    show_repl = false;
+    argarray = NULL;
+    showrepl = false;
     evaled = false;
-    showed_help = false;
-    bytecode_file = NULL;
+    showedhelp = false;
+    bytecodefile = NULL;
     for(i = 1; i < argc; i++)
     {
-        args_left = argc - i - 1;
+        argsleft = argc - i - 1;
         arg = argv[i];
         if(arg[0] == '-' && arg[1] == 'O')
         {
@@ -438,7 +438,7 @@ int oldmain(int argc, const char* argv[])
             if(enable_optimization && strcmp(optimization_name, "help") == 0)
             {
                 show_optimization_help();
-                showed_help = true;
+                showedhelp = true;
             }
             else if(strcmp(optimization_name, "all") == 0)
             {
@@ -468,7 +468,7 @@ int oldmain(int argc, const char* argv[])
         else if(match_arg(arg, "-e", "--eval"))
         {
             evaled = true;
-            if(args_left == 0)
+            if(argsleft == 0)
             {
                 fprintf(stderr, "Expected code to run for the eval argument.\n");
                 return exitstate(state, result);
@@ -477,7 +477,7 @@ int oldmain(int argc, const char* argv[])
             length = strlen(string) + 1;
             source = (char*)malloc(length + 1);
             memcpy(source, string, length);
-            module_name = num_files_to_run == 0 ? "repl" : files_to_run[0];
+            module_name = numfilestorun == 0 ? "repl" : filestorun[0];
             if(dump)
             {
                 module = lit_state_compilemodule(state, lit_string_copyconst(state, module_name), source, length);
@@ -501,7 +501,7 @@ int oldmain(int argc, const char* argv[])
         else if(match_arg(arg, "-h", "--help"))
         {
             show_help();
-            showed_help = true;
+            showedhelp = true;
         }
         else if(match_arg(arg, "-t", "--time"))
         {
@@ -509,7 +509,7 @@ int oldmain(int argc, const char* argv[])
         }
         else if(match_arg(arg, "-i", "--interactive"))
         {
-            show_repl = true;
+            showrepl = true;
         }
         else if(match_arg(arg, "-d", "--dump"))
         {
@@ -517,27 +517,27 @@ int oldmain(int argc, const char* argv[])
         }
         else if(match_arg(arg, "-o", "--output"))
         {
-            if(args_left == 0)
+            if(argsleft == 0)
             {
                 fprintf(stderr, "Expected file name where to save the bytecode.\n");
                 //return LIT_EXIT_CODE_ARGUMENT_ERROR;
                 return exitstate(state, result);
             }
 
-            bytecode_file = (char*)argv[++i];
+            bytecodefile = (char*)argv[++i];
             lit_astopt_setoptlevel(LITOPTLEVEL_EXTREME);
         }
         else if(match_arg(arg, "-p", "--pass"))
         {
-            arg_array = lit_create_array(state);
+            argarray = lit_create_array(state);
 
-            for(j = 0; j < (size_t)args_left; j++)
+            for(j = 0; j < (size_t)argsleft; j++)
             {
-                arg_string = argv[i + j + 1];
-                lit_vallist_push(state, &arg_array->list, lit_value_makestring(state, arg_string));
+                argstring = argv[i + j + 1];
+                lit_vallist_push(state, &argarray->list, lit_value_makestring(state, argstring));
             }
 
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(arg_array));
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(argarray));
             break;
         }
         else if(arg[0] == '-')
@@ -548,25 +548,25 @@ int oldmain(int argc, const char* argv[])
         }
     }
 
-    if(num_files_to_run > 0)
+    if(numfilestorun > 0)
     {
-        if(bytecode_file != NULL)
+        if(bytecodefile != NULL)
         {
-            if(!lit_state_compileandsave(state, files_to_run, num_files_to_run, bytecode_file))
+            if(!lit_state_compileandsave(state, filestorun, numfilestorun, bytecodefile))
             {
                 result = LITRESULT_COMPILE_ERROR;
             }
         }
         else
         {
-            if(arg_array == NULL)
+            if(argarray == NULL)
             {
-                arg_array = lit_create_array(state);
+                argarray = lit_create_array(state);
             }
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(arg_array));
-            for(i = 0; i < num_files_to_run; i++)
+            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(argarray));
+            for(i = 0; i < numfilestorun; i++)
             {
-                file = files_to_run[i];
+                file = filestorun[i];
                 result = LITRESULT_OK;
                 if(dump)
                 {
@@ -583,11 +583,11 @@ int oldmain(int argc, const char* argv[])
             }
         }
     }
-    if(show_repl)
+    if(showrepl)
     {
         run_repl(state);
     }
-    else if((showed_help == false) && (evaled == false) && (num_files_to_run == 0))
+    else if((showedhelp == false) && (evaled == false) && (numfilestorun == 0))
     {
         run_repl(state);
     }

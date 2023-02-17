@@ -135,19 +135,19 @@ int lit_ustring_length(LitString* string)
 LitString* lit_ustring_codepointat(LitState* state, LitString* string, uint32_t index)
 {
     char bytes[2];
-    int code_point;
+    int codepoint;
     if(index >= lit_string_getlength(string))
     {
         return NULL;
     }
-    code_point = lit_ustring_decode((uint8_t*)string->chars + index, lit_string_getlength(string) - index);
-    if(code_point == -1)
+    codepoint = lit_ustring_decode((uint8_t*)string->chars + index, lit_string_getlength(string) - index);
+    if(codepoint == -1)
     {
         bytes[0] = string->chars[index];
         bytes[1] = '\0';
         return lit_string_copy(state, bytes, 1);
     }
-    return lit_ustring_fromcodepoint(state, code_point);
+    return lit_ustring_fromcodepoint(state, codepoint);
 }
 
 LitString* lit_ustring_fromcodepoint(LitState* state, int value)
@@ -168,7 +168,7 @@ LitString* lit_ustring_fromrange(LitState* state, LitString* source, int start, 
 {
     int length;
     int index;
-    int code_point;
+    int codepoint;
     uint32_t i;
     uint8_t* to;
     uint8_t* from;
@@ -184,10 +184,10 @@ LitString* lit_ustring_fromrange(LitState* state, LitString* source, int start, 
     for(i = 0; i < count; i++)
     {
         index = start + i;
-        code_point = lit_ustring_decode(from + index, lit_string_getlength(source) - index);
-        if(code_point != -1)
+        codepoint = lit_ustring_decode(from + index, lit_string_getlength(source) - index);
+        if(codepoint != -1)
         {
-            to += lit_ustring_encode(code_point, to);
+            to += lit_ustring_encode(codepoint, to);
         }
     }
     return lit_string_take(state, bytes, length, false);
@@ -255,7 +255,7 @@ int lit_ustring_encode(int value, uint8_t* bytes)
 int lit_ustring_decode(const uint8_t* bytes, uint32_t length)
 {
     int value;
-    uint32_t remaining_bytes;
+    uint32_t remainingbytes;
     if(*bytes <= 0x7f)
     {
         return *bytes;
@@ -263,30 +263,30 @@ int lit_ustring_decode(const uint8_t* bytes, uint32_t length)
     if((*bytes & 0xe0) == 0xc0)
     {
         value = *bytes & 0x1f;
-        remaining_bytes = 1;
+        remainingbytes = 1;
     }
     else if((*bytes & 0xf0) == 0xe0)
     {
         value = *bytes & 0x0f;
-        remaining_bytes = 2;
+        remainingbytes = 2;
     }
     else if((*bytes & 0xf8) == 0xf0)
     {
         value = *bytes & 0x07;
-        remaining_bytes = 3;
+        remainingbytes = 3;
     }
     else
     {
         return -1;
     }
-    if(remaining_bytes > length - 1)
+    if(remainingbytes > length - 1)
     {
         return -1;
     }
-    while(remaining_bytes > 0)
+    while(remainingbytes > 0)
     {
         bytes++;
-        remaining_bytes--;
+        remainingbytes--;
         if((*bytes & 0xc0) != 0x80)
         {
             return -1;
@@ -391,7 +391,7 @@ LitString* lit_string_take(LitState* state, char* chars, size_t length, bool was
 LitString* lit_string_copy(LitState* state, const char* chars, size_t length)
 {
     uint32_t hash;
-    char* heap_chars;
+    char* heapchars;
     LitString* interned;
     hash= lit_util_hashstring(chars, length);
     interned = lit_table_find_string(&state->vm->strings, chars, length, hash);
@@ -400,15 +400,15 @@ LitString* lit_string_copy(LitState* state, const char* chars, size_t length)
         return interned;
     }
     /*
-    heap_chars = LIT_ALLOCATE(state, sizeof(char), length + 1);
-    memcpy(heap_chars, chars, length);
-    heap_chars[length] = '\0';
+    heapchars = LIT_ALLOCATE(state, sizeof(char), length + 1);
+    memcpy(heapchars, chars, length);
+    heapchars[length] = '\0';
     */
-    heap_chars = sdsnewlen(chars, length);
+    heapchars = sdsnewlen(chars, length);
 #ifdef LIT_LOG_ALLOCATION
     printf("Allocated new string '%s'\n", chars);
 #endif
-    return lit_string_makelen(state, heap_chars, length, hash, true, true);
+    return lit_string_makelen(state, heapchars, length, hash, true, true);
 }
 
 const char* lit_string_getdata(LitString* ls)
@@ -480,28 +480,28 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
 {
     char ch;
     size_t length;
-    size_t total_length;
-    bool was_allowed;
+    size_t totallength;
+    bool wasallowed;
     const char* c;
     const char* strval;
-    va_list arg_list;
+    va_list arglist;
     LitValue val;
     LitString* string;
     LitString* result;
-    was_allowed = state->allow_gc;
+    wasallowed = state->allow_gc;
     state->allow_gc = false;
-    va_start(arg_list, format);
-    total_length = strlen(format);
-    va_end(arg_list);
-    result = lit_string_makeempty(state, total_length + 1, false);
-    va_start(arg_list, format);
+    va_start(arglist, format);
+    totallength = strlen(format);
+    va_end(arglist);
+    result = lit_string_makeempty(state, totallength + 1, false);
+    va_start(arglist, format);
     for(c = format; *c != '\0'; c++)
     {
         switch(*c)
         {
             case '$':
                 {
-                    strval = va_arg(arg_list, const char*);
+                    strval = va_arg(arglist, const char*);
                     if(strval != NULL)
                     {
                         length = strlen(strval);
@@ -509,13 +509,13 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
                     }
                     else
                     {
-                        goto default_ending_copying;
+                        goto defaultendingcopying;
                     }
                 }
                 break;
             case '@':
                 {
-                    val = va_arg(arg_list, LitValue);
+                    val = va_arg(arglist, LitValue);
                     if(lit_value_isstring(val))
                     {
                         string = lit_value_asstring(val);
@@ -524,7 +524,7 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
                     {
                         //fprintf(stderr, "format: not a string, but a '%s'\n", lit_tostring_typename(val));
                         //string = lit_value_tostring(state, val);
-                        goto default_ending_copying;
+                        goto defaultendingcopying;
                     }
                     if(string != NULL)
                     {
@@ -536,13 +536,13 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
                     }
                     else
                     {
-                        goto default_ending_copying;
+                        goto defaultendingcopying;
                     }
                 }
                 break;
             case '#':
                 {
-                    string = lit_value_asstring(lit_string_numbertostring(state, va_arg(arg_list, double)));
+                    string = lit_value_asstring(lit_string_numbertostring(state, va_arg(arglist, double)));
                     length = sdslen(string->chars);
                     if(length > 0)
                     {
@@ -552,17 +552,17 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
                 break;
             default:
                 {
-                    default_ending_copying:
+                    defaultendingcopying:
                     ch = *c;
                     result->chars = sdscatlen(result->chars, &ch, 1);
                 }
                 break;
         }
     }
-    va_end(arg_list);
+    va_end(arglist);
     result->hash = lit_util_hashstring(result->chars, lit_string_getlength(result));
     lit_state_regstring(state, result);
-    state->allow_gc = was_allowed;
+    state->allow_gc = wasallowed;
     return lit_value_fromobject(result);
 }
 
@@ -852,8 +852,8 @@ static LitValue objfn_string_endswith(LitVM* vm, LitValue instance, size_t argc,
 static LitValue objfn_string_replace(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
     size_t i;
-    size_t buffer_length;
-    size_t buffer_index;
+    size_t bufferlength;
+    size_t bufferindex;
     char* buffer;
     LitString* string;
     LitString* what;
@@ -866,37 +866,37 @@ static LitValue objfn_string_replace(LitVM* vm, LitValue instance, size_t argc, 
     string = lit_value_asstring(instance);
     what = lit_value_asstring(argv[0]);
     with = lit_value_asstring(argv[1]);
-    buffer_length = 0;
+    bufferlength = 0;
     for(i = 0; i < lit_string_getlength(string); i++)
     {
         if(strncmp(string->chars + i, what->chars, lit_string_getlength(what)) == 0)
         {
             i += lit_string_getlength(what) - 1;
-            buffer_length += lit_string_getlength(with);
+            bufferlength += lit_string_getlength(with);
         }
         else
         {
-            buffer_length++;
+            bufferlength++;
         }
     }
-    buffer_index = 0;
-    buffer = LIT_ALLOCATE(vm->state, sizeof(char), buffer_length+1);
+    bufferindex = 0;
+    buffer = LIT_ALLOCATE(vm->state, sizeof(char), bufferlength+1);
     for(i = 0; i < lit_string_getlength(string); i++)
     {
         if(strncmp(string->chars + i, what->chars, lit_string_getlength(what)) == 0)
         {
-            memcpy(buffer + buffer_index, with->chars, lit_string_getlength(with));
-            buffer_index += lit_string_getlength(with);
+            memcpy(buffer + bufferindex, with->chars, lit_string_getlength(with));
+            bufferindex += lit_string_getlength(with);
             i += lit_string_getlength(what) - 1;
         }
         else
         {
-            buffer[buffer_index] = string->chars[i];
-            buffer_index++;
+            buffer[bufferindex] = string->chars[i];
+            bufferindex++;
         }
     }
-    buffer[buffer_length] = '\0';
-    return lit_value_fromobject(lit_string_take(vm->state, buffer, buffer_length, false));
+    buffer[bufferlength] = '\0';
+    return lit_value_fromobject(lit_string_take(vm->state, buffer, bufferlength, false));
 }
 
 static LitValue objfn_string_substring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)

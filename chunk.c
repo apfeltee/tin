@@ -27,10 +27,10 @@ void lit_chunk_push(LitState* state, LitChunk* chunk, uint8_t byte, uint16_t lin
 {
     if(chunk->capacity < chunk->count + 1)
     {
-        size_t old_capacity = chunk->capacity;
+        size_t oldcapacity = chunk->capacity;
 
-        chunk->capacity = LIT_GROW_CAPACITY(old_capacity + 2);
-        chunk->code = LIT_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), old_capacity, chunk->capacity + 2);
+        chunk->capacity = LIT_GROW_CAPACITY(oldcapacity + 2);
+        chunk->code = LIT_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity + 2);
     }
 
     chunk->code[chunk->count] = byte;
@@ -43,31 +43,31 @@ void lit_chunk_push(LitState* state, LitChunk* chunk, uint8_t byte, uint16_t lin
 
     if(chunk->line_capacity < chunk->line_count + 2)
     {
-        size_t old_capacity = chunk->line_capacity;
+        size_t oldcapacity = chunk->line_capacity;
 
         chunk->line_capacity = LIT_GROW_CAPACITY(chunk->line_capacity + 2);
-        chunk->lines = LIT_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), old_capacity, chunk->line_capacity + 2);
+        chunk->lines = LIT_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity + 2);
 
-        if(old_capacity == 0)
+        if(oldcapacity == 0)
         {
             chunk->lines[0] = 0;
             chunk->lines[1] = 0;
         }
     }
 
-    size_t line_index = chunk->line_count;
-    size_t value = chunk->lines[line_index];
+    size_t lineindex = chunk->line_count;
+    size_t value = chunk->lines[lineindex];
 
     if(value != 0 && value != line)
     {
         chunk->line_count += 2;
-        line_index = chunk->line_count;
+        lineindex = chunk->line_count;
 
-        chunk->lines[line_index + 1] = 0;
+        chunk->lines[lineindex + 1] = 0;
     }
 
-    chunk->lines[line_index] = line;
-    chunk->lines[line_index + 1]++;
+    chunk->lines[lineindex] = line;
+    chunk->lines[lineindex + 1]++;
 }
 
 size_t lit_chunk_addconst(LitState* state, LitChunk* chunk, LitValue constant)
@@ -128,18 +128,18 @@ void lit_chunk_shrink(LitState* state, LitChunk* chunk)
 {
     if(chunk->capacity > chunk->count)
     {
-        size_t old_capacity = chunk->capacity;
+        size_t oldcapacity = chunk->capacity;
 
         chunk->capacity = chunk->count;
-        chunk->code = LIT_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), old_capacity, chunk->capacity);
+        chunk->code = LIT_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity);
     }
 
     if(chunk->line_capacity > chunk->line_count)
     {
-        size_t old_capacity = chunk->line_capacity;
+        size_t oldcapacity = chunk->line_capacity;
 
         chunk->line_capacity = chunk->line_count + 2;
-        chunk->lines = LIT_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), old_capacity, chunk->line_capacity);
+        chunk->lines = LIT_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity);
     }
 }
 

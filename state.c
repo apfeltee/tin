@@ -4,12 +4,12 @@
 #include <time.h>
 #include "priv.h"
 
-static bool measure_compilation_time;
-static double last_source_time = 0;
+static bool measurecompilationtime;
+static double lastsourcetime = 0;
 
 void lit_enable_compilation_time_measurement()
 {
-    measure_compilation_time = true;
+    measurecompilationtime = true;
 }
 
 static void lit_util_default_error(LitState* state, const char* message)
@@ -257,7 +257,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
     int amount;
     size_t i;
     size_t varargc;
-    size_t function_arg_count;
+    size_t functionargcount;
     LitVM* vm;
     LitFiber* fiber;
     LitCallFrame* frame;
@@ -293,13 +293,13 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
     {
         PUSH(argv[i]);
     }
-    function_arg_count = callee->arg_count;
-    if(argc != function_arg_count)
+    functionargcount = callee->arg_count;
+    if(argc != functionargcount)
     {
         vararg = callee->vararg;
-        if(argc < function_arg_count)
+        if(argc < functionargcount)
         {
-            amount = (int)function_arg_count - argc - (vararg ? 1 : 0);
+            amount = (int)functionargcount - argc - (vararg ? 1 : 0);
             for(i = 0; i < (size_t)amount; i++)
             {
                 PUSH(lit_value_makenull(state));
@@ -312,7 +312,7 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
         else if(callee->vararg)
         {
             array = lit_create_array(vm->state);
-            varargc = argc - function_arg_count + 1;
+            varargc = argc - functionargcount + 1;
             lit_vallist_ensuresize(vm->state, &array->list, varargc);
             for(i = 0; i < varargc; i++)
             {
@@ -324,13 +324,13 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
         }
         else
         {
-            fiber->stack_top -= (argc - function_arg_count);
+            fiber->stack_top -= (argc - functionargcount);
         }
     }
     else if(callee->vararg)
     {
         array = lit_create_array(vm->state);
-        varargc = argc - function_arg_count + 1;
+        varargc = argc - functionargcount + 1;
         lit_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
         *(fiber->stack_top - 1) = lit_value_fromobject(array);
     }
@@ -386,7 +386,7 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
     LitFiber* fiber;
     LitValue* slot;
     LitNativeMethod* natmethod;
-    LitBoundMethod* bound_method;
+    LitBoundMethod* boundmethod;
     LitValue mthval;
     LitValue result;
     lir.result = lit_value_makenull(state);
@@ -473,18 +473,18 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
                 break;
             case LITTYPE_BOUND_METHOD:
                 {
-                    bound_method = lit_value_asboundmethod(callee);
-                    mthval = bound_method->method;
-                    *slot = bound_method->receiver;
+                    boundmethod = lit_value_asboundmethod(callee);
+                    mthval = boundmethod->method;
+                    *slot = boundmethod->receiver;
                     if(lit_value_isnatmethod(mthval))
                     {
-                        result = lit_value_asnativemethod(mthval)->method(vm, bound_method->receiver, argc, fiber->stack_top - argc);
+                        result = lit_value_asnativemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
                         fiber->stack_top = slot;
                         RETURN_OK(result);
                     }
                     else if(lit_value_isprimmethod(mthval))
                     {
-                        lit_value_asprimitivemethod(mthval)->method(vm, bound_method->receiver, argc, fiber->stack_top - argc);
+                        lit_value_asprimitivemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
 
                         fiber->stack_top = slot;
                         RETURN_OK(lit_value_makenull(state));
@@ -526,7 +526,7 @@ LitInterpretResult lit_state_callvalue(LitState* state, LitValue callee, LitValu
     return lit_state_callmethod(state, callee, callee, argv, argc, ignfiber);
 }
 
-LitInterpretResult lit_state_findandcallmethod(LitState* state, LitValue callee, LitString* method_name, LitValue* argv, uint8_t argc, bool ignfiber)
+LitInterpretResult lit_state_findandcallmethod(LitState* state, LitValue callee, LitString* mthname, LitValue* argv, uint8_t argc, bool ignfiber)
 {
     LitClass* klass;
     LitVM* vm;
@@ -543,7 +543,7 @@ LitInterpretResult lit_state_findandcallmethod(LitState* state, LitValue callee,
         }
     }
     klass = lit_state_getclassfor(state, callee);
-    if((lit_value_isinstance(callee) && lit_table_get(&lit_value_asinstance(callee)->fields, method_name, &mthval)) || lit_table_get(&klass->methods, method_name, &mthval))
+    if((lit_value_isinstance(callee) && lit_table_get(&lit_value_asinstance(callee)->fields, mthname, &mthval)) || lit_table_get(&klass->methods, mthname, &mthval))
     {
         return lit_state_callmethod(state, callee, mthval, argv, argc, ignfiber);
     }
@@ -705,10 +705,10 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
 {
     clock_t t;
     clock_t total_t;
-    bool allowed_gc;
+    bool allowedgc;
     LitModule* module;
     LitAstExprList statements;
-    allowed_gc = state->allow_gc;
+    allowedgc = state->allow_gc;
     state->allow_gc = false;
     state->had_error = false;
     module = NULL;
@@ -721,7 +721,7 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
     {
         t = 0;
         total_t = 0;
-        if(measure_compilation_time)
+        if(measurecompilationtime)
         {
             total_t = t = clock();
         }
@@ -735,27 +735,27 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
         {
             lit_towriter_ast(state, &state->stdoutwriter, &statements);
         }
-        if(measure_compilation_time)
+        if(measurecompilationtime)
         {
             printf("Parsing:        %gms\n", (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
             t = clock();
         }
         lit_astopt_optast(state->optimizer, &statements);
-        if(measure_compilation_time)
+        if(measurecompilationtime)
         {
             printf("Optimization:   %gms\n", (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
             t = clock();
         }
         module = lit_emitter_modemit(state->emitter, &statements, module_name);
         free_statements(state, &statements);
-        if(measure_compilation_time)
+        if(measurecompilationtime)
         {
             printf("Emitting:       %gms\n", (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
             printf("\nTotal:          %gms\n-----------------------\n",
-                   (double)(clock() - total_t) / CLOCKS_PER_SEC * 1000 + last_source_time);
+                   (double)(clock() - total_t) / CLOCKS_PER_SEC * 1000 + lastsourcetime);
         }
     }
-    state->allow_gc = allowed_gc;
+    state->allow_gc = allowedgc;
     return state->had_error ? NULL : module;
 }
 
@@ -804,7 +804,7 @@ LitInterpretResult lit_state_internexecsource(LitState* state, LitString* module
 }
 
 
-bool lit_state_compileandsave(LitState* state, char* files[], size_t num_files, const char* output_file)
+bool lit_state_compileandsave(LitState* state, char* files[], size_t numfiles, const char* outputfile)
 {
     size_t i;
     size_t len;
@@ -813,10 +813,10 @@ bool lit_state_compileandsave(LitState* state, char* files[], size_t num_files, 
     FILE* file;
     LitString* module_name;
     LitModule* module;
-    LitModule** compiled_modules;
-    compiled_modules = LIT_ALLOCATE(state, sizeof(LitModule*), num_files+1);
+    LitModule** compiledmodules;
+    compiledmodules = LIT_ALLOCATE(state, sizeof(LitModule*), numfiles+1);
     lit_astopt_setoptlevel(LITOPTLEVEL_EXTREME);
-    for(i = 0; i < num_files; i++)
+    for(i = 0; i < numfiles; i++)
     {
         file_name = lit_util_copystring(files[i]);
         source = lit_util_readfile(file_name, &len);
@@ -828,7 +828,7 @@ bool lit_state_compileandsave(LitState* state, char* files[], size_t num_files, 
         file_name = lit_util_patchfilename(file_name);
         module_name = lit_string_copy(state, file_name, strlen(file_name));
         module = lit_state_compilemodule(state, module_name, source, len);
-        compiled_modules[i] = module;
+        compiledmodules[i] = module;
         free((void*)source);
         free((void*)file_name);
         if(module == NULL)
@@ -836,33 +836,33 @@ bool lit_state_compileandsave(LitState* state, char* files[], size_t num_files, 
             return false;
         }
     }
-    file = fopen(output_file, "w+b");
+    file = fopen(outputfile, "w+b");
     if(file == NULL)
     {
-        lit_state_raiseerror(state, COMPILE_ERROR, "failed to open file '%s' for writing", output_file);
+        lit_state_raiseerror(state, COMPILE_ERROR, "failed to open file '%s' for writing", outputfile);
         return false;
     }
     lit_ioutil_writeuint16(file, LIT_BYTECODE_MAGIC_NUMBER);
     lit_ioutil_writeuint8(file, LIT_BYTECODE_VERSION);
-    lit_ioutil_writeuint16(file, num_files);
-    for(i = 0; i < num_files; i++)
+    lit_ioutil_writeuint16(file, numfiles);
+    for(i = 0; i < numfiles; i++)
     {
-        lit_ioutil_writemodule(compiled_modules[i], file);
+        lit_ioutil_writemodule(compiledmodules[i], file);
     }
     lit_ioutil_writeuint16(file, LIT_BYTECODE_END_NUMBER);
-    LIT_FREE(state, sizeof(LitModule), compiled_modules);
+    LIT_FREE(state, sizeof(LitModule), compiledmodules);
     fclose(file);
     return true;
 }
 
-static char* lit_util_readsource(LitState* state, const char* file, char** patched_file_name, size_t* dlen)
+static char* lit_util_readsource(LitState* state, const char* file, char** patchedfilename, size_t* dlen)
 {
     clock_t t;
     size_t len;
     char* file_name;
     char* source;
     t = 0;
-    if(measure_compilation_time)
+    if(measurecompilationtime)
     {
         t = clock();
     }
@@ -874,11 +874,11 @@ static char* lit_util_readsource(LitState* state, const char* file, char** patch
     }
     *dlen = len;
     file_name = lit_util_patchfilename(file_name);
-    if(measure_compilation_time)
+    if(measurecompilationtime)
     {
-        printf("reading source: %gms\n", last_source_time = (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
+        printf("reading source: %gms\n", lastsourcetime = (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
     }
-    *patched_file_name = file_name;
+    *patchedfilename = file_name;
     return source;
 }
 
@@ -886,33 +886,33 @@ LitInterpretResult lit_state_execfile(LitState* state, const char* file)
 {
     size_t len;
     char* source;
-    char* patched_file_name;
+    char* patchedfilename;
     LitInterpretResult result;
-    source = lit_util_readsource(state, file, &patched_file_name, &len);
+    source = lit_util_readsource(state, file, &patchedfilename, &len);
     if(source == NULL)
     {
         return INTERPRET_RUNTIME_FAIL;
     }
-    result = lit_state_execsource(state, patched_file_name, source, len);
+    result = lit_state_execsource(state, patchedfilename, source, len);
     free((void*)source);
-    free(patched_file_name);
+    free(patchedfilename);
     return result;
 }
 
 LitInterpretResult lit_state_dumpfile(LitState* state, const char* file)
 {
     size_t len;
-    char* patched_file_name;
+    char* patchedfilename;
     char* source;
     LitInterpretResult result;
     LitString* module_name;
     LitModule* module;
-    source = lit_util_readsource(state, file, &patched_file_name, &len);
+    source = lit_util_readsource(state, file, &patchedfilename, &len);
     if(source == NULL)
     {
         return INTERPRET_RUNTIME_FAIL;
     }
-    module_name = lit_string_copy(state, patched_file_name, strlen(patched_file_name));
+    module_name = lit_string_copy(state, patchedfilename, strlen(patchedfilename));
     module = lit_state_compilemodule(state, module_name, source, len);
     if(module == NULL)
     {
@@ -924,23 +924,23 @@ LitInterpretResult lit_state_dumpfile(LitState* state, const char* file)
         result = (LitInterpretResult){ LITRESULT_OK, lit_value_makenull(state) };
     }
     free((void*)source);
-    free((void*)patched_file_name);
+    free((void*)patchedfilename);
     return result;
 }
 
 void lit_state_raiseerror(LitState* state, LitErrType type, const char* message, ...)
 {
-    size_t buffer_size;
+    size_t buffersize;
     char* buffer;
     va_list args;
-    va_list args_copy;
+    va_list argscopy;
     (void)type;
     va_start(args, message);
-    va_copy(args_copy, args);
-    buffer_size = vsnprintf(NULL, 0, message, args_copy) + 1;
-    va_end(args_copy);
-    buffer = (char*)malloc(buffer_size+1);
-    vsnprintf(buffer, buffer_size, message, args);
+    va_copy(argscopy, args);
+    buffersize = vsnprintf(NULL, 0, message, argscopy) + 1;
+    va_end(argscopy);
+    buffer = (char*)malloc(buffersize+1);
+    vsnprintf(buffer, buffersize, message, args);
     va_end(args);
     state->error_fn(state, buffer);
     state->had_error = true;
@@ -950,16 +950,16 @@ void lit_state_raiseerror(LitState* state, LitErrType type, const char* message,
 
 void lit_state_printf(LitState* state, const char* message, ...)
 {
-    size_t buffer_size;
+    size_t buffersize;
     char* buffer;
     va_list args;
     va_start(args, message);
-    va_list args_copy;
-    va_copy(args_copy, args);
-    buffer_size = vsnprintf(NULL, 0, message, args_copy) + 1;
-    va_end(args_copy);
-    buffer = (char*)malloc(buffer_size+1);
-    vsnprintf(buffer, buffer_size, message, args);
+    va_list argscopy;
+    va_copy(argscopy, args);
+    buffersize = vsnprintf(NULL, 0, message, argscopy) + 1;
+    va_end(argscopy);
+    buffer = (char*)malloc(buffersize+1);
+    vsnprintf(buffer, buffersize, message, args);
     va_end(args);
     state->print_fn(state, buffer);
     free(buffer);

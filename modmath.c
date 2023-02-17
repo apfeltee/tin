@@ -149,13 +149,13 @@ static LitValue math_exp(LitVM* vm, LitValue instance, size_t argc, LitValue* ar
  * Random
  */
 
-static size_t static_random_data;
+static size_t staticrandomdata;
 
 static size_t* extract_random_data(LitState* state, LitValue instance)
 {
     if(lit_value_isclass(instance))
     {
-        return &static_random_data;
+        return &staticrandomdata;
     }
 
     LitValue data;
@@ -367,7 +367,7 @@ void lit_open_math_library(LitState* state)
         };
     }
     srand(time(NULL));
-    static_random_data = time(NULL);
+    staticrandomdata = time(NULL);
     {
         klass = lit_create_classobject(state, "Random");
         {

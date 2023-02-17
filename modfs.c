@@ -66,7 +66,7 @@ char* lit_util_readfile(const char* path, size_t* dlen)
 {
     size_t fileSize;
     char* buffer;
-    size_t bytes_read;
+    size_t bytesread;
     FILE* file;
     file = fopen(path, "rb");
     if(file == NULL)
@@ -77,10 +77,10 @@ char* lit_util_readfile(const char* path, size_t* dlen)
     fileSize = ftell(file);
     rewind(file);
     buffer = (char*)malloc(fileSize + 1);
-    bytes_read = fread(buffer, sizeof(char), fileSize, file);
-    buffer[bytes_read] = '\0';
+    bytesread = fread(buffer, sizeof(char), fileSize, file);
+    buffer[bytesread] = '\0';
     fclose(file);
-    *dlen = bytes_read;
+    *dlen = bytesread;
     return buffer;
 }
 
@@ -434,9 +434,9 @@ LitModule* lit_ioutil_readmodule(LitState* state, const char* input, size_t len)
     bool enabled;
     uint16_t i;
     uint16_t j;
-    uint16_t module_count;
-    uint16_t privates_count;
-    uint8_t bytecode_version;
+    uint16_t modulecount;
+    uint16_t privatescount;
+    uint8_t bytecodeversion;
     LitString* name;
     LitTable* privates;
     LitModule* module;
@@ -447,23 +447,23 @@ LitModule* lit_ioutil_readmodule(LitState* state, const char* input, size_t len)
         lit_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown magic number");
         return NULL;
     }
-    bytecode_version = lit_emufile_readuint8(&file);
-    if(bytecode_version > LIT_BYTECODE_VERSION)
+    bytecodeversion = lit_emufile_readuint8(&file);
+    if(bytecodeversion > LIT_BYTECODE_VERSION)
     {
-        lit_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown bytecode version '%i'", (int)bytecode_version);
+        lit_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown bytecode version '%i'", (int)bytecodeversion);
         return NULL;
     }
-    module_count = lit_emufile_readuint16(&file);
+    modulecount = lit_emufile_readuint16(&file);
     LitModule* first = NULL;
-    for(j = 0; j < module_count; j++)
+    for(j = 0; j < modulecount; j++)
     {
         module = lit_object_makemodule(state, lit_emufile_readstring(state, &file));
         privates = &module->private_names->values;
-        privates_count = lit_emufile_readuint16(&file);
+        privatescount = lit_emufile_readuint16(&file);
         enabled = !((bool)lit_emufile_readuint8(&file));
-        module->privates = LIT_ALLOCATE(state, sizeof(LitValue), privates_count);
-        module->private_count = privates_count;
-        for(i = 0; i < privates_count; i++)
+        module->privates = LIT_ALLOCATE(state, sizeof(LitValue), privatescount);
+        module->private_count = privatescount;
+        for(i = 0; i < privatescount; i++)
         {
             module->privates[i] = NULL_VALUE;
             if(enabled)
@@ -704,13 +704,13 @@ static LitValue objmethod_file_readline(LitVM* vm, LitValue instance, size_t arg
     (void)instance;
     (void)argc;
     (void)argv;
-    size_t max_length;
+    size_t maxlength;
     char* line;
     LitFileData* data;
-    max_length = (size_t)lit_value_getnumber(vm, argv, argc, 0, 128);
+    maxlength = (size_t)lit_value_getnumber(vm, argv, argc, 0, 128);
     data = (LitFileData*)lit_util_instancedataget(vm, instance);
-    line = LIT_ALLOCATE(vm->state, sizeof(char), max_length + 1);
-    if(!fgets(line, max_length, data->handle))
+    line = LIT_ALLOCATE(vm->state, sizeof(char), maxlength + 1);
+    if(!fgets(line, maxlength, data->handle))
     {
         LIT_FREE(vm->state, sizeof(char), line);
         return NULL_VALUE;
@@ -800,13 +800,13 @@ static LitValue objmethod_file_getlastmodified(LitVM* vm, LitValue instance, siz
 
 static LitValue objfunction_directory_exists(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
 {
-    const char* directory_name = lit_value_checkstring(vm, argv, argc, 0);
+    const char* directoryname = lit_value_checkstring(vm, argv, argc, 0);
     struct stat buffer;
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makebool(vm->state, stat(directory_name, &buffer) == 0 && S_ISDIR(buffer.st_mode));
+    return lit_value_makebool(vm->state, stat(directoryname, &buffer) == 0 && S_ISDIR(buffer.st_mode));
 }
 
 static LitValue objfunction_directory_listfiles(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)

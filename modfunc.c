@@ -72,11 +72,11 @@ LitPrimitiveMethod* lit_object_makeprimitivemethod(LitState* state, LitPrimitive
 
 LitBoundMethod* lit_object_makeboundmethod(LitState* state, LitValue receiver, LitValue method)
 {
-    LitBoundMethod* bound_method;
-    bound_method = (LitBoundMethod*)lit_gcmem_allocobject(state, sizeof(LitBoundMethod), LITTYPE_BOUND_METHOD, false);
-    bound_method->receiver = receiver;
-    bound_method->method = method;
-    return bound_method;
+    LitBoundMethod* boundmethod;
+    boundmethod = (LitBoundMethod*)lit_gcmem_allocobject(state, sizeof(LitBoundMethod), LITTYPE_BOUND_METHOD, false);
+    boundmethod->receiver = receiver;
+    boundmethod->method = method;
+    return boundmethod;
 }
 
 bool lit_value_iscallablefunction(LitValue value)

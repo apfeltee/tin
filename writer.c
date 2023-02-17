@@ -106,17 +106,17 @@ static const char* lit_object_type_names[] =
 {
     "string",
     "function",
-    "native_function",
-    "native_primitive",
-    "native_method",
-    "primitive_method",
+    "nativefunction",
+    "nativeprimitive",
+    "nativemethod",
+    "primitivemethod",
     "fiber",
     "module",
     "closure",
     "upvalue",
     "class",
     "instance",
-    "bound_method",
+    "boundmethod",
     "array",
     "map",
     "userdata",
@@ -124,8 +124,6 @@ static const char* lit_object_type_names[] =
     "field",
     "reference"
 };
-
-
 
 void lit_towriter_array(LitState* state, LitWriter* wr, LitArray* array, size_t size)
 {
@@ -142,7 +140,7 @@ void lit_towriter_array(LitState* state, LitWriter* wr, LitArray* array, size_t 
             }
             else
             {
-                lit_towriter_value(state, wr, lit_vallist_get(&array->list, i));
+                lit_towriter_value(state, wr, lit_vallist_get(&array->list, i), true);
             }
             if(i + 1 < size)
             {
@@ -159,11 +157,11 @@ void lit_towriter_array(LitState* state, LitWriter* wr, LitArray* array, size_t 
 
 void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
 {
-    bool had_before;
+    bool hadbefore;
     size_t i;
     LitTableEntry* entry;
     lit_writer_writeformat(wr, "(%u) {", (unsigned int)size);
-    had_before = false;
+    hadbefore = false;
     if(size > 0)
     {
         for(i = 0; i < (size_t)map->values.capacity; i++)
@@ -171,7 +169,7 @@ void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
             entry = &map->values.entries[i];
             if(entry->key != NULL)
             {
-                if(had_before)
+                if(hadbefore)
                 {
                     lit_writer_writestring(wr, ", ");
                 }
@@ -186,13 +184,13 @@ void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
                 }
                 else
                 {
-                    lit_towriter_value(state, wr, entry->value);
+                    lit_towriter_value(state, wr, entry->value, true);
                 }
-                had_before = true;
+                hadbefore = true;
             }
         }
     }
-    if(had_before)
+    if(hadbefore)
     {
         lit_writer_writestring(wr, " }");
     }
@@ -202,7 +200,93 @@ void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
     }
 }
 
-void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
+void lit_writer_writeescapedbyte(LitWriter* wr, int ch)
+{
+    switch(ch)
+    {
+        case '\'':
+            {
+                lit_writer_writestring(wr, "\\\'");
+            }
+            break;
+        case '\"':
+            {
+                lit_writer_writestring(wr, "\\\"");
+            }
+            break;
+        case '\\':
+            {
+                lit_writer_writestring(wr, "\\\\");
+            }
+            break;
+        case '\b':
+            {
+                lit_writer_writestring(wr, "\\b");
+            }
+            break;
+        case '\f':
+            {
+                lit_writer_writestring(wr, "\\f");
+            }
+            break;
+        case '\n':
+            {
+                lit_writer_writestring(wr, "\\n");
+            }
+            break;
+        case '\r':
+            {
+                lit_writer_writestring(wr, "\\r");
+            }
+            break;
+        case '\t':
+            {
+                lit_writer_writestring(wr, "\\t");
+            }
+            break;
+        default:
+            {
+                lit_writer_writeformat(wr, "\\x%02x", (unsigned char)ch);
+            }
+            break;
+    }
+}
+
+
+void lit_towriter_string(LitState* state, LitWriter* wr, LitString* so, bool withquot)
+{
+    int i;
+    int len;
+    char bch;
+    char quotch;
+    const char* str;
+    len = lit_string_getlength(so);
+    str = so->chars;
+    quotch = '"';
+    if(withquot)
+    {
+        lit_writer_writebyte(wr, quotch);
+        for(i=0; i<len; i++)
+        {
+            bch = str[i];
+            if((bch < 32) || (bch > 127) || (bch == '\"') || (bch == '\\'))
+            {
+                lit_writer_writeescapedbyte(wr, bch);
+            }
+            else
+            {
+                lit_writer_writebyte(wr, bch);
+            }
+        }
+        lit_writer_writebyte(wr, quotch);
+    }
+    else
+    {
+        lit_writer_writestringl(wr, str, len);
+    }
+}
+
+void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value, bool withquot)
 {
     size_t size;
     LitMap* map;
@@ -218,7 +302,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
         {
             case LITTYPE_STRING:
                 {
-                    lit_writer_writeformat(wr, "%s", lit_value_ascstring(value));
+                    lit_towriter_string(state, wr, lit_value_asstring(value), withquot);
                 }
                 break;
             case LITTYPE_FUNCTION:
@@ -267,11 +351,11 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
                     upvalue = lit_value_asupvalue(value);
                     if(upvalue->location == NULL)
                     {
-                        lit_towriter_value(state, wr, upvalue->closed);
+                        lit_towriter_value(state, wr, upvalue->closed, withquot);
                     }
                     else
                     {
-                        lit_towriter_object(state, wr, *upvalue->location);
+                        lit_towriter_object(state, wr, *upvalue->location, withquot);
                     }
                 }
                 break;
@@ -298,7 +382,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
                 break;
             case LITTYPE_BOUND_METHOD:
                 {
-                    lit_towriter_value(state, wr, lit_value_asboundmethod(value)->method);
+                    lit_towriter_value(state, wr, lit_value_asboundmethod(value)->method, withquot);
                     return;
                 }
                 break;
@@ -350,7 +434,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
                     }
                     else
                     {
-                        lit_towriter_value(state, wr, *slot);
+                        lit_towriter_value(state, wr, *slot, withquot);
                     }
                 }
                 break;
@@ -368,7 +452,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value)
 
 //LitInterpretResult lit_call_instance_method(LitState* state, LitInstance* instance, LitString* mthname, LitValue* argv, size_t argc)
 //
-void lit_towriter_value(LitState* state, LitWriter* wr, LitValue value)
+void lit_towriter_value(LitState* state, LitWriter* wr, LitValue value, bool withquot)
 {
     if(lit_value_isbool(value))
     {
@@ -384,10 +468,9 @@ void lit_towriter_value(LitState* state, LitWriter* wr, LitValue value)
     }
     else if(lit_value_isobject(value))
     {
-        lit_towriter_object(state, wr, value);
+        lit_towriter_object(state, wr, value, withquot);
     }
 }
-
 
 const char* lit_tostring_typename(LitValue value)
 {
@@ -560,7 +643,7 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
         case LITEXPR_LITERAL:
             {
                 as_type(exlit, expr, LitAstLiteralExpr);
-                lit_towriter_value(state, wr, exlit->value);
+                lit_towriter_value(state, wr, exlit->value, true);
             }
             break;
         case LITEXPR_BINARY:
@@ -622,7 +705,7 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
             {
                 as_type(exset, expr, LitAstSetExpr);
                 lit_towriter_expr(state, wr, exset->where);
-                lit_writer_writeformat(wr, ".%s = ", exset->name);
+                lit_writer_writeformat(wr, ".%.*s = ", exset->length, exset->name);
                 lit_towriter_expr(state, wr, exset->value);
             }
             break;
@@ -630,7 +713,7 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
             {
                 as_type(exget, expr, LitAstGetExpr);
                 lit_towriter_expr(state, wr, exget->where);
-                lit_writer_writeformat(wr, ".%s", exget->name);
+                lit_writer_writeformat(wr, ".%.*s", exget->length, exget->name);
             }
             break;
         case LITEXPR_LAMBDA:
@@ -639,7 +722,7 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
                 lit_writer_writeformat(wr, "(");
                 for(i=0; i<exlam->parameters.count; i++)
                 {
-                    lit_writer_writeformat(wr, "%s", exlam->parameters.values[i].name);
+                    lit_writer_writeformat(wr, "%.*s", exlam->parameters.values[i].length, exlam->parameters.values[i].name);
                     if(exlam->parameters.values[i].default_value != NULL)
                     {
                         lit_towriter_expr(state, wr, exlam->parameters.values[i].default_value);
@@ -675,7 +758,7 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
                 lit_writer_writeformat(wr, "{");
                 for(i=0; i<lit_vallist_count(&exobj->keys); i++)
                 {
-                    lit_towriter_value(state, wr, lit_vallist_get(&exobj->keys, i));
+                    lit_towriter_value(state, wr, lit_vallist_get(&exobj->keys, i), true);
                     lit_writer_writeformat(wr, ": ");
                     lit_towriter_expr(state, wr, exobj->values.values[i]);
                     if((i+1) < lit_vallist_count(&exobj->keys))
@@ -703,7 +786,7 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
         case LITEXPR_SUPER:
             {
                 as_type(exsuper, expr, LitAstSuperExpr);
-                lit_writer_writeformat(wr, "super(%s)", exsuper->method->chars);
+                lit_writer_writeformat(wr, "super(%.*s)", lit_string_getlength(exsuper->method), exsuper->method->chars);
             }
             break;
         case LITEXPR_RANGE:
@@ -776,36 +859,85 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
             break;
         case LITEXPR_WHILE:
             {
-                as_type(wl, expr, LitAstWhileExpr);
+                as_type(exwhile, expr, LitAstWhileExpr);
                 lit_writer_writeformat(wr, "while(");
-                lit_towriter_expr(state, wr, wl->condition);
+                lit_towriter_expr(state, wr, exwhile->condition);
                 lit_writer_writeformat(wr, ")");
-                lit_towriter_expr(state, wr, wl->body);
+                lit_towriter_expr(state, wr, exwhile->body);
             }
             break;
         case LITEXPR_FOR:
             {
-            
+                as_type(exfor, expr, LitAstForExpr);
+                lit_writer_writeformat(wr, "for(");
+                if(exfor->c_style)
+                {
+                    if(exfor->init)
+                    {
+                        if(exfor->var)
+                        {
+                            lit_writer_writeformat(wr, "var ");
+                            lit_towriter_expr(state, wr, exfor->var);
+                        }
+                        lit_towriter_expr(state, wr, exfor->init);
+                    }
+                    lit_writer_writeformat(wr, ";");
+                    if(exfor->condition)
+                    {
+                        lit_towriter_expr(state, wr, exfor->condition);
+                    }
+                    lit_writer_writeformat(wr, ";");
+                    if(exfor->increment)
+                    {
+                        lit_towriter_expr(state, wr, exfor->increment);
+                    }
+                }
+                else
+                {
+                    
+                }
+                lit_writer_writeformat(wr, ")");
+                lit_towriter_expr(state, wr, exfor->body);
+
             }
             break;
         case LITEXPR_VARSTMT:
             {
-            
+                as_type(exvdec, expr, LitAstAssignVarExpr);
+                if(exvdec->constant)
+                {
+                    lit_writer_writeformat(wr, "const");
+                }
+                else
+                {
+                    lit_writer_writeformat(wr, "var");
+                }
+                lit_writer_writeformat(wr, " %.*s", exvdec->length, exvdec->name);
+                if(exvdec->init)
+                {
+                    lit_writer_writeformat(wr, " = ");
+                    lit_towriter_expr(state, wr, exvdec->init);
+                }
+                lit_writer_writeformat(wr, ";\n");
             }
             break;
         case LITEXPR_CONTINUE:
             {
-            
+                lit_writer_writeformat(wr, "continue;");
             }
             break;
         case LITEXPR_BREAK:
             {
-            
+                lit_writer_writeformat(wr, "break;");
             }
             break;
         case LITEXPR_FUNCTION:
             {
-            
+                as_type(exfun, expr, LitAstFunctionExpr);
+                lit_writer_writeformat(wr, "function %.*s", exfun->length, exfun->name);
+                lit_writer_writeformat(wr, "(");
+                lit_writer_writeformat(wr, ")");
+                lit_towriter_expr(state, wr, exfun->body);
             }
             break;
         case LITEXPR_RETURN:
