@@ -164,10 +164,10 @@ void lit_ast_destroyexpression(LitState* state, LitAstExpression* expression)
 
         case LITEXPR_LAMBDA:
             {
-                LitAstLambdaExpr* expr = (LitAstLambdaExpr*)expression;
+                LitAstFunctionExpr* expr = (LitAstFunctionExpr*)expression;
                 lit_paramlist_destroyvalues(state, &expr->parameters);
                 lit_ast_destroyexpression(state, expr->body);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstLambdaExpr), 0);
+                lit_gcmem_memrealloc(state, expression, sizeof(LitAstFunctionExpr), 0);
             }
             break;
         case LITEXPR_ARRAY:
@@ -423,10 +423,10 @@ LitAstSetExpr* lit_ast_make_setexpr(LitState* state, size_t line, LitAstExpressi
     return expression;
 }
 
-LitAstLambdaExpr* lit_ast_make_lambdaexpr(LitState* state, size_t line)
+LitAstFunctionExpr* lit_ast_make_lambdaexpr(LitState* state, size_t line)
 {
-    LitAstLambdaExpr* expression;
-    expression = (LitAstLambdaExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstLambdaExpr), LITEXPR_LAMBDA);
+    LitAstFunctionExpr* expression;
+    expression = (LitAstFunctionExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstFunctionExpr), LITEXPR_LAMBDA);
     expression->body = NULL;
     lit_paramlist_init(&expression->parameters);
     return expression;

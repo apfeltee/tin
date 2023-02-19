@@ -335,7 +335,6 @@ typedef struct /**/LitAstCallExpr LitAstCallExpr;
 typedef struct /**/LitAstGetExpr LitAstGetExpr;
 typedef struct /**/LitAstSetExpr LitAstSetExpr;
 typedef struct /**/LitAstParameter LitAstParameter;
-typedef struct /**/LitAstLambdaExpr LitAstLambdaExpr;
 typedef struct /**/LitAstArrayExpr LitAstArrayExpr;
 typedef struct /**/LitAstObjectExpr LitAstObjectExpr;
 typedef struct /**/LitAstIndexExpr LitAstIndexExpr;
@@ -867,7 +866,7 @@ LitAstAssignExpr *lit_ast_make_assignexpr(LitState *state, size_t line, LitAstEx
 LitAstCallExpr *lit_ast_make_callexpr(LitState *state, size_t line, LitAstExpression *callee);
 LitAstGetExpr *lit_ast_make_getexpr(LitState *state, size_t line, LitAstExpression *where, const char *name, size_t length, bool questionable, bool ignore_result);
 LitAstSetExpr *lit_ast_make_setexpr(LitState *state, size_t line, LitAstExpression *where, const char *name, size_t length, LitAstExpression *value);
-LitAstLambdaExpr *lit_ast_make_lambdaexpr(LitState *state, size_t line);
+LitAstFunctionExpr *lit_ast_make_lambdaexpr(LitState *state, size_t line);
 LitAstArrayExpr *lit_ast_make_arrayexpr(LitState *state, size_t line);
 LitAstObjectExpr *lit_ast_make_objectexpr(LitState *state, size_t line);
 LitAstIndexExpr *lit_ast_make_subscriptexpr(LitState *state, size_t line, LitAstExpression *array, LitAstExpression *index);

@@ -53,9 +53,13 @@ function rol(num, cnt)
 function safe_add(x, y)
 {
     if(x == null)
+    {
         x = 0;
+    }
     if(y == null)
+    {
         y = 0;
+    }
     var lsw = (x & 0xFFFF) + (y & 0xFFFF);
     var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
     return (msw << 16) | (lsw & 0xFFFF);
@@ -84,7 +88,19 @@ function sha1_ft(t, b, c, d)
 // Determine the appropriate additive constant for the current iteration 
 function sha1_kt(t)
 {
-    return (t < 20) ?  1518500249 : (t < 40) ?  1859775393 : (t < 60) ? -1894007588 : -899497514;
+    if(t < 20)
+    {
+        return 1518500249;
+    }
+    if(t < 40)
+    {
+        return 1859775393;
+    }
+    if(t < 60)
+    {
+        return -1894007588;
+    }
+    return -899497514;
 }
 
 // Calculate the SHA-1 of an array of big-endian words, and a bit length
@@ -120,14 +136,21 @@ function core_sha1(x, l)
                 var wv3 = w[j - 14];
                 var wv4 = w[j - 16];
                 if(wv1 == null)
+                {
                     wv1 = 0;
+                }
                 if(wv2 == null)
+                {
                     wv2 = 0;
+                }
                 if(wv3 == null)
+                {
                     wv3 = 0;
+                }
                 if(wv4 == null)
+                {
                     wv4 = 0;
-
+                }
                 w[j] = rol(wv1 ^ wv2 ^ wv3 ^ wv4, 1);
             }
             var t = safe_add(safe_add(rol(a, 5), sha1_ft(j, b, c, d)), safe_add(safe_add(e, w[j]), sha1_kt(j)));
@@ -155,7 +178,9 @@ function str2binb(str)
     for(var i = 0; i < str.length * chrsz; i += chrsz)
     {
         if(bin[i>>5] == null)
+        {
             bin[i>>5] = 0
+        }
         bin[i>>5] |= (str.charCodeAt(i / chrsz) & mask) << (24 - i%32);
     }
     return bin;

@@ -1,84 +1,207 @@
-  # LitFunction * lit_create_function(LitState *state, LitModule *module);
-  "lit_create_function": "lit_object_makefunction"
+  # static void resolve_statements(LitEmitter *emitter, LitAstExprList *statements);
+  "resolve_statements": "resolve_statements"
 
-  # LitClosure * lit_create_closure(LitState *state, LitFunction *function);
-  "lit_create_closure": "lit_object_makeclosure"
+  # void lit_privlist_init(LitPrivList *array);
+  "lit_privlist_init": "lit_privlist_init"
 
-  # LitNativeFunction * lit_create_native_function(LitState *state, LitNativeFunctionFn function, LitString *name);
-  "lit_create_native_function": "lit_object_makenativefunction"
+  # void lit_privlist_destroy(LitState *state, LitPrivList *array);
+  "lit_privlist_destroy": "lit_privlist_destroy"
 
-  # LitNativePrimFunction * lit_create_native_primitive(LitState *state, LitNativePrimitiveFn function, LitString *name);
-  "lit_create_native_primitive": "lit_object_makenativeprimitive"
+  # void lit_privlist_push(LitState *state, LitPrivList *array, LitPrivate value);
+  "lit_privlist_push": "lit_privlist_push"
 
-  # LitNativeMethod * lit_create_native_method(LitState *state, LitNativeMethodFn method, LitString *name);
-  "lit_create_native_method": "lit_object_makenativemethod"
+  # void lit_loclist_init(LitLocList *array);
+  "lit_loclist_init": "lit_loclist_init"
 
-  # LitPrimitiveMethod * lit_create_primitive_method(LitState *state, LitPrimitiveMethodFn method, LitString *name);
-  "lit_create_primitive_method": "lit_object_makeprimitivemethod"
+  # void lit_loclist_destroy(LitState *state, LitLocList *array);
+  "lit_loclist_destroy": "lit_loclist_destroy"
 
-  # LitBoundMethod * lit_create_bound_method(LitState *state, LitValue receiver, LitValue method);
-  "lit_create_bound_method": "lit_object_makeboundmethod"
+  # void lit_loclist_push(LitState *state, LitLocList *array, LitLocal value);
+  "lit_loclist_push": "lit_loclist_push"
 
-  # _Bool lit_is_callable_function(LitValue value);
-  "lit_is_callable_function": "lit_value_iscallablefunction"
+  # void lit_emitter_init(LitState *state, LitEmitter *emitter);
+  "lit_emitter_init": "lit_emitter_init"
 
-  # static LitValue objfn_function_tostring(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_function_tostring": "objfn_function_tostring"
+  # void lit_emitter_destroy(LitEmitter *emitter);
+  "lit_emitter_destroy": "lit_emitter_destroy"
 
-  # static LitValue objfn_function_name(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_function_name": "objfn_function_name"
+  # static void lit_emitter_emit1byte(LitEmitter *emitter, uint16_t line, uint8_t byte);
+  "lit_emitter_emit1byte": "lit_emitter_emit1byte"
 
-  # void lit_open_function_library(LitState *state);
-  "lit_open_function_library": "lit_state_openfunctionlibrary"
+  # static void lit_emitter_emit2bytes(LitEmitter *emitter, uint16_t line, uint8_t a, uint8_t b);
+  "lit_emitter_emit2bytes": "lit_emitter_emit2bytes"
 
-  # LitUpvalue * lit_create_upvalue(LitState *state, LitValue *slot);
-  "lit_create_upvalue": "lit_object_makeupvalue"
+  # static void lit_emitter_emit1op(LitEmitter *emitter, uint16_t line, LitOpCode op);
+  "lit_emitter_emit1op": "lit_emitter_emit1op"
 
-  # LitModule * lit_create_module(LitState *state, LitString *name);
-  "lit_create_module": "lit_object_makemodule"
+  # static void lit_emitter_emit2ops(LitEmitter *emitter, uint16_t line, LitOpCode a, LitOpCode b);
+  "lit_emitter_emit2ops": "lit_emitter_emit2ops"
 
-  # LitUserdata * lit_create_userdata(LitState *state, size_t size, _Bool ispointeronly);
-  "lit_create_userdata": "lit_object_makeuserdata"
+  # static void lit_emitter_emitvaryingop(LitEmitter *emitter, uint16_t line, LitOpCode op, uint8_t arg);
+  "lit_emitter_emitvaryingop": "lit_emitter_emitvaryingop"
 
-  # LitRange * lit_create_range(LitState *state, double from, double to);
-  "lit_create_range": "lit_object_makerange"
+  # static void lit_emitter_emitargedop(LitEmitter *emitter, uint16_t line, LitOpCode op, uint8_t arg);
+  "lit_emitter_emitargedop": "lit_emitter_emitargedop"
 
-  # LitReference * lit_create_reference(LitState *state, LitValue *slot);
-  "lit_create_reference": "lit_object_makereference"
+  # static void lit_emitter_emitshort(LitEmitter *emitter, uint16_t line, uint16_t value);
+  "lit_emitter_emitshort": "lit_emitter_emitshort"
 
-  # void lit_object_destroy(LitState *state, LitObject *object);
-  "lit_object_destroy": "lit_object_destroy"
+  # static void lit_emitter_emitbyteorshort(LitEmitter *emitter, uint16_t line, uint8_t a, uint8_t b, uint16_t index);
+  "lit_emitter_emitbyteorshort": "lit_emitter_emitbyteorshort"
 
-  # void lit_object_destroylistof(LitState *state, LitObject *objects);
-  "lit_object_destroylistof": "lit_object_destroylistof"
+  # static void lit_compiler_compiler(LitEmitter *emitter, LitCompiler *compiler, LitFuncType type);
+  "lit_compiler_compiler": "lit_compiler_compiler"
 
-  # LitValue lit_get_function_name(LitVM *vm, LitValue instance);
-  "lit_get_function_name": "lit_function_getname"
+  # static void lit_emitter_emitreturn(LitEmitter *emitter, size_t line);
+  "lit_emitter_emitreturn": "lit_emitter_emitreturn"
 
-  # static LitValue objfn_object_class(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_object_class": "objfn_object_class"
+  # static LitFunction * lit_compiler_end(LitEmitter *emitter, LitString *name);
+  "lit_compiler_end": "lit_compiler_end"
 
-  # static LitValue objfn_object_super(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_object_super": "objfn_object_super"
+  # static void lit_emitter_beginscope(LitEmitter *emitter);
+  "lit_emitter_beginscope": "lit_emitter_beginscope"
 
-  # static LitValue objfn_object_tostring(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_object_tostring": "objfn_object_tostring"
+  # static void lit_emitter_endscope(LitEmitter *emitter, uint16_t line);
+  "lit_emitter_endscope": "lit_emitter_endscope"
 
-  # static void fillmap(LitState *state, LitMap *destmap, LitTable *fromtbl, _Bool includenullkeys);
-  "fillmap": "fillmap"
+  # static void lit_emitter_raiseerror(LitEmitter *emitter, size_t line, LitError ecode, ...);
+  "lit_emitter_raiseerror": "lit_emitter_raiseerror"
 
-  # static LitValue objfn_object_tomap(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_object_tomap": "objfn_object_tomap"
+  # static uint16_t lit_emitter_addconstant(LitEmitter *emitter, size_t line, LitValue value);
+  "lit_emitter_addconstant": "lit_emitter_addconstant"
 
-  # static LitValue objfn_object_subscript(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_object_subscript": "objfn_object_subscript"
+  # static size_t lit_emitter_emitconstant(LitEmitter *emitter, size_t line, LitValue value);
+  "lit_emitter_emitconstant": "lit_emitter_emitconstant"
 
-  # static LitValue objfn_object_iterator(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_object_iterator": "objfn_object_iterator"
+  # static int lit_emitter_addprivate(LitEmitter *emitter, const char *name, size_t length, size_t line, _Bool constant);
+  "lit_emitter_addprivate": "lit_emitter_addprivate"
 
-  # static LitValue objfn_object_iteratorvalue(LitVM *vm, LitValue instance, size_t argc, LitValue *argv);
-  "objfn_object_iteratorvalue": "objfn_object_iteratorvalue"
+  # static int lit_emitter_resolveprivate(LitEmitter *emitter, const char *name, size_t length, size_t line);
+  "lit_emitter_resolveprivate": "lit_emitter_resolveprivate"
 
-  # void lit_open_object_library(LitState *state);
-  "lit_open_object_library": "lit_state_openobjectlibrary"
+  # static int lit_emitter_addlocal(LitEmitter *emitter, const char *name, size_t length, size_t line, _Bool constant);
+  "lit_emitter_addlocal": "lit_emitter_addlocal"
+
+  # static int lit_emitter_resolvelocal(LitEmitter *emitter, LitCompiler *compiler, const char *name, size_t length, size_t line);
+  "lit_emitter_resolvelocal": "lit_emitter_resolvelocal"
+
+  # static int lit_emitter_addupvalue(LitEmitter *emitter, LitCompiler *compiler, uint8_t index, size_t line, _Bool islocal);
+  "lit_emitter_addupvalue": "lit_emitter_addupvalue"
+
+  # static int lit_emitter_resolveupvalue(LitEmitter *emitter, LitCompiler *compiler, const char *name, size_t length, size_t line);
+  "lit_emitter_resolveupvalue": "lit_emitter_resolveupvalue"
+
+  # static void lit_emitter_marklocalinit(LitEmitter *emitter, size_t index);
+  "lit_emitter_marklocalinit": "lit_emitter_marklocalinit"
+
+  # static void lit_emitter_markprivateinit(LitEmitter *emitter, size_t index);
+  "lit_emitter_markprivateinit": "lit_emitter_markprivateinit"
+
+  # static size_t lit_emitter_emitjump(LitEmitter *emitter, LitOpCode code, size_t line);
+  "lit_emitter_emitjump": "lit_emitter_emitjump"
+
+  # static void lit_emitter_patchjump(LitEmitter *emitter, size_t offset, size_t line);
+  "lit_emitter_patchjump": "lit_emitter_patchjump"
+
+  # static void lit_emitter_emitloop(LitEmitter *emitter, size_t start, size_t line);
+  "lit_emitter_emitloop": "lit_emitter_emitloop"
+
+  # static void lit_emitter_patchloopjumps(LitEmitter *emitter, LitUintList *breaks, size_t line);
+  "lit_emitter_patchloopjumps": "lit_emitter_patchloopjumps"
+
+  # static _Bool lit_emitter_emitparamlist(LitEmitter *emitter, LitAstParamList *parameters, size_t line);
+  "lit_emitter_emitparamlist": "lit_emitter_emitparamlist"
+
+  # static void lit_emitter_resolvestmt(LitEmitter *emitter, LitAstExpression *statement);
+  "lit_emitter_resolvestmt": "lit_emitter_resolvestmt"
+
+  # static _Bool lit_emitter_doemitliteral(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitliteral": "lit_emitter_doemitliteral"
+
+  # static _Bool lit_emitter_doemitbinary(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitbinary": "lit_emitter_doemitbinary"
+
+  # static _Bool lit_emitter_doemitunary(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitunary": "lit_emitter_doemitunary"
+
+  # static _Bool lit_emitter_doemitvarexpr(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitvarexpr": "lit_emitter_doemitvarexpr"
+
+  # static _Bool lit_emitter_doemitassign(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitassign": "lit_emitter_doemitassign"
+
+  # static _Bool lit_emitter_doemitcall(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitcall": "lit_emitter_doemitcall"
+
+  # static _Bool lit_emitter_doemitget(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitget": "lit_emitter_doemitget"
+
+  # static _Bool lit_emitter_doemitset(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitset": "lit_emitter_doemitset"
+
+  # static _Bool lit_emitter_doemitlambda(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitlambda": "lit_emitter_doemitlambda"
+
+  # static _Bool lit_emitter_doemitarray(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitarray": "lit_emitter_doemitarray"
+
+  # static _Bool lit_emitter_doemitobject(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitobject": "lit_emitter_doemitobject"
+
+  # static _Bool lit_emitter_doemitthis(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitthis": "lit_emitter_doemitthis"
+
+  # static _Bool lit_emitter_doemitsuper(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitsuper": "lit_emitter_doemitsuper"
+
+  # static _Bool lit_emitter_doemitternary(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitternary": "lit_emitter_doemitternary"
+
+  # static _Bool lit_emitter_doemitinterpolation(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitinterpolation": "lit_emitter_doemitinterpolation"
+
+  # static _Bool lit_emitter_doemitreference(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitreference": "lit_emitter_doemitreference"
+
+  # static _Bool lit_emitter_doemitvarstmt(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitvarstmt": "lit_emitter_doemitvarstmt"
+
+  # static _Bool lit_emitter_doemitifstmt(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitifstmt": "lit_emitter_doemitifstmt"
+
+  # static _Bool lit_emitter_doemitblockstmt(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitblockstmt": "lit_emitter_doemitblockstmt"
+
+  # static _Bool lit_emitter_doemitwhilestmt(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitwhilestmt": "lit_emitter_doemitwhilestmt"
+
+  # static _Bool lit_emitter_doemitforstmt(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitforstmt": "lit_emitter_doemitforstmt"
+
+  # static _Bool lit_emitter_doemitbreak(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitbreak": "lit_emitter_doemitbreak"
+
+  # static _Bool lit_emitter_doemitcontinue(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitcontinue": "lit_emitter_doemitcontinue"
+
+  # static _Bool lit_emitter_doemitreturn(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitreturn": "lit_emitter_doemitreturn"
+
+  # static _Bool lit_emitter_doemitfunction(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitfunction": "lit_emitter_doemitfunction"
+
+  # static _Bool lit_emitter_doemitmethod(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitmethod": "lit_emitter_doemitmethod"
+
+  # static _Bool lit_emitter_doemitclass(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitclass": "lit_emitter_doemitclass"
+
+  # static _Bool lit_emitter_doemitfield(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_doemitfield": "lit_emitter_doemitfield"
+
+  # static _Bool lit_emitter_emitexpression(LitEmitter *emitter, LitAstExpression *expr);
+  "lit_emitter_emitexpression": "lit_emitter_emitexpression"
+
+  # LitModule * lit_emitter_modemit(LitEmitter *emitter, LitAstExprList *statements, LitString *module_name);
+  "lit_emitter_modemit": "lit_emitter_modemit"
 

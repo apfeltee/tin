@@ -354,12 +354,6 @@ struct LitAstParamList
 };
 
 
-struct LitAstLambdaExpr
-{
-    LitAstExpression exobj;
-    LitAstParamList parameters;
-    LitAstExpression* body;
-};
 
 struct LitAstArrayExpr
 {

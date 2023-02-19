@@ -718,7 +718,7 @@ void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
             break;
         case LITEXPR_LAMBDA:
             {
-                as_type(exlam, expr, LitAstLambdaExpr);
+                as_type(exlam, expr, LitAstFunctionExpr);
                 lit_writer_writeformat(wr, "(");
                 for(i=0; i<exlam->parameters.count; i++)
                 {
