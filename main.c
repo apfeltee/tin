@@ -144,13 +144,13 @@ static void show_optimization_help()
     printf("Here is a list of all supported optimizations:\n\n");
     for(i = 0; i < LITOPTSTATE_TOTAL; i++)
     {
-        printf(" %s  %s\n", lit_astopt_getoptname((LitOptimization)i),
-               lit_astopt_getoptdescr((LitOptimization)i));
+        printf(" %s  %s\n", lit_astopt_getoptname((LitAstOptType)i),
+               lit_astopt_getoptdescr((LitAstOptType)i));
     }
     printf("\nIf you want to use a predefined optimization level (recommended), run lit with argument -O[optimization level], for example -O1.\n\n");
     for(i = 0; i < LITOPTLEVEL_TOTAL; i++)
     {
-        printf("\t-O%i\t\t%s\n", i, lit_astopt_getoptleveldescr((LitOptLevel)i));
+        printf("\t-O%i\t\t%s\n", i, lit_astopt_getoptleveldescr((LitAstOptLevel)i));
     }
 }
 
@@ -430,7 +430,7 @@ int oldmain(int argc, const char* argv[])
 
                 if(c >= '0' && c <= '4')
                 {
-                    lit_astopt_setoptlevel((LitOptLevel)(c - '0'));
+                    lit_astopt_setoptlevel((LitAstOptLevel)(c - '0'));
                     continue;
                 }
             }
@@ -450,10 +450,10 @@ int oldmain(int argc, const char* argv[])
                 // Yes I know, this is not the fastest way, and what now?
                 for(j = 0; j < LITOPTSTATE_TOTAL; j++)
                 {
-                    if(strcmp(lit_astopt_getoptname((LitOptimization)j), optimization_name) == 0)
+                    if(strcmp(lit_astopt_getoptname((LitAstOptType)j), optimization_name) == 0)
                     {
                         found = true;
-                        lit_astopt_setoptenabled((LitOptimization)j, enable_optimization);
+                        lit_astopt_setoptenabled((LitAstOptType)j, enable_optimization);
 
                         break;
                     }

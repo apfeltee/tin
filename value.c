@@ -135,8 +135,6 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
 {
     LitValType t1;
     LitValType t2;
-    double n1;
-    double n2;
     LitInterpretResult inret;
     LitValue args[3];
     if(lit_value_isinstance(a))

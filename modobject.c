@@ -85,7 +85,6 @@ void lit_object_destroy(LitState* state, LitObject* object)
     {
         case LITTYPE_NUMBER:
             {
-                LitNumber* n = (LitNumber*)object;
                 if(object->mustfree)
                 {
                     LIT_FREE(state, sizeof(LitNumber), object);

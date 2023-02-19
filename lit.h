@@ -230,7 +230,7 @@ enum LitErrType
     RUNTIME_ERROR
 };
 
-enum LitOptLevel
+enum LitAstOptLevel
 {
     LITOPTLEVEL_NONE,
     LITOPTLEVEL_REPL,
@@ -241,7 +241,7 @@ enum LitOptLevel
     LITOPTLEVEL_TOTAL
 };
 
-enum LitOptimization
+enum LitAstOptType
 {
     LITOPTSTATE_CONSTANT_FOLDING,
     LITOPTSTATE_LITERAL_FOLDING,
@@ -262,21 +262,20 @@ typedef struct /**/ LitObject LitObject;
 typedef struct /**/ LitValue LitValue;
 
 typedef enum /**/LitOpCode LitOpCode;
-typedef enum /**/LitExprType LitExprType;
-typedef enum /**/LitOptLevel LitOptLevel;
-typedef enum /**/LitOptimization LitOptimization;
-typedef enum /**/LitError LitError;
-typedef enum /**/LitPrecedence LitPrecedence;
-typedef enum /**/LitTokType LitTokType;
+typedef enum /**/LitAstExprType LitAstExprType;
+typedef enum /**/LitAstOptLevel LitAstOptLevel;
+typedef enum /**/LitAstOptType LitAstOptType;
+typedef enum /**/LitAstPrecedence LitAstPrecedence;
+typedef enum /**/LitAstTokType LitAstTokType;
 typedef enum /**/LitResult LitResult;
 typedef enum /**/LitErrType LitErrType;
-typedef enum /**/LitFuncType LitFuncType;
-typedef struct /**/LitScanner LitScanner;
+typedef enum /**/LitAstFuncType LitAstFuncType;
+typedef struct /**/LitAstScanner LitAstScanner;
 typedef struct /**/LitExecState LitExecState;
 typedef struct /**/LitVM LitVM;
-typedef struct /**/LitParser LitParser;
-typedef struct /**/LitEmitter LitEmitter;
-typedef struct /**/LitOptimizer LitOptimizer;
+typedef struct /**/LitAstParser LitAstParser;
+typedef struct /**/LitAstEmitter LitAstEmitter;
+typedef struct /**/LitAstOptimizer LitAstOptimizer;
 typedef struct /**/LitState LitState;
 typedef struct /**/LitInterpretResult LitInterpretResult;
 typedef struct /**/LitMap LitMap;
@@ -303,15 +302,15 @@ typedef struct /**/LitArray LitArray;
 typedef struct /**/LitRange LitRange;
 typedef struct /**/LitField LitField;
 typedef struct /**/LitReference LitReference;
-typedef struct /**/LitToken LitToken;
+typedef struct /**/LitAstToken LitAstToken;
 typedef struct /**/LitAstExpression LitAstExpression;
-typedef struct /**/LitCompilerUpvalue LitCompilerUpvalue;
-typedef struct /**/LitCompiler LitCompiler;
-typedef struct /**/LitParseRule LitParseRule;
+typedef struct /**/LitAstCompUpvalue LitAstCompUpvalue;
+typedef struct /**/LitAstCompiler LitAstCompiler;
+typedef struct /**/LitAstParseRule LitAstParseRule;
 typedef struct /**/LitEmulatedFile LitEmulatedFile;
 typedef struct /**/LitVariable LitVariable;
 typedef struct /**/LitWriter LitWriter;
-typedef struct /**/LitLocal LitLocal;
+typedef struct /**/LitAstLocal LitAstLocal;
 typedef struct /**/LitConfig LitConfig;
 
 /* ARRAYTYPES */
@@ -320,10 +319,10 @@ typedef struct /**/LitUintList LitUintList;
 typedef struct /**/LitValList LitValList;
 typedef struct /**/LitAstExprList LitAstExprList;
 typedef struct /**/LitAstParamList LitAstParamList;
-typedef struct /**/LitPrivList LitPrivList;
-typedef struct /**/LitLocList LitLocList;
+typedef struct /**/LitAstPrivList LitAstPrivList;
+typedef struct /**/LitAstLocList LitAstLocList;
 typedef struct /**/LitDataList LitDataList;
-typedef struct /**/LitByteList LitByteList;
+typedef struct /**/LitAstByteList LitAstByteList;
 
 /* ast/compiler types */
 typedef struct /**/LitAstLiteralExpr LitAstLiteralExpr;
@@ -357,14 +356,14 @@ typedef struct /**/LitAstReturnExpr LitAstReturnExpr;
 typedef struct /**/LitAstMethodExpr LitAstMethodExpr;
 typedef struct /**/LitAstClassExpr LitAstClassExpr;
 typedef struct /**/LitAstFieldExpr LitAstFieldExpr;
-typedef struct /**/LitPrivate LitPrivate;
+typedef struct /**/LitAstPrivate LitAstPrivate;
 
 /* forward decls to make prot.inc work */
 typedef struct /**/LitDirReader LitDirReader;
 typedef struct /**/LitDirItem LitDirItem;
 
-typedef LitAstExpression* (*LitPrefixParseFn)(LitParser*, bool);
-typedef LitAstExpression* (*LitInfixParseFn)(LitParser*, LitAstExpression*, bool);
+typedef LitAstExpression* (*LitAstParsePrefixFn)(LitAstParser*, bool);
+typedef LitAstExpression* (*LitAstParseInfixFn)(LitAstParser*, LitAstExpression*, bool);
 
 
 typedef LitValue (*LitNativeFunctionFn)(LitVM*, size_t, LitValue*);
@@ -438,7 +437,7 @@ struct LitUintList
 
 
 /* TODO: using DataList messes with the string its supposed to collect. no clue why, though. */
-struct LitByteList
+struct LitAstByteList
 {
     size_t capacity;
     size_t count;
@@ -725,10 +724,10 @@ struct LitState
     LitValue* roots;
     size_t root_count;
     size_t root_capacity;
-    LitScanner* scanner;
-    LitParser* parser;
-    LitEmitter* emitter;
-    LitOptimizer* optimizer;
+    LitAstScanner* scanner;
+    LitAstParser* parser;
+    LitAstEmitter* emitter;
+    LitAstOptimizer* optimizer;
     /*
     * recursive pointer to the current VM instance.
     * using 'state->vm->state' will in turn mean this instance, etc.
@@ -859,8 +858,8 @@ void lit_ast_destroyexprlist(LitState *state, LitAstExprList *expressions);
 void lit_ast_destroystmtlist(LitState *state, LitAstExprList *statements);
 void lit_ast_destroyexpression(LitState *state, LitAstExpression *expression);
 LitAstLiteralExpr *lit_ast_make_literalexpr(LitState *state, size_t line, LitValue value);
-LitAstBinaryExpr *lit_ast_make_binaryexpr(LitState *state, size_t line, LitAstExpression *left, LitAstExpression *right, LitTokType op);
-LitAstUnaryExpr *lit_ast_make_unaryexpr(LitState *state, size_t line, LitAstExpression *right, LitTokType op);
+LitAstBinaryExpr *lit_ast_make_binaryexpr(LitState *state, size_t line, LitAstExpression *left, LitAstExpression *right, LitAstTokType op);
+LitAstUnaryExpr *lit_ast_make_unaryexpr(LitState *state, size_t line, LitAstExpression *right, LitAstTokType op);
 LitAstVarExpr *lit_ast_make_varexpr(LitState *state, size_t line, const char *name, size_t length);
 LitAstAssignExpr *lit_ast_make_assignexpr(LitState *state, size_t line, LitAstExpression *to, LitAstExpression *value);
 LitAstCallExpr *lit_ast_make_callexpr(LitState *state, size_t line, LitAstExpression *callee);
@@ -896,15 +895,15 @@ void lit_ast_destry_allocdstmtlist(LitState *state, LitAstExprList *statements);
 /* librange.c */
 void lit_open_range_library(LitState *state);
 /* ccemit.c */
-void lit_privlist_init(LitPrivList *array);
-void lit_privlist_destroy(LitState *state, LitPrivList *array);
-void lit_privlist_push(LitState *state, LitPrivList *array, LitPrivate value);
-void lit_loclist_init(LitLocList *array);
-void lit_loclist_destroy(LitState *state, LitLocList *array);
-void lit_loclist_push(LitState *state, LitLocList *array, LitLocal value);
-void lit_emitter_init(LitState *state, LitEmitter *emitter);
-void lit_emitter_destroy(LitEmitter *emitter);
-LitModule *lit_emitter_modemit(LitEmitter *emitter, LitAstExprList *statements, LitString *module_name);
+void lit_privlist_init(LitAstPrivList *array);
+void lit_privlist_destroy(LitState *state, LitAstPrivList *array);
+void lit_privlist_push(LitState *state, LitAstPrivList *array, LitAstPrivate value);
+void lit_loclist_init(LitAstLocList *array);
+void lit_loclist_destroy(LitState *state, LitAstLocList *array);
+void lit_loclist_push(LitState *state, LitAstLocList *array, LitAstLocal value);
+void lit_astemit_init(LitState *state, LitAstEmitter *emitter);
+void lit_astemit_destroy(LitAstEmitter *emitter);
+LitModule *lit_astemit_modemit(LitAstEmitter *emitter, LitAstExprList *statements, LitString *module_name);
 /* vm.c */
 uint16_t lit_vmexec_readshort(LitExecState *est);
 uint8_t lit_vmexec_readbyte(LitExecState *est);
@@ -993,10 +992,10 @@ LitModule *lit_ioutil_readmodule(LitState *state, const char *input, size_t len)
 void lit_userfile_cleanup(LitState *state, LitUserdata *data, bool mark);
 void lit_open_file_library(LitState *state);
 /* ccparser.c */
-const char *lit_parser_token2name(int t);
-void lit_parser_init(LitState *state, LitParser *parser);
-void lit_parser_destroy(LitParser *parser);
-bool lit_parser_parsesource(LitParser *parser, const char *file_name, const char *source, LitAstExprList *statements);
+const char *lit_astparser_token2name(int t);
+void lit_astparser_init(LitState *state, LitAstParser *parser);
+void lit_astparser_destroy(LitAstParser *parser);
+bool lit_astparser_parsesource(LitAstParser *parser, const char *file_name, const char *source, LitAstExprList *statements);
 /* util.c */
 uint64_t pack754(long double f, unsigned bits, unsigned expbits);
 long double unpack754(uint64_t i, unsigned bits, unsigned expbits);
@@ -1009,9 +1008,8 @@ int lit_util_closestpowof2(int n);
 char *lit_util_patchfilename(char *file_name);
 char *lit_util_copystring(const char *string);
 /* error.c */
-const char *lit_error_getformatstring(LitError e);
-LitString *lit_vformat_error(LitState *state, size_t line, LitError ecode, va_list args);
-LitString *lit_format_error(LitState *state, size_t line, LitError ecode, ...);
+LitString *lit_vformat_error(LitState *state, size_t line, const char* fmt, va_list args);
+LitString *lit_format_error(LitState *state, size_t line, const char* fmt, ...);
 /* value.c */
 LitValue lit_value_fromobject_actual(LitObject* obj);
 bool lit_value_isobject(LitValue v);
@@ -1088,12 +1086,11 @@ void lit_disassemble_chunk(LitState *state, LitChunk *chunk, const char *name, c
 size_t lit_disassemble_instruction(LitState *state, LitChunk *chunk, size_t offset, const char *source);
 void lit_trace_frame(LitFiber *fiber, LitWriter *wr);
 /* ccscan.c */
-void lit_bytelist_init(LitByteList *bl);
-void lit_bytelist_destroy(LitState *state, LitByteList *bl);
-void lit_bytelist_push(LitState *state, LitByteList *bl, uint8_t value);
-void lit_lex_init(LitState *state, LitScanner *scanner, const char *file_name, const char *source);
-LitToken lit_lex_rollback(LitScanner *scanner);
-LitToken lit_lex_scantoken(LitScanner *scanner);
+void lit_bytelist_init(LitAstByteList *bl);
+void lit_bytelist_destroy(LitState *state, LitAstByteList *bl);
+void lit_bytelist_push(LitState *state, LitAstByteList *bl, uint8_t value);
+void lit_astlex_init(LitState *state, LitAstScanner *scanner, const char *file_name, const char *source);
+LitAstToken lit_astlex_scantoken(LitAstScanner *scanner);
 /* libstring.c */
 char *itoa(int value, char *result, int base);
 char *lit_util_inttostring(char *dest, size_t n, int x);
@@ -1216,15 +1213,15 @@ void lit_astopt_optdbg(const char *fmt, ...);
 void lit_varlist_init(LitVarList *array);
 void lit_varlist_destroy(LitState *state, LitVarList *array);
 void lit_varlist_push(LitState *state, LitVarList *array, LitVariable value);
-void lit_astopt_init(LitState *state, LitOptimizer *optimizer);
-void lit_astopt_optast(LitOptimizer *optimizer, LitAstExprList *statements);
-bool lit_astopt_isoptenabled(LitOptimization optimization);
-void lit_astopt_setoptenabled(LitOptimization optimization, bool enabled);
+void lit_astopt_init(LitState *state, LitAstOptimizer *optimizer);
+void lit_astopt_optast(LitAstOptimizer *optimizer, LitAstExprList *statements);
+bool lit_astopt_isoptenabled(LitAstOptType optimization);
+void lit_astopt_setoptenabled(LitAstOptType optimization, bool enabled);
 void lit_astopt_setalloptenabled(bool enabled);
-void lit_astopt_setoptlevel(LitOptLevel level);
-const char *lit_astopt_getoptname(LitOptimization optimization);
-const char *lit_astopt_getoptdescr(LitOptimization optimization);
-const char *lit_astopt_getoptleveldescr(LitOptLevel level);
+void lit_astopt_setoptlevel(LitAstOptLevel level);
+const char *lit_astopt_getoptname(LitAstOptType optimization);
+const char *lit_astopt_getoptdescr(LitAstOptType optimization);
+const char *lit_astopt_getoptleveldescr(LitAstOptLevel level);
 
 /* writer.c */
 /* writer.c */
@@ -1234,14 +1231,16 @@ void lit_writer_writebyte(LitWriter *wr, int byte);
 void lit_writer_writestringl(LitWriter *wr, const char *str, size_t len);
 void lit_writer_writestring(LitWriter *wr, const char *str);
 void lit_writer_writeformat(LitWriter *wr, const char *fmt, ...);
+void lit_writer_writeescapedbyte(LitWriter* wr, int ch);
+void lit_writer_writeescapedstring(LitWriter* wr, const char* str, size_t len, bool withquot);
 LitString *lit_writer_get_string(LitWriter *wr);
 void lit_towriter_array(LitState *state, LitWriter *wr, LitArray *array, size_t size);
 void lit_towriter_map(LitState *state, LitWriter *wr, LitMap *map, size_t size);
 void lit_towriter_object(LitState *state, LitWriter *wr, LitValue value, bool withquot);
 void lit_towriter_value(LitState *state, LitWriter *wr, LitValue value, bool withquot);
 const char *lit_tostring_typename(LitValue value);
-const char *lit_tostring_exprtype(LitExprType t);
-const char *lit_tostring_optok(LitTokType t);
+const char *lit_tostring_exprtype(LitAstExprType t);
+const char *lit_tostring_optok(LitAstTokType t);
 void lit_towriter_expr(LitState *state, LitWriter *wr, LitAstExpression *expr);
 void lit_towriter_ast(LitState *state, LitWriter *wr, LitAstExprList *exlist);
 

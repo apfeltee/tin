@@ -11,7 +11,6 @@
 #endif
 #include "priv.h"
 
-static bool should_update_locals;
 
 
 void lit_open_libraries(LitState* state)

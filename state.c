@@ -7,6 +7,40 @@
 static bool measurecompilationtime;
 static double lastsourcetime = 0;
 
+LitString* lit_vformat_error(LitState* state, size_t line, const char* fmt, va_list args)
+{
+    size_t buffersize;
+    char* buffer;
+    LitString* rt;
+    va_list argscopy;
+    va_copy(argscopy, args);
+    buffersize = vsnprintf(NULL, 0, fmt, argscopy) + 1;
+    va_end(argscopy);
+    buffer = (char*)malloc(buffersize+1);
+    vsnprintf(buffer, buffersize, fmt, args);
+    buffer[buffersize - 1] = '\0';
+    if(line != 0)
+    {
+        rt = lit_value_asstring(lit_string_format(state, "[line #]: $", (double)line, (const char*)buffer));
+    }
+    else
+    {
+        rt = lit_value_asstring(lit_string_format(state, "$", (const char*)buffer));
+    }
+    free(buffer);
+    return rt;
+}
+
+LitString* lit_format_error(LitState* state, size_t line, const char* fmt, ...)
+{
+    va_list args;
+    LitString* result;
+    va_start(args, fmt);
+    result = lit_vformat_error(state, line, fmt, args);
+    va_end(args);
+    return result;
+}
+
 void lit_enable_compilation_time_measurement()
 {
     measurecompilationtime = true;
@@ -65,12 +99,12 @@ LitState* lit_make_state()
     state->root_capacity = 0;
     state->last_module = NULL;
     lit_writer_init_file(state, &state->debugwriter, stdout, true);
-    state->scanner = (LitScanner*)malloc(sizeof(LitScanner));
-    state->parser = (LitParser*)malloc(sizeof(LitParser));
-    lit_parser_init(state, (LitParser*)state->parser);
-    state->emitter = (LitEmitter*)malloc(sizeof(LitEmitter));
-    lit_emitter_init(state, state->emitter);
-    state->optimizer = (LitOptimizer*)malloc(sizeof(LitOptimizer));
+    state->scanner = (LitAstScanner*)malloc(sizeof(LitAstScanner));
+    state->parser = (LitAstParser*)malloc(sizeof(LitAstParser));
+    lit_astparser_init(state, (LitAstParser*)state->parser);
+    state->emitter = (LitAstEmitter*)malloc(sizeof(LitAstEmitter));
+    lit_astemit_init(state, state->emitter);
+    state->optimizer = (LitAstOptimizer*)malloc(sizeof(LitAstOptimizer));
     lit_astopt_init(state, state->optimizer);
     state->vm = (LitVM*)malloc(sizeof(LitVM));
     lit_vm_init(state, state->vm);
@@ -89,9 +123,9 @@ int64_t lit_destroy_state(LitState* state)
     }
     lit_api_destroy(state);
     free(state->scanner);
-    lit_parser_destroy(state->parser);
+    lit_astparser_destroy(state->parser);
     free(state->parser);
-    lit_emitter_destroy(state->emitter);
+    lit_astemit_destroy(state->emitter);
     free(state->emitter);
     free(state->optimizer);
     lit_vm_destroy(state->vm);
@@ -726,7 +760,7 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
             total_t = t = clock();
         }
         lit_exprlist_init(&statements);
-        if(lit_parser_parsesource(state->parser, module_name->chars, code, &statements))
+        if(lit_astparser_parsesource(state->parser, module_name->chars, code, &statements))
         {
             free_statements(state, &statements);
             return NULL;
@@ -746,7 +780,7 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
             printf("Optimization:   %gms\n", (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
             t = clock();
         }
-        module = lit_emitter_modemit(state->emitter, &statements, module_name);
+        module = lit_astemit_modemit(state->emitter, &statements, module_name);
         free_statements(state, &statements);
         if(measurecompilationtime)
         {

@@ -1211,7 +1211,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
         * which may invalidate the stack, and while the same is technically true for switch/case, they
         * could end up executing completely unrelated instructions.
         * think, declaring a block for OP_BUILDHOUSE, and the next block is OP_SETHOUSEONFIRE.
-        * an easy mistake to make, but crucial to lit_parser_check.
+        * an easy mistake to make, but crucial to check.
         */
         {
             op_case(OP_POP)

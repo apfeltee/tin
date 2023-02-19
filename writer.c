@@ -93,6 +93,88 @@ void lit_writer_writeformat(LitWriter* wr, const char* fmt, ...)
     va_end(va);
 }
 
+
+void lit_writer_writeescapedbyte(LitWriter* wr, int ch)
+{
+    switch(ch)
+    {
+        case '\'':
+            {
+                lit_writer_writestring(wr, "\\\'");
+            }
+            break;
+        case '\"':
+            {
+                lit_writer_writestring(wr, "\\\"");
+            }
+            break;
+        case '\\':
+            {
+                lit_writer_writestring(wr, "\\\\");
+            }
+            break;
+        case '\b':
+            {
+                lit_writer_writestring(wr, "\\b");
+            }
+            break;
+        case '\f':
+            {
+                lit_writer_writestring(wr, "\\f");
+            }
+            break;
+        case '\n':
+            {
+                lit_writer_writestring(wr, "\\n");
+            }
+            break;
+        case '\r':
+            {
+                lit_writer_writestring(wr, "\\r");
+            }
+            break;
+        case '\t':
+            {
+                lit_writer_writestring(wr, "\\t");
+            }
+            break;
+        default:
+            {
+                lit_writer_writeformat(wr, "\\x%02x", (unsigned char)ch);
+            }
+            break;
+    }
+}
+
+void lit_writer_writeescapedstring(LitWriter* wr, const char* str, size_t len, bool withquot)
+{
+    size_t i;
+    int bch;
+    int quotch;
+    quotch = '"';
+    if(withquot)
+    {
+        lit_writer_writebyte(wr, quotch);
+        for(i=0; i<len; i++)
+        {
+            bch = str[i];
+            if((bch < 32) || (bch > 127) || (bch == '\"') || (bch == '\\'))
+            {
+                lit_writer_writeescapedbyte(wr, bch);
+            }
+            else
+            {
+                lit_writer_writebyte(wr, bch);
+            }
+        }
+        lit_writer_writebyte(wr, quotch);
+    }
+    else
+    {
+        lit_writer_writestringl(wr, str, len);
+    }
+}
+
 LitString* lit_writer_get_string(LitWriter* wr)
 {
     if(wr->stringmode)
@@ -200,92 +282,6 @@ void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
     }
 }
 
-void lit_writer_writeescapedbyte(LitWriter* wr, int ch)
-{
-    switch(ch)
-    {
-        case '\'':
-            {
-                lit_writer_writestring(wr, "\\\'");
-            }
-            break;
-        case '\"':
-            {
-                lit_writer_writestring(wr, "\\\"");
-            }
-            break;
-        case '\\':
-            {
-                lit_writer_writestring(wr, "\\\\");
-            }
-            break;
-        case '\b':
-            {
-                lit_writer_writestring(wr, "\\b");
-            }
-            break;
-        case '\f':
-            {
-                lit_writer_writestring(wr, "\\f");
-            }
-            break;
-        case '\n':
-            {
-                lit_writer_writestring(wr, "\\n");
-            }
-            break;
-        case '\r':
-            {
-                lit_writer_writestring(wr, "\\r");
-            }
-            break;
-        case '\t':
-            {
-                lit_writer_writestring(wr, "\\t");
-            }
-            break;
-        default:
-            {
-                lit_writer_writeformat(wr, "\\x%02x", (unsigned char)ch);
-            }
-            break;
-    }
-}
-
-
-void lit_towriter_string(LitState* state, LitWriter* wr, LitString* so, bool withquot)
-{
-    int i;
-    int len;
-    char bch;
-    char quotch;
-    const char* str;
-    len = lit_string_getlength(so);
-    str = so->chars;
-    quotch = '"';
-    if(withquot)
-    {
-        lit_writer_writebyte(wr, quotch);
-        for(i=0; i<len; i++)
-        {
-            bch = str[i];
-            if((bch < 32) || (bch > 127) || (bch == '\"') || (bch == '\\'))
-            {
-                lit_writer_writeescapedbyte(wr, bch);
-            }
-            else
-            {
-                lit_writer_writebyte(wr, bch);
-            }
-        }
-        lit_writer_writebyte(wr, quotch);
-    }
-    else
-    {
-        lit_writer_writestringl(wr, str, len);
-    }
-}
-
 void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value, bool withquot)
 {
     size_t size;
@@ -295,6 +291,7 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value, bool wi
     LitValue* slot;
     LitObject* obj;
     LitUpvalue* upvalue;
+    LitString* s;
     obj = lit_value_asobject(value);
     if(obj != NULL)
     {
@@ -302,7 +299,8 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value, bool wi
         {
             case LITTYPE_STRING:
                 {
-                    lit_towriter_string(state, wr, lit_value_asstring(value), withquot);
+                    s = lit_value_asstring(value);
+                    lit_writer_writeescapedstring(wr, s->chars, lit_string_getlength(s), withquot);
                 }
                 break;
             case LITTYPE_FUNCTION:
@@ -493,7 +491,7 @@ const char* lit_tostring_typename(LitValue value)
     return "unknown";
 }
 
-const char* lit_tostring_exprtype(LitExprType t)
+const char* lit_tostring_exprtype(LitAstExprType t)
 {
     switch(t)
     {
@@ -534,7 +532,7 @@ const char* lit_tostring_exprtype(LitExprType t)
     return "unknown";
 }
 
-const char* lit_tostring_optok(LitTokType t)
+const char* lit_tostring_optok(LitAstTokType t)
 {
     switch(t)
     {

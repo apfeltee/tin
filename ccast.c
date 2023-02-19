@@ -334,7 +334,7 @@ void lit_ast_destroyexpression(LitState* state, LitAstExpression* expression)
     }
 }
 
-static LitAstExpression* lit_ast_allocexpr(LitState* state, uint64_t line, size_t size, LitExprType type)
+static LitAstExpression* lit_ast_allocexpr(LitState* state, uint64_t line, size_t size, LitAstExprType type)
 {
     LitAstExpression* object;
     object = (LitAstExpression*)lit_gcmem_memrealloc(state, NULL, 0, size);
@@ -351,7 +351,7 @@ LitAstLiteralExpr* lit_ast_make_literalexpr(LitState* state, size_t line, LitVal
     return expression;
 }
 
-LitAstBinaryExpr* lit_ast_make_binaryexpr(LitState* state, size_t line, LitAstExpression* left, LitAstExpression* right, LitTokType op)
+LitAstBinaryExpr* lit_ast_make_binaryexpr(LitState* state, size_t line, LitAstExpression* left, LitAstExpression* right, LitAstTokType op)
 {
     LitAstBinaryExpr* expression;
     expression = (LitAstBinaryExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstBinaryExpr), LITEXPR_BINARY);
@@ -362,7 +362,7 @@ LitAstBinaryExpr* lit_ast_make_binaryexpr(LitState* state, size_t line, LitAstEx
     return expression;
 }
 
-LitAstUnaryExpr* lit_ast_make_unaryexpr(LitState* state, size_t line, LitAstExpression* right, LitTokType op)
+LitAstUnaryExpr* lit_ast_make_unaryexpr(LitState* state, size_t line, LitAstExpression* right, LitAstTokType op)
 {
     LitAstUnaryExpr* expression;
     expression = (LitAstUnaryExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstUnaryExpr), LITEXPR_UNARY);
@@ -511,7 +511,7 @@ LitAstRefExpr* lit_ast_make_referenceexpr(LitState* state, size_t line, LitAstEx
 
 
 
-static LitAstExpression* lit_ast_allocstmt(LitState* state, uint64_t line, size_t size, LitExprType type)
+static LitAstExpression* lit_ast_allocstmt(LitState* state, uint64_t line, size_t size, LitAstExprType type)
 {
     LitAstExpression* object;
     object = (LitAstExpression*)lit_gcmem_memrealloc(state, NULL, 0, size);

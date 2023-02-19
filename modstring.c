@@ -8,7 +8,7 @@ char* itoa(int value, char* result, int base)
     char* ptr;
     char* ptr1;
     char tmp_char;
-    // lit_parser_check that the base if valid
+    // check that the base if valid
     if (base < 2 || base > 36)
     {
         *result = '\0';

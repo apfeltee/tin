@@ -8,7 +8,7 @@ enum LitOpCode
 #undef OPCODE
 };
 
-enum LitExprType
+enum LitAstExprType
 {
     LITEXPR_LITERAL,
     LITEXPR_BINARY,
@@ -44,58 +44,7 @@ enum LitExprType
     LITEXPR_FIELD
 };
 
-
-enum LitError
-{
-    // Preprocessor errors
-    LITERROR_UNCLOSED_MACRO,
-    LITERROR_UNKNOWN_MACRO,
-
-    // Scanner errors
-    LITERROR_UNEXPECTED_CHAR,
-    LITERROR_UNTERMINATED_STRING,
-    LITERROR_INVALID_ESCAPE_CHAR,
-    LITERROR_INTERPOLATION_NESTING_TOO_DEEP,
-    LITERROR_NUMBER_IS_TOO_BIG,
-    LITERROR_CHAR_EXPECTATION_UNMET,
-
-    // Parser errors
-    LITERROR_EXPECTATION_UNMET,
-    LITERROR_INVALID_ASSIGMENT_TARGET,
-    LITERROR_TOO_MANY_FUNCTION_ARGS,
-    LITERROR_MULTIPLE_ELSE_BRANCHES,
-    LITERROR_VAR_MISSING_IN_FORIN,
-    LITERROR_NO_GETTER_AND_SETTER,
-    LITERROR_STATIC_OPERATOR,
-    LITERROR_SELF_INHERITED_CLASS,
-    LITERROR_STATIC_FIELDS_AFTER_METHODS,
-    LITERROR_MISSING_STATEMENT,
-    LITERROR_EXPECTED_EXPRESSION,
-    LITERROR_DEFAULT_ARG_CENTRED,
-
-    // Emitter errors
-    LITERROR_TOO_MANY_CONSTANTS,
-    LITERROR_TOO_MANY_PRIVATES,
-    LITERROR_VAR_REDEFINED,
-    LITERROR_TOO_MANY_LOCALS,
-    LITERROR_TOO_MANY_UPVALUES,
-    LITERROR_VARIABLE_USED_IN_INIT,
-    LITERROR_JUMP_TOO_BIG,
-    LITERROR_NO_SUPER,
-    LITERROR_THIS_MISSUSE,
-    LITERROR_SUPER_MISSUSE,
-    LITERROR_UNKNOWN_EXPRESSION,
-    LITERROR_UNKNOWN_STATEMENT,
-    LITERROR_LOOP_JUMP_MISSUSE,
-    LITERROR_RETURN_FROM_CONSTRUCTOR,
-    LITERROR_STATIC_CONSTRUCTOR,
-    LITERROR_CONSTANT_MODIFIED,
-    LITERROR_INVALID_REFERENCE_TARGET,
-
-    LITERROR_TOTAL
-};
-
-enum LitPrecedence
+enum LitAstPrecedence
 {
     LITPREC_NONE,
     LITPREC_ASSIGNMENT,// =
@@ -117,7 +66,7 @@ enum LitPrecedence
     LITPREC_PRIMARY
 };
 
-enum LitTokType
+enum LitAstTokType
 {
     LITTOK_NEW_LINE,
 
@@ -213,7 +162,7 @@ enum LitTokType
 };
 
 
-enum LitFuncType
+enum LitAstFuncType
 {
     LITFUNC_REGULAR,
     LITFUNC_SCRIPT,
@@ -224,31 +173,31 @@ enum LitFuncType
 
 struct LitAstExpression
 {
-    LitExprType type;
+    LitAstExprType type;
     size_t line;
 };
 
-struct LitPrivate
+struct LitAstPrivate
 {
     bool initialized;
     bool constant;
 };
 
-struct LitPrivList
+struct LitAstPrivList
 {
     size_t capacity;
     size_t count;
-    LitPrivate* values;
+    LitAstPrivate* values;
 };
 
-struct LitEmitter
+struct LitAstEmitter
 {
     LitState* state;
     LitChunk* chunk;
-    LitCompiler* compiler;
+    LitAstCompiler* compiler;
     size_t last_line;
     size_t loop_start;
-    LitPrivList privates;
+    LitAstPrivList privates;
     LitUintList breaks;
     LitUintList continues;
     LitModule* module;
@@ -258,11 +207,11 @@ struct LitEmitter
     int emit_reference;
 };
 
-struct LitParseRule
+struct LitAstParseRule
 {
-    LitPrefixParseFn prefix;
-    LitInfixParseFn infix;
-    LitPrecedence precedence;
+    LitAstParsePrefixFn prefix;
+    LitAstParseInfixFn infix;
+    LitAstPrecedence precedence;
 };
 
 /*
@@ -286,7 +235,7 @@ struct LitAstBinaryExpr
     LitAstExpression exobj;
     LitAstExpression* left;
     LitAstExpression* right;
-    LitTokType op;
+    LitAstTokType op;
     bool ignore_left;
 };
 
@@ -294,7 +243,7 @@ struct LitAstUnaryExpr
 {
     LitAstExpression exobj;
     LitAstExpression* right;
-    LitTokType op;
+    LitAstTokType op;
 };
 
 struct LitAstVarExpr
@@ -545,16 +494,16 @@ struct LitExecState
 };
 
 
-struct LitToken
+struct LitAstToken
 {
     const char* start;
-    LitTokType type;
+    LitAstTokType type;
     size_t length;
     size_t line;
     LitValue value;
 };
 
-struct LitLocal
+struct LitAstLocal
 {
     const char* name;
     size_t length;
@@ -563,41 +512,41 @@ struct LitLocal
     bool constant;
 };
 
-struct LitLocList
+struct LitAstLocList
 {
     size_t capacity;
     size_t count;
-    LitLocal* values;
+    LitAstLocal* values;
 };
 
-struct LitCompilerUpvalue
+struct LitAstCompUpvalue
 {
     uint8_t index;
     bool isLocal;
 };
 
-struct LitCompiler
+struct LitAstCompiler
 {
-    LitLocList locals;
+    LitAstLocList locals;
     int scope_depth;
     LitFunction* function;
-    LitFuncType type;
-    LitCompilerUpvalue upvalues[UINT8_COUNT];
-    LitCompiler* enclosing;
+    LitAstFuncType type;
+    LitAstCompUpvalue upvalues[UINT8_COUNT];
+    LitAstCompiler* enclosing;
     bool skip_return;
     size_t loop_depth;
     int slots;
     int max_slots;
 };
 
-struct LitParser
+struct LitAstParser
 {
     LitState* state;
     bool had_error;
     bool panic_mode;
-    LitToken previous;
-    LitToken current;
-    LitCompiler* compiler;
+    LitAstToken previous;
+    LitAstToken current;
+    LitAstCompiler* compiler;
     uint8_t exprrootcnt;
     uint8_t stmtrootcnt;
 };
@@ -609,7 +558,7 @@ struct LitEmulatedFile
     size_t position;
 };
 
-struct LitScanner
+struct LitAstScanner
 {
     size_t line;
     const char* start;
@@ -621,7 +570,7 @@ struct LitScanner
     bool had_error;
 };
 
-struct LitOptimizer
+struct LitAstOptimizer
 {
     LitState* state;
     LitVarList variables;

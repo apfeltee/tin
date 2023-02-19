@@ -417,7 +417,7 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
         {
             // Special hidden key
             field = haswrapper ? map->index_fn(vm, map, entry->key, NULL) : entry->value;
-            // This lit_parser_check is required to prevent infinite loops when playing with Module.privates and such
+            // This check is required to prevent infinite loops when playing with Module.privates and such
             strobval = (lit_value_ismap(field) && lit_value_asmap(field)->index_fn != NULL) ? lit_string_copyconst(state, "map") : lit_value_tostring(state, field);
             lit_state_pushroot(state, (LitObject*)strobval);
             valuesconverted[i] = strobval;
