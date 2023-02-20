@@ -462,7 +462,14 @@ void lit_towriter_value(LitState* state, LitWriter* wr, LitValue value, bool wit
     }
     else if(lit_value_isnumber(value))
     {
-        lit_writer_writeformat(wr, "%g", lit_value_asnumber(value));
+        if(value.isfixednumber)
+        {
+            lit_writer_writeformat(wr, "%ld", lit_value_asfixednumber(value));
+        }
+        else
+        {
+            lit_writer_writeformat(wr, "%g", lit_value_asfloatnumber(value));
+        }
     }
     else if(lit_value_isobject(value))
     {

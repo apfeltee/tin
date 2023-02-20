@@ -356,20 +356,31 @@ static int lit_astlex_scanbinarydigit(LitAstScanner* scanner)
 
 static LitAstToken lit_astlex_makenumbertoken(LitAstScanner* scanner, bool ishex, bool isbinary)
 {
+    int64_t itmp;
+    double tmp;
     LitAstToken token;
     LitValue value;
     errno = 0;
     if(ishex)
     {
-        value = lit_value_makenumber(scanner->state, (double)strtoll(scanner->start, NULL, 16));
+        value = lit_value_makefixednumber(scanner->state, (double)strtoll(scanner->start, NULL, 16));
     }
     else if(isbinary)
     {
-        value = lit_value_makenumber(scanner->state, (int)strtoll(scanner->start + 2, NULL, 2));
+        value = lit_value_makefixednumber(scanner->state, (int)strtoll(scanner->start + 2, NULL, 2));
     }
     else
     {
-        value = lit_value_makenumber(scanner->state, strtod(scanner->start, NULL));
+        tmp = strtod(scanner->start, NULL);
+        itmp = (int64_t)tmp;
+        if(itmp == tmp)
+        {
+            value = lit_value_makefixednumber(scanner->state, tmp);
+        }
+        else
+        {
+            value = lit_value_makefloatnumber(scanner->state, tmp);
+        }
     }
 
     if(errno == ERANGE)

@@ -54,9 +54,10 @@ void lit_privlist_destroy(LitState* state, LitAstPrivList* array)
 
 void lit_privlist_push(LitState* state, LitAstPrivList* array, LitAstPrivate value)
 {
+    size_t oldcapacity;
     if(array->capacity < array->count + 1)
     {
-        size_t oldcapacity = array->capacity;
+        oldcapacity = array->capacity;
         array->capacity = LIT_GROW_CAPACITY(oldcapacity);
         array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstPrivate), oldcapacity, array->capacity);
     }
@@ -78,9 +79,10 @@ void lit_loclist_destroy(LitState* state, LitAstLocList* array)
 
 void lit_loclist_push(LitState* state, LitAstLocList* array, LitAstLocal value)
 {
+    size_t oldcapacity;
     if(array->capacity < array->count + 1)
     {
-        size_t oldcapacity = array->capacity;
+        oldcapacity = array->capacity;
         array->capacity = LIT_GROW_CAPACITY(oldcapacity);
         array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstLocal), oldcapacity, array->capacity);
     }
@@ -96,7 +98,6 @@ static void lit_astemit_raiseerror(LitAstEmitter* emitter, size_t line, const ch
     va_end(args);
 }
 
-
 void lit_astemit_init(LitState* state, LitAstEmitter* emitter)
 {
     emitter->state = state;
@@ -108,7 +109,6 @@ void lit_astemit_init(LitState* state, LitAstEmitter* emitter)
     emitter->module = NULL;
     emitter->previous_was_expression_statement = false;
     emitter->class_has_super = false;
-
     lit_privlist_init(&emitter->privates);
     lit_uintlist_init(&emitter->breaks);
     lit_uintlist_init(&emitter->continues);
@@ -127,12 +127,12 @@ static void lit_astemit_emit1byte(LitAstEmitter* emitter, uint16_t line, uint8_t
         // Egor-fail proofing
         line = emitter->last_line;
     }
-
     lit_chunk_push(emitter->state, emitter->chunk, byte, line);
     emitter->last_line = line;
 }
 
-static const int8_t stack_effects[] = {
+static const int8_t stack_effects[] =
+{
 #define OPCODE(_, effect) effect,
 #include "opcodes.inc"
 #undef OPCODE
@@ -156,7 +156,6 @@ static void lit_astemit_emit1op(LitAstEmitter* emitter, uint16_t line, LitOpCode
     compiler = emitter->compiler;
     lit_astemit_emit1byte(emitter, line, (uint8_t)op);
     compiler->slots += stack_effects[(int)op];
-
     if(compiler->slots > (int)compiler->function->max_slots)
     {
         compiler->function->max_slots = (size_t)compiler->slots;
@@ -189,11 +188,10 @@ static void lit_astemit_emitvaryingop(LitAstEmitter* emitter, uint16_t line, Lit
 
 static void lit_astemit_emitargedop(LitAstEmitter* emitter, uint16_t line, LitOpCode op, uint8_t arg)
 {
-    LitAstCompiler* compiler = emitter->compiler;
-
+    LitAstCompiler* compiler;
+    compiler = emitter->compiler;
     lit_astemit_emit2bytes(emitter, line, (uint8_t)op, arg);
     compiler->slots += stack_effects[(int)op];
-
     if(compiler->slots > (int)compiler->function->max_slots)
     {
         compiler->function->max_slots = (size_t)compiler->slots;
@@ -220,31 +218,25 @@ static void lit_astemit_emitbyteorshort(LitAstEmitter* emitter, uint16_t line, u
 
 static void lit_compiler_compiler(LitAstEmitter* emitter, LitAstCompiler* compiler, LitAstFuncType type)
 {
+    const char* name;
     lit_loclist_init(&compiler->locals);
-
     compiler->type = type;
     compiler->scope_depth = 0;
     compiler->enclosing = (struct LitAstCompiler*)emitter->compiler;
     compiler->skip_return = false;
     compiler->function = lit_object_makefunction(emitter->state, emitter->module);
     compiler->loop_depth = 0;
-
     emitter->compiler = compiler;
-
-    const char* name = emitter->state->scanner->file_name;
-
+    name = emitter->state->scanner->file_name;
     if(emitter->compiler == NULL)
     {
         compiler->function->name = lit_string_copy(emitter->state, name, strlen(name));
     }
-
     emitter->chunk = &compiler->function->chunk;
-
     if(lit_astopt_isoptenabled(LITOPTSTATE_LINE_INFO))
     {
         emitter->chunk->has_line_info = false;
     }
-
     if(type == LITFUNC_METHOD || type == LITFUNC_STATIC_METHOD || type == LITFUNC_CONSTRUCTOR)
     {
         lit_loclist_push(emitter->state, &compiler->locals, (LitAstLocal){ "this", 4, -1, false, false });
@@ -253,7 +245,6 @@ static void lit_compiler_compiler(LitAstEmitter* emitter, LitAstCompiler* compil
     {
         lit_loclist_push(emitter->state, &compiler->locals, (LitAstLocal){ "", 0, -1, false, false });
     }
-
     compiler->slots = 1;
     compiler->max_slots = 1;
 }
@@ -278,28 +269,23 @@ static void lit_astemit_emitreturn(LitAstEmitter* emitter, size_t line)
 
 static LitFunction* lit_compiler_end(LitAstEmitter* emitter, LitString* name)
 {
+    LitFunction* function;
     if(!emitter->compiler->skip_return)
     {
         lit_astemit_emitreturn(emitter, emitter->last_line);
         emitter->compiler->skip_return = true;
     }
-
-    LitFunction* function = emitter->compiler->function;
-
+    function = emitter->compiler->function;
     lit_loclist_destroy(emitter->state, &emitter->compiler->locals);
-
     emitter->compiler = (LitAstCompiler*)emitter->compiler->enclosing;
     emitter->chunk = emitter->compiler == NULL ? NULL : &emitter->compiler->function->chunk;
-
     if(name != NULL)
     {
         function->name = name;
     }
-
 #ifdef LIT_TRACE_CHUNK
     lit_disassemble_chunk(&function->chunk, function->name->chars, NULL);
 #endif
-
     return function;
 }
 
@@ -310,11 +296,11 @@ static void lit_astemit_beginscope(LitAstEmitter* emitter)
 
 static void lit_astemit_endscope(LitAstEmitter* emitter, uint16_t line)
 {
+    LitAstLocList* locals;
+    LitAstCompiler* compiler;
     emitter->compiler->scope_depth--;
-
-    LitAstCompiler* compiler = emitter->compiler;
-    LitAstLocList* locals = &compiler->locals;
-
+    compiler = emitter->compiler;
+    locals = &compiler->locals;
     while(locals->count > 0 && locals->values[locals->count - 1].depth > compiler->scope_depth)
     {
         if(locals->values[locals->count - 1].captured)
@@ -325,28 +311,25 @@ static void lit_astemit_endscope(LitAstEmitter* emitter, uint16_t line)
         {
             lit_astemit_emit1op(emitter, line, OP_POP);
         }
-
         locals->count--;
     }
 }
 
-
 static uint16_t lit_astemit_addconstant(LitAstEmitter* emitter, size_t line, LitValue value)
 {
-    size_t constant = lit_chunk_addconst(emitter->state, emitter->chunk, value);
-
+    size_t constant;
+    constant = lit_chunk_addconst(emitter->state, emitter->chunk, value);
     if(constant >= UINT16_MAX)
     {
         lit_astemit_raiseerror(emitter, line, "too many constants for one chunk");
     }
-
     return constant;
 }
 
 static size_t lit_astemit_emitconstant(LitAstEmitter* emitter, size_t line, LitValue value)
 {
-    size_t constant = lit_chunk_addconst(emitter->state, emitter->chunk, value);
-
+    size_t constant;
+    constant = lit_chunk_addconst(emitter->state, emitter->chunk, value);
     if(constant < UINT8_MAX)
     {
         lit_astemit_emitargedop(emitter, line, OP_CONSTANT, constant);
@@ -360,94 +343,85 @@ static size_t lit_astemit_emitconstant(LitAstEmitter* emitter, size_t line, LitV
     {
         lit_astemit_raiseerror(emitter, line, "too many constants for one chunk");
     }
-
     return constant;
 }
 
 static int lit_astemit_addprivate(LitAstEmitter* emitter, const char* name, size_t length, size_t line, bool constant)
 {
-    LitAstPrivList* privates = &emitter->privates;
-
+    int index;
+    LitValue idxval;
+    LitState* state;
+    LitString* key;
+    LitTable* privnames;
+    LitAstPrivList* privates;
+    privates = &emitter->privates;
     if(privates->count == UINT16_MAX)
     {
         lit_astemit_raiseerror(emitter, line, "too many private locals for one module");
     }
-
-    LitTable* private_names = &emitter->module->private_names->values;
-    LitString* key = lit_table_find_string(private_names, name, length, lit_util_hashstring(name, length));
-
+    privnames = &emitter->module->private_names->values;
+    key = lit_table_find_string(privnames, name, length, lit_util_hashstring(name, length));
     if(key != NULL)
     {
         lit_astemit_raiseerror(emitter, line, "variable '%.*s' was already declared in this scope", length, name);
-
-        LitValue index;
-        lit_table_get(private_names, key, &index);
-
-        return lit_value_asnumber(index);
+        lit_table_get(privnames, key, &idxval);
+        return lit_value_asnumber(idxval);
     }
-
-    LitState* state = emitter->state;
-    int index = (int)privates->count;
-
+    state = emitter->state;
+    index = (int)privates->count;
     lit_privlist_push(state, privates, (LitAstPrivate){ false, constant });
-
-    lit_table_set(state, private_names, lit_string_copy(state, name, length), lit_value_makenumber(state, index));
+    lit_table_set(state, privnames, lit_string_copy(state, name, length), lit_value_makefixednumber(state, index));
     emitter->module->private_count++;
-
     return index;
 }
 
 static int lit_astemit_resolveprivate(LitAstEmitter* emitter, const char* name, size_t length, size_t line)
 {
-    LitTable* private_names = &emitter->module->private_names->values;
-    LitString* key = lit_table_find_string(private_names, name, length, lit_util_hashstring(name, length));
-
+    int numberindex;
+    LitValue index;
+    LitString* key;
+    LitTable* privnames;
+    privnames = &emitter->module->private_names->values;
+    key = lit_table_find_string(privnames, name, length, lit_util_hashstring(name, length));
     if(key != NULL)
     {
-        LitValue index;
-        lit_table_get(private_names, key, &index);
-
-        int numberindex = lit_value_asnumber(index);
-
+        lit_table_get(privnames, key, &index);
+        numberindex = lit_value_asnumber(index);
         if(!emitter->privates.values[numberindex].initialized)
         {
             lit_astemit_raiseerror(emitter, line, "variable '%.*s' cannot use itself in its initializer", length, name);
         }
-
         return numberindex;
     }
-
     return -1;
 }
 
 static int lit_astemit_addlocal(LitAstEmitter* emitter, const char* name, size_t length, size_t line, bool constant)
 {
-    LitAstCompiler* compiler = emitter->compiler;
-    LitAstLocList* locals = &compiler->locals;
-
+    int i;
+    LitAstLocal* local;
+    LitAstLocList* locals;
+    LitAstCompiler* compiler;
+    compiler = emitter->compiler;
+    locals = &compiler->locals;
     if(locals->count == UINT16_MAX)
     {
         lit_astemit_raiseerror(emitter, line, "too many local variables for one function");
     }
-
-    for(int i = (int)locals->count - 1; i >= 0; i--)
+    for(i = (int)locals->count - 1; i >= 0; i--)
     {
-        LitAstLocal* local = &locals->values[i];
-
+        local = &locals->values[i];
         if(local->depth != UINT16_MAX && local->depth < compiler->scope_depth)
         {
             break;
         }
-
         if(length == local->length && memcmp(local->name, name, length) == 0)
         {
             lit_astemit_raiseerror(emitter, line, "variable '%.*s' was already declared in this scope", length, name);
         }
     }
-
     lit_loclist_push(emitter->state, locals, (LitAstLocal){ name, length, UINT16_MAX, false, constant });
-
-    return (int)locals->count - 1;
+    return (((int)locals->count) - 1);
 }
 
 static int lit_astemit_resolvelocal(LitAstEmitter* emitter, LitAstCompiler* compiler, const char* name, size_t length, size_t line)

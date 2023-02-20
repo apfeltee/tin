@@ -20,6 +20,11 @@ String.chr = function(n)
     return String.fromCharCode(n);
 }
 
+Array.prototype.clone = function()
+{
+    return JSON.parse(JSON.stringify(this));
+}
+
 function bitnot(n)
 {
     return (~n);

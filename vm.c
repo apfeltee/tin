@@ -914,7 +914,7 @@ unsigned int vmutil_numtouint32(LitValue val)
     }
     if(val.isfixednumber)
     {
-        //return lit_util_numbertouint32(val.numfixedval);
+        return lit_util_numbertouint32(val.numfixedval);
         return val.numfixedval;
     }
     return lit_util_numbertouint32(val.numfloatval);
@@ -1000,25 +1000,28 @@ static inline bool vm_binaryop_actual(LitVM* vm, LitFiber* fiber, int op, LitVal
             {
                 ia = lit_value_asfixednumber(a);
                 ib = lit_value_asfixednumber(b);
-                *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, ia & ib));
+                *(fiber->stack_top - 1) = (lit_value_makefixednumber(vm->state, ia & ib));
             }
             break;
         case OP_BOR:
             {
                 ia = lit_value_asfixednumber(a);
                 ib = lit_value_asfixednumber(b);
-                *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, ia | ib));
+                *(fiber->stack_top - 1) = (lit_value_makefixednumber(vm->state, ia | ib));
             }
             break;
         case OP_BXOR:
             {
                 ia = lit_value_asfixednumber(a);
                 ib = lit_value_asfixednumber(b);
-                *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, ia ^ ib));
+                *(fiber->stack_top - 1) = (lit_value_makefixednumber(vm->state, ia ^ ib));
             }
             break;
         case OP_LSHIFT:
             {
+                int ires;
+                int uleft;
+                unsigned int uright;
                 /*
                     ApeFloat rightval = ape_object_value_asnumber(right);
                     ApeFloat leftval = ape_object_value_asnumber(left);
@@ -1026,18 +1029,27 @@ static inline bool vm_binaryop_actual(LitVM* vm, LitFiber* fiber, int op, LitVal
                     unsigned int uright = ape_util_numbertouint32(rightval);
                     resfixed = (uleft << (uright & 0x1F));
                 */
-
-                int uleft = lit_util_numbertoint32(lit_value_asfloatnumber(a));
-                //int uleft = vmutil_numtoint32(a);
-                unsigned int uright = lit_util_numbertouint32(lit_value_asfloatnumber(b));
-                //unsigned int uright = vmutil_numtouint32(b);
-                int ires = uleft << (uright & 0x1F);
-
-                *(fiber->stack_top - 1) = lit_value_makenumber(vm->state, ires);
+            
+                //uleft = lit_util_numbertoint32(lit_value_asfloatnumber(a));
+                uleft = vmutil_numtoint32(a);
+                //uright = lit_util_numbertouint32(lit_value_asfloatnumber(b));
+                uright = vmutil_numtouint32(b);
+                if(!b.isfixednumber)
+                {
+                    ires = uleft << (uright & 0x1F);
+                }
+                else
+                {
+                    ires = uleft << uright;
+                }
+                *(fiber->stack_top - 1) = lit_value_makefixednumber(vm->state, ires);
             }
             break;
         case OP_RSHIFT:
             {
+                int ires;
+                int uleft;
+                unsigned int uright;
                 /*
                     ApeFloat rightval = ape_object_value_asnumber(right);
                     ApeFloat leftval = ape_object_value_asnumber(left);
@@ -1046,12 +1058,19 @@ static inline bool vm_binaryop_actual(LitVM* vm, LitFiber* fiber, int op, LitVal
                     resfixed = (uleft >> (uright & 0x1F));
                     isfixed = true;
                 */
-                int uleft = lit_util_numbertoint32(lit_value_asfloatnumber(a));
-                //int uleft = vmutil_numtoint32(a);
-                unsigned int uright = lit_util_numbertouint32(lit_value_asfloatnumber(b));
-                //unsigned int uright = vmutil_numtouint32(b);
-                int ires = uleft >> (uright & 0x1F);
-                *(fiber->stack_top - 1) = lit_value_makenumber(vm->state, ires);
+                //uleft = lit_util_numbertoint32(lit_value_asfloatnumber(a));
+                uleft = vmutil_numtoint32(a);
+                //uright = lit_util_numbertouint32(lit_value_asfloatnumber(b));
+                uright = vmutil_numtouint32(b);
+                if(!b.isfixednumber)
+                {
+                    ires = uleft >> (uright & 0x1F);
+                }
+                else
+                {
+                    ires = uleft >> uright;
+                }
+                *(fiber->stack_top - 1) = lit_value_makefixednumber(vm->state, ires);
                 //abort();
             }
             break;
@@ -1111,6 +1130,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
     size_t argc;
     size_t arindex;
     size_t i;
+    int64_t ival;
     uint16_t offset;
     uint8_t index;
     uint8_t islocal;
@@ -1322,7 +1342,14 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     vmexec_raiseerror("operand must be a number");
                 }
                 popped = lit_vmexec_pop(fiber);
-                tmpval = lit_value_makenumber(vm->state, -lit_value_asnumber(popped));
+                if(popped.isfixednumber)
+                {
+                    tmpval = lit_value_makefixednumber(vm->state, -lit_value_asfixednumber(popped));
+                }
+                else
+                {
+                    tmpval = lit_value_makefloatnumber(vm->state, -lit_value_asfloatnumber(popped));
+                }
                 lit_vmexec_push(fiber, tmpval);
                 continue;
             }
@@ -1348,7 +1375,8 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                     vmexec_raiseerror("Operand must be a number");
                 }
                 popped = lit_vmexec_pop(fiber);
-                tmpval = lit_value_makenumber(vm->state, ~((int)lit_value_asnumber(popped)));
+                ival = (int)lit_value_asnumber(popped);
+                tmpval = lit_value_makefixednumber(vm->state, ~ival);
                 lit_vmexec_push(fiber, tmpval);
                 continue;
             }
@@ -1374,7 +1402,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 if(lit_value_isnumber(vala) && lit_value_isnumber(valb))
                 {
                     lit_vmexec_drop(fiber);
-                    *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, pow(lit_value_asnumber(vala), lit_value_asnumber(valb))));
+                    *(fiber->stack_top - 1) = lit_value_makefloatnumber(vm->state, pow(lit_value_asnumber(vala), lit_value_asnumber(valb)));
                 }
                 else
                 {
@@ -1394,7 +1422,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 if(lit_value_isnumber(vala) && lit_value_isnumber(valb))
                 {
                     lit_vmexec_drop(fiber);
-                    *(fiber->stack_top - 1) = (lit_value_makenumber(vm->state, floor(lit_value_asnumber(vala) / lit_value_asnumber(valb))));
+                    *(fiber->stack_top - 1) = lit_value_makefloatnumber(vm->state, floor(lit_value_asnumber(vala) / lit_value_asnumber(valb)));
                 }
                 else
                 {
@@ -1409,7 +1437,7 @@ LitInterpretResult lit_vm_execfiber(LitState* state, LitFiber* fiber)
                 if(lit_value_isnumber(vala) && lit_value_isnumber(valb))
                 {
                     lit_vmexec_drop(fiber);
-                    *(fiber->stack_top - 1) = lit_value_makenumber(vm->state, fmod(lit_value_asnumber(vala), lit_value_asnumber(valb)));
+                    *(fiber->stack_top - 1) = lit_value_makefloatnumber(vm->state, fmod(lit_value_asnumber(vala), lit_value_asnumber(valb)));
                 }
                 else
                 {

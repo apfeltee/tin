@@ -774,7 +774,7 @@ static LitAstExpression* lit_astparser_rulecompound(LitAstParser* parser, LitAst
     rule = lit_astparser_getrule(op);
     if(op == LITTOK_PLUS_PLUS || op == LITTOK_MINUS_MINUS)
     {
-        expression = (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, lit_value_makenumber(parser->state, 1));
+        expression = (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, lit_value_makefixednumber(parser->state, 1));
     }
     else
     {
