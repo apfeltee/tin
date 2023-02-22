@@ -1,173 +1,173 @@
 
 #include "priv.h"
 
-LitClass* lit_create_class(LitState* state, LitString* name)
+TinClass* tin_create_class(TinState* state, TinString* name)
 {
-    LitClass* klass;
-    klass = (LitClass*)lit_gcmem_allocobject(state, sizeof(LitClass), LITTYPE_CLASS, false);
+    TinClass* klass;
+    klass = (TinClass*)tin_gcmem_allocobject(state, sizeof(TinClass), TINTYPE_CLASS, false);
     klass->name = name;
     klass->init_method = NULL;
     klass->super = NULL;
-    lit_table_init(state, &klass->methods);
-    lit_table_init(state, &klass->static_fields);
+    tin_table_init(state, &klass->methods);
+    tin_table_init(state, &klass->static_fields);
     return klass;
 }
 
-LitClass* lit_create_classobject(LitState* state, const char* name)
+TinClass* tin_create_classobject(TinState* state, const char* name)
 {
-    LitString* nm;
-    LitClass* cl;
-    nm = lit_string_copy(state, name, strlen(name));
-    cl = lit_create_class(state, nm);
+    TinString* nm;
+    TinClass* cl;
+    nm = tin_string_copy(state, name, strlen(name));
+    cl = tin_create_class(state, nm);
     cl->name = nm;
     return cl;
 }
 
-LitField* lit_create_field(LitState* state, LitObject* getter, LitObject* setter)
+TinField* tin_create_field(TinState* state, TinObject* getter, TinObject* setter)
 {
-    LitField* field;
-    field = (LitField*)lit_gcmem_allocobject(state, sizeof(LitField), LITTYPE_FIELD, false);
+    TinField* field;
+    field = (TinField*)tin_gcmem_allocobject(state, sizeof(TinField), TINTYPE_FIELD, false);
     field->getter = getter;
     field->setter = setter;
     return field;
 }
 
-LitInstance* lit_create_instance(LitState* state, LitClass* klass)
+TinInstance* tin_create_instance(TinState* state, TinClass* klass)
 {
-    LitInstance* instance;
-    instance = (LitInstance*)lit_gcmem_allocobject(state, sizeof(LitInstance), LITTYPE_INSTANCE, false);
+    TinInstance* instance;
+    instance = (TinInstance*)tin_gcmem_allocobject(state, sizeof(TinInstance), TINTYPE_INSTANCE, false);
     instance->klass = klass;
-    lit_table_init(state, &instance->fields);
+    tin_table_init(state, &instance->fields);
     instance->fields.count = 0;
     return instance;
 }
 
-void lit_class_bindconstructor(LitState* state, LitClass* cl, LitNativeMethodFn fn)
+void tin_class_bindconstructor(TinState* state, TinClass* cl, TinNativeMethodFn fn)
 {
-    LitNativeMethod* mth;
-    mth = lit_class_bindmethod(state, cl, "constructor", fn);
-    cl->init_method = (LitObject*)mth;
+    TinNativeMethod* mth;
+    mth = tin_class_bindmethod(state, cl, "constructor", fn);
+    cl->init_method = (TinObject*)mth;
 }
 
-LitNativeMethod* lit_class_bindmethod(LitState* state, LitClass* cl, const char* name, LitNativeMethodFn fn)
+TinNativeMethod* tin_class_bindmethod(TinState* state, TinClass* cl, const char* name, TinNativeMethodFn fn)
 {
-    LitString* nm;
-    LitNativeMethod* mth;
-    nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_object_makenativemethod(state, fn, nm);
-    lit_table_set(state, &cl->methods, nm, lit_value_fromobject(mth));
+    TinString* nm;
+    TinNativeMethod* mth;
+    nm = tin_string_copy(state, name, strlen(name));
+    mth = tin_object_makenativemethod(state, fn, nm);
+    tin_table_set(state, &cl->methods, nm, tin_value_fromobject(mth));
     return mth;
 }
 
-LitPrimitiveMethod* lit_class_bindprimitive(LitState* state, LitClass* cl, const char* name, LitPrimitiveMethodFn fn)
+TinPrimitiveMethod* tin_class_bindprimitive(TinState* state, TinClass* cl, const char* name, TinPrimitiveMethodFn fn)
 {
-    LitString* nm;
-    LitPrimitiveMethod* mth;
-    nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_object_makeprimitivemethod(state, fn, nm);
-    lit_table_set(state, &cl->methods, nm, lit_value_fromobject(mth));
+    TinString* nm;
+    TinPrimitiveMethod* mth;
+    nm = tin_string_copy(state, name, strlen(name));
+    mth = tin_object_makeprimitivemethod(state, fn, nm);
+    tin_table_set(state, &cl->methods, nm, tin_value_fromobject(mth));
     return mth;
 }
 
-LitNativeMethod* lit_class_bindstaticmethod(LitState* state, LitClass* cl, const char* name, LitNativeMethodFn fn)
+TinNativeMethod* tin_class_bindstaticmethod(TinState* state, TinClass* cl, const char* name, TinNativeMethodFn fn)
 {
-    LitString* nm;
-    LitNativeMethod* mth;
-    nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_object_makenativemethod(state, fn, nm);
-    lit_table_set(state, &cl->static_fields, nm, lit_value_fromobject(mth));
+    TinString* nm;
+    TinNativeMethod* mth;
+    nm = tin_string_copy(state, name, strlen(name));
+    mth = tin_object_makenativemethod(state, fn, nm);
+    tin_table_set(state, &cl->static_fields, nm, tin_value_fromobject(mth));
     return mth;
 }
 
-LitPrimitiveMethod* lit_class_bindstaticprimitive(LitState* state, LitClass* cl, const char* name, LitPrimitiveMethodFn fn)
+TinPrimitiveMethod* tin_class_bindstaticprimitive(TinState* state, TinClass* cl, const char* name, TinPrimitiveMethodFn fn)
 {
-    LitString* nm;
-    LitPrimitiveMethod* mth;
-    nm = lit_string_copy(state, name, strlen(name));
-    mth = lit_object_makeprimitivemethod(state, fn, nm);
-    lit_table_set(state, &cl->static_fields, nm, lit_value_fromobject(mth));
+    TinString* nm;
+    TinPrimitiveMethod* mth;
+    nm = tin_string_copy(state, name, strlen(name));
+    mth = tin_object_makeprimitivemethod(state, fn, nm);
+    tin_table_set(state, &cl->static_fields, nm, tin_value_fromobject(mth));
     return mth;
 }
 
 
-void lit_class_setstaticfield(LitState* state, LitClass* cl, const char* name, LitValue val)
+void tin_class_setstaticfield(TinState* state, TinClass* cl, const char* name, TinValue val)
 {
-    LitString* nm;
-    nm = lit_string_copy(state, name, strlen(name));
-    lit_table_set(state, &cl->static_fields, nm, val);
+    TinString* nm;
+    nm = tin_string_copy(state, name, strlen(name));
+    tin_table_set(state, &cl->static_fields, nm, val);
 }
 
-LitField* lit_class_bindgetset(LitState* state, LitClass* cl, const char* name, LitNativeMethodFn getfn, LitNativeMethodFn setfn, bool isstatic)
+TinField* tin_class_bindgetset(TinState* state, TinClass* cl, const char* name, TinNativeMethodFn getfn, TinNativeMethodFn setfn, bool isstatic)
 {
-    LitTable* tbl;
-    LitField* field;
-    LitString* nm;
-    LitNativeMethod* mthset;
-    LitNativeMethod* mthget;
+    TinTable* tbl;
+    TinField* field;
+    TinString* nm;
+    TinNativeMethod* mthset;
+    TinNativeMethod* mthget;
     tbl = &cl->methods;
     mthset = NULL;
     mthget = NULL;
 
-    nm = lit_string_copy(state, name, strlen(name));
+    nm = tin_string_copy(state, name, strlen(name));
     if(getfn != NULL)
     {
-        mthget = lit_object_makenativemethod(state, getfn, nm);
+        mthget = tin_object_makenativemethod(state, getfn, nm);
     }
     if(setfn != NULL)
     {
-        mthset = lit_object_makenativemethod(state, setfn, nm);
+        mthset = tin_object_makenativemethod(state, setfn, nm);
     }
     if(isstatic)
     {
         tbl = &cl->static_fields;
     }
-    field = lit_create_field(state, (LitObject*)mthget, (LitObject*)mthset);
-    lit_table_set(state, tbl, nm, lit_value_fromobject(field)); 
+    field = tin_create_field(state, (TinObject*)mthget, (TinObject*)mthset);
+    tin_table_set(state, tbl, nm, tin_value_fromobject(field)); 
     return field;
 }
 
 
 /*
 
-    #define LIT_INHERIT_CLASS(superklass)                                \
-        klass->super = (LitClass*)superklass;                            \
+    #define TIN_INHERIT_CLASS(superklass)                                \
+        klass->super = (TinClass*)superklass;                            \
         if(klass->init_method == NULL)                                    \
         {                                                                 \
             klass->init_method = superklass->init_method;                \
         }                                                                 \
-        lit_table_add_all(state, &superklass->methods, &klass->methods); \
-        lit_table_add_all(state, &superklass->static_fields, &klass->static_fields);
+        tin_table_add_all(state, &superklass->methods, &klass->methods); \
+        tin_table_add_all(state, &superklass->static_fields, &klass->static_fields);
 */
 
-void lit_class_inheritfrom(LitState* state, LitClass* current, LitClass* other)
+void tin_class_inheritfrom(TinState* state, TinClass* current, TinClass* other)
 {
-    current->super = (LitClass*)other;
+    current->super = (TinClass*)other;
     if(current->init_method == NULL)
     {
         current->init_method = other->init_method;
     }
-    lit_table_add_all(state, &other->methods, &current->methods); \
-    lit_table_add_all(state, &other->static_fields, &current->static_fields);
+    tin_table_add_all(state, &other->methods, &current->methods); \
+    tin_table_add_all(state, &other->static_fields, &current->static_fields);
 }
 
-static LitValue objfn_class_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_class_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    return lit_string_format(vm->state, "class @", lit_value_fromobject(lit_value_asclass(instance)->name));
+    return tin_string_format(vm->state, "class @", tin_value_fromobject(tin_value_asclass(instance)->name));
 }
 
-static LitValue objfn_class_iterator(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     bool fields;
     int value;
     int index;
     int mthcap;
-    LitClass* klass;
+    TinClass* klass;
     (void)argc;
-    LIT_ENSURE_ARGS(vm->state, 1);
-    klass = lit_value_asclass(instance);
-    index = lit_value_isnull(argv[0]) ? -1 : lit_value_asnumber(argv[0]);
+    TIN_ENSURE_ARGS(vm->state, 1);
+    klass = tin_value_asclass(instance);
+    index = tin_value_isnull(argv[0]) ? -1 : tin_value_asnumber(argv[0]);
     mthcap = (int)klass->methods.capacity;
     fields = index >= mthcap;
     value = util_table_iterator(fields ? &klass->static_fields : &klass->methods, fields ? index - mthcap : index);
@@ -185,89 +185,89 @@ static LitValue objfn_class_iterator(LitVM* vm, LitValue instance, size_t argc, 
     {
         return NULL_VALUE;
     }
-    return lit_value_makenumber(vm->state, fields ? value + mthcap : value);
+    return tin_value_makefixednumber(vm->state, fields ? value + mthcap : value);
 }
 
 
-static LitValue objfn_class_iteratorvalue(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_class_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     bool fields;
     size_t index;
     size_t mthcap;
-    LitClass* klass;
-    index = lit_value_checknumber(vm, argv, argc, 0);
-    klass = lit_value_asclass(instance);
+    TinClass* klass;
+    index = tin_value_checknumber(vm, argv, argc, 0);
+    klass = tin_value_asclass(instance);
     mthcap = klass->methods.capacity;
     fields = index >= mthcap;
     return util_table_iterator_key(fields ? &klass->static_fields : &klass->methods, fields ? index - mthcap : index);
 }
 
 
-static LitValue objfn_class_super(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_class_super(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitClass* super;
+    TinClass* super;
     (void)vm;
     (void)argc;
     (void)argv;
     super = NULL;
-    if(lit_value_isinstance(instance))
+    if(tin_value_isinstance(instance))
     {
-        super = lit_value_asinstance(instance)->klass->super;
+        super = tin_value_asinstance(instance)->klass->super;
     }
     else
     {
-        super = lit_value_asclass(instance)->super;
+        super = tin_value_asclass(instance)->super;
     }
     if(super == NULL)
     {
         return NULL_VALUE;
     }
-    return lit_value_fromobject(super);
+    return tin_value_fromobject(super);
 }
 
-static LitValue objfn_class_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_class_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitClass* klass;    
-    LitValue value;
+    TinClass* klass;    
+    TinValue value;
     (void)argc;
-    klass = lit_value_asclass(instance);
+    klass = tin_value_asclass(instance);
     if(argc == 2)
     {
-        if(!lit_value_isstring(argv[0]))
+        if(!tin_value_isstring(argv[0]))
         {
-            lit_vm_raiseexitingerror(vm, "class index must be a string");
+            tin_vm_raiseexitingerror(vm, "class index must be a string");
         }
 
-        lit_table_set(vm->state, &klass->static_fields, lit_value_asstring(argv[0]), argv[1]);
+        tin_table_set(vm->state, &klass->static_fields, tin_value_asstring(argv[0]), argv[1]);
         return argv[1];
     }
-    if(!lit_value_isstring(argv[0]))
+    if(!tin_value_isstring(argv[0]))
     {
-        lit_vm_raiseexitingerror(vm, "class index must be a string");
+        tin_vm_raiseexitingerror(vm, "class index must be a string");
     }
-    if(lit_table_get(&klass->static_fields, lit_value_asstring(argv[0]), &value))
+    if(tin_table_get(&klass->static_fields, tin_value_asstring(argv[0]), &value))
     {
         return value;
     }
-    if(lit_table_get(&klass->methods, lit_value_asstring(argv[0]), &value))
+    if(tin_table_get(&klass->methods, tin_value_asstring(argv[0]), &value))
     {
         return value;
     }
     return NULL_VALUE;
 }
 
-static LitValue objfn_class_compare(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_class_compare(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitClass* selfclass;
-    LitClass* otherclass;
+    TinClass* selfclass;
+    TinClass* otherclass;
     (void)vm;
     (void)argc;
-    if(lit_value_isclass(argv[0]))
+    if(tin_value_isclass(argv[0]))
     {
-        selfclass = lit_value_asclass(instance);
-        otherclass = lit_value_asclass(argv[0]);
-        if(lit_string_equal(vm->state, selfclass->name, otherclass->name))
+        selfclass = tin_value_asclass(instance);
+        otherclass = tin_value_asclass(argv[0]);
+        if(tin_string_equal(vm->state, selfclass->name, otherclass->name))
         {
             if(selfclass == otherclass)
             {
@@ -278,31 +278,31 @@ static LitValue objfn_class_compare(LitVM* vm, LitValue instance, size_t argc, L
     return FALSE_VALUE;
 }
 
-static LitValue objfn_class_name(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_class_name(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_fromobject(lit_value_asclass(instance)->name);
+    return tin_value_fromobject(tin_value_asclass(instance)->name);
 }
 
-void lit_open_class_library(LitState* state)
+void tin_open_class_library(TinState* state)
 {
-    LitClass* klass;
-    klass = lit_create_classobject(state, "Class");
+    TinClass* klass;
+    klass = tin_create_classobject(state, "Class");
     {
-        lit_class_bindmethod(state, klass, "[]", objfn_class_subscript);
-        lit_class_bindmethod(state, klass, "==", objfn_class_compare);
-        lit_class_bindmethod(state, klass, "toString", objfn_class_tostring);
-        lit_class_bindstaticmethod(state, klass, "toString", objfn_class_tostring);
-        lit_class_bindstaticmethod(state, klass, "iterator", objfn_class_iterator);
-        lit_class_bindstaticmethod(state, klass, "iteratorValue", objfn_class_iteratorvalue);
-        lit_class_bindgetset(state, klass, "super", objfn_class_super, NULL, false);
-        lit_class_bindgetset(state, klass, "super", objfn_class_super, NULL, true);
-        lit_class_bindgetset(state, klass, "name", objfn_class_name, NULL, true);
-        state->classvalue_class = klass;
+        tin_class_bindmethod(state, klass, "[]", objfn_class_subscript);
+        tin_class_bindmethod(state, klass, "==", objfn_class_compare);
+        tin_class_bindmethod(state, klass, "toString", objfn_class_tostring);
+        tin_class_bindstaticmethod(state, klass, "toString", objfn_class_tostring);
+        tin_class_bindstaticmethod(state, klass, "iterator", objfn_class_iterator);
+        tin_class_bindstaticmethod(state, klass, "iteratorValue", objfn_class_iteratorvalue);
+        tin_class_bindgetset(state, klass, "super", objfn_class_super, NULL, false);
+        tin_class_bindgetset(state, klass, "super", objfn_class_super, NULL, true);
+        tin_class_bindgetset(state, klass, "name", objfn_class_name, NULL, true);
+        state->primclassclass = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+    tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
 }
 
 

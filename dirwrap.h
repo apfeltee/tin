@@ -4,12 +4,12 @@
 #include <stddef.h>
 #include <string.h>
 
-#define LITDIR_PATHSIZE 1024
+#define TINDIR_PATHSIZE 1024
 #if defined(__unix__) || defined(__linux__)
-    #define LITDIR_ISUNIX
+    #define TINDIR_ISUNIX
 #endif
 
-#if defined(LITDIR_ISUNIX)
+#if defined(TINDIR_ISUNIX)
     #include <dirent.h>
 #else
     #include <windows.h>
@@ -22,24 +22,24 @@
     #define	S_ISREG(m)	(((m)&S_IFMT) == S_IFREG)	/* file */
 #endif
 
-typedef struct LitDirReader LitDirReader;
-typedef struct LitDirItem LitDirItem;
+typedef struct TinDirReader TinDirReader;
+typedef struct TinDirItem TinDirItem;
 
-struct LitDirReader
+struct TinDirReader
 {
     void* handle;
 };
 
-struct LitDirItem
+struct TinDirItem
 {
-    char name[LITDIR_PATHSIZE + 1];
+    char name[TINDIR_PATHSIZE + 1];
     bool isdir;
     bool isfile;
 };
 
-bool lit_fs_diropen(LitDirReader* rd, const char* path)
+bool tin_fs_diropen(TinDirReader* rd, const char* path)
 {
-    #if defined(LITDIR_ISUNIX)
+    #if defined(TINDIR_ISUNIX)
         if((rd->handle = opendir(path)) == NULL)
         {
             return false;
@@ -49,12 +49,12 @@ bool lit_fs_diropen(LitDirReader* rd, const char* path)
     return false;
 }
 
-bool lit_fs_dirread(LitDirReader* rd, LitDirItem* itm)
+bool tin_fs_dirread(TinDirReader* rd, TinDirItem* itm)
 {
     itm->isdir = false;
     itm->isfile = false;
-    memset(itm->name, 0, LITDIR_PATHSIZE);
-    #if defined(LITDIR_ISUNIX)
+    memset(itm->name, 0, TINDIR_PATHSIZE);
+    #if defined(TINDIR_ISUNIX)
         struct dirent* ent;
         if((ent = readdir((DIR*)(rd->handle))) == NULL)
         {
@@ -74,9 +74,9 @@ bool lit_fs_dirread(LitDirReader* rd, LitDirItem* itm)
     return false;
 }
 
-bool lit_fs_dirclose(LitDirReader* rd)
+bool tin_fs_dirclose(TinDirReader* rd)
 {
-    #if defined(LITDIR_ISUNIX)
+    #if defined(TINDIR_ISUNIX)
         closedir((DIR*)(rd->handle));
     #endif
     return false;

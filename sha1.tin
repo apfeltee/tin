@@ -32,13 +32,10 @@ function unshiftright(a, b)
 }
 
 // hex output format. 0 - lowercase; 1 - uppercase
-var hexcase = 0;
-
-// base-64 pad character. "=" for strict RFC compliance
-var b64pad  = "";
+var K_HEXCASE = 0;
 
 // bits per input character. 8 - ASCII; 16 - Unicode
-var chrsz   = 8;
+var K_CHARSIZE   = 8;
 
 // Bitwise rotate a 32-bit number to the left.
 function rol(num, cnt)
@@ -110,7 +107,7 @@ function core_sha1(x, l)
     x[aidx] = x[aidx] | 0x80 << (24 - l % 32);
     aidx = ((l + 64 >> 9) << 4) + 15;
     x[aidx] = l;
-    println("x: ", x);
+    //println("x: ", x);
     var w = [];
     var a =  1732584193;
     var b = -271733879;
@@ -180,15 +177,16 @@ function str2binb(str)
 {
     var aidx;
     var bin = [];
-    var mask = (1 << chrsz) - 1;
-    for(var i = 0; i < str.length * chrsz; i += chrsz)
+    var mask = (1 << K_CHARSIZE) - 1;
+    var len = str.length;
+    for(var i = 0; i < len * K_CHARSIZE; i += K_CHARSIZE)
     {
         aidx = (i >> 5);
         if(bin[aidx] == null)
         {
             bin[aidx] = 0
         }
-        bin[aidx] |= (str.charCodeAt(i / chrsz) & mask) << (24 - i%32);
+        bin[aidx] = bin[aidx] | (str.charCodeAt(i / K_CHARSIZE) & mask) << (24 - i%32);
     }
     return bin;
 }
@@ -199,7 +197,7 @@ function core_hmac_sha1(key, data)
     var bkey = str2binb(key);
     if(bkey.length > 16)
     {
-        bkey = core_sha1(bkey, key.length * chrsz);
+        bkey = core_sha1(bkey, key.length * K_CHARSIZE);
     }
     var ipad = []
     var opad = []
@@ -208,14 +206,14 @@ function core_hmac_sha1(key, data)
         ipad[i] = bkey[i] ^ 0x36363636;
         opad[i] = bkey[i] ^ 0x5C5C5C5C;
     }
-    var hash = core_sha1(ipad + str2binb(data), 512 + data.length * chrsz);
+    var hash = core_sha1(ipad + str2binb(data), 512 + data.length * K_CHARSIZE);
     return core_sha1(opad + hash, 512 + 160);
 }
 
 // Convert an array of big-endian words to a hex string.
 function binb2hex(binarray)
 {
-    var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
+    var hex_tab = K_HEXCASE ? "0123456789ABCDEF" : "0123456789abcdef";
     var str = "";
     for(var i = 0; i < binarray.length * 4; i++)
     {
@@ -231,7 +229,7 @@ function binb2hex(binarray)
 // They take string arguments and return either hex or base-64 encoded strings
 function hex_sha1(s)
 {
-    return binb2hex(core_sha1(str2binb(s),s.length * chrsz));
+    return binb2hex(core_sha1(str2binb(s),s.length * K_CHARSIZE));
 }
 
 var demo = [

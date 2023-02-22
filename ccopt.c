@@ -1,48 +1,48 @@
 
 #include "priv.h"
 
-#define LIT_DEBUG_OPTIMIZER
+#define TIN_DEBUG_OPTIMIZER
 
 #define optc_do_binary_op(op) \
-    if(lit_value_isnumber(a) && lit_value_isnumber(b)) \
+    if(tin_value_isnumber(a) && tin_value_isnumber(b)) \
     { \
-        lit_astopt_optdbg("translating constant binary expression of '" # op "' to constant value"); \
-        return lit_value_makenumber(optimizer->state, lit_value_asnumber(a) op lit_value_asnumber(b)); \
+        tin_astopt_optdbg("translating constant binary expression of '" # op "' to constant value"); \
+        return tin_value_makenumber(optimizer->state, tin_value_asnumber(a) op tin_value_asnumber(b)); \
     } \
     return NULL_VALUE;
 
 #define optc_do_bitwise_op(op) \
-    if(lit_value_isnumber(a) && lit_value_isnumber(b)) \
+    if(tin_value_isnumber(a) && tin_value_isnumber(b)) \
     { \
-        lit_astopt_optdbg("translating constant bitwise expression of '" #op "' to constant value"); \
-        return lit_value_makenumber(optimizer->state, (int)lit_value_asnumber(a) op(int) lit_value_asnumber(b)); \
+        tin_astopt_optdbg("translating constant bitwise expression of '" #op "' to constant value"); \
+        return tin_value_makenumber(optimizer->state, (int)tin_value_asnumber(a) op(int) tin_value_asnumber(b)); \
     } \
     return NULL_VALUE;
 
 #define optc_do_fn_op(fn, tokstr) \
-    if(lit_value_isnumber(a) && lit_value_isnumber(b)) \
+    if(tin_value_isnumber(a) && tin_value_isnumber(b)) \
     { \
-        lit_astopt_optdbg("translating constant expression of '" tokstr "' to constant value via lit_vm_callcallable to '" #fn "'"); \
-        return lit_value_makenumber(optimizer->state, fn(lit_value_asnumber(a), lit_value_asnumber(b))); \
+        tin_astopt_optdbg("translating constant expression of '" tokstr "' to constant value via tin_vm_callcallable to '" #fn "'"); \
+        return tin_value_makenumber(optimizer->state, fn(tin_value_asnumber(a), tin_value_asnumber(b))); \
     } \
     return NULL_VALUE;
 
 
 
-static void lit_astopt_optexpression(LitAstOptimizer* optimizer, LitAstExpression** slot);
-static void lit_astopt_optexprlist(LitAstOptimizer* optimizer, LitAstExprList* expressions);
-static void lit_astopt_optstmtlist(LitAstOptimizer* optimizer, LitAstExprList* statements);
+static void tin_astopt_optexpression(TinAstOptimizer* optimizer, TinAstExpression** slot);
+static void tin_astopt_optexprlist(TinAstOptimizer* optimizer, TinAstExprList* expressions);
+static void tin_astopt_optstmtlist(TinAstOptimizer* optimizer, TinAstExprList* statements);
 
-static const char* optimization_level_descriptions[LITOPTLEVEL_TOTAL]
+static const char* optimization_level_descriptions[TINOPTLEVEL_TOTAL]
 = { "No optimizations (same as -Ono-all)", "Super light optimizations, sepcific to interactive shell.",
     "(default) Recommended optimization level for the development.", "Medium optimization, recommended for the release.",
     "(default for bytecode) Extreme optimization, throws out most of the variable/function names, used for bytecode compilation." };
 
-static const char* optimization_names[LITOPTSTATE_TOTAL]
+static const char* optimization_names[TINOPTSTATE_TOTAL]
 = { "constant-folding", "literal-folding", "unused-var",    "unreachable-code",
     "empty-body",       "line-info",       "private-names", "c-for" };
 
-static const char* optimization_descriptions[LITOPTSTATE_TOTAL]
+static const char* optimization_descriptions[TINOPTSTATE_TOTAL]
 = { "Replaces constants in code with their values.",
     "Precalculates literal expressions (3 + 4 is replaced with 7).",
     "Removes user-declared all variables, that were not used.",
@@ -52,15 +52,15 @@ static const char* optimization_descriptions[LITOPTSTATE_TOTAL]
     "Removes names of the private locals from modules (they are indexed by id at runtime).",
     "Replaces for-in loops with c-style for loops where it can." };
 
-static bool optimization_states[LITOPTSTATE_TOTAL];
+static bool optimization_states[TINOPTSTATE_TOTAL];
 
 static bool optimization_states_setup = false;
 static bool any_optimization_enabled = false;
 
-static void lit_astopt_setupstates();
+static void tin_astopt_setupstates();
 
-#if defined(LIT_DEBUG_OPTIMIZER)
-void lit_astopt_optdbg(const char* fmt, ...)
+#if defined(TIN_DEBUG_OPTIMIZER)
+void tin_astopt_optdbg(const char* fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
@@ -70,81 +70,81 @@ void lit_astopt_optdbg(const char* fmt, ...)
     va_end(va);
 }
 #else
-    #define lit_astopt_optdbg(msg, ...)
+    #define tin_astopt_optdbg(msg, ...)
 #endif
 
-void lit_varlist_init(LitVarList* array)
+void tin_varlist_init(TinVarList* array)
 {
     array->values = NULL;
     array->capacity = 0;
     array->count = 0;
 }
 
-void lit_varlist_destroy(LitState* state, LitVarList* array)
+void tin_varlist_destroy(TinState* state, TinVarList* array)
 {
-    LIT_FREE_ARRAY(state, sizeof(LitVariable), array->values, array->capacity);
-    lit_varlist_init(array);
+    TIN_FREE_ARRAY(state, sizeof(TinVariable), array->values, array->capacity);
+    tin_varlist_init(array);
 }
 
-void lit_varlist_push(LitState* state, LitVarList* array, LitVariable value)
+void tin_varlist_push(TinState* state, TinVarList* array, TinVariable value)
 {
     size_t oldcapacity;
     if(array->capacity < array->count + 1)
     {
         oldcapacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitVariable), oldcapacity, array->capacity);
+        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinVariable), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
 }
 
-void lit_astopt_init(LitState* state, LitAstOptimizer* optimizer)
+void tin_astopt_init(TinState* state, TinAstOptimizer* optimizer)
 {
     optimizer->state = state;
     optimizer->depth = -1;
     optimizer->mark_used = false;
-    lit_varlist_init(&optimizer->variables);
+    tin_varlist_init(&optimizer->variables);
 }
 
-static void lit_astopt_beginscope(LitAstOptimizer* optimizer)
+static void tin_astopt_beginscope(TinAstOptimizer* optimizer)
 {
     optimizer->depth++;
 }
 
-static void lit_astopt_endscope(LitAstOptimizer* optimizer)
+static void tin_astopt_endscope(TinAstOptimizer* optimizer)
 {
     bool remove_unused;
-    LitVariable* variable;
-    LitVarList* variables;
+    TinVariable* variable;
+    TinVarList* variables;
     optimizer->depth--;
     variables = &optimizer->variables;
-    remove_unused = lit_astopt_isoptenabled(LITOPTSTATE_UNUSED_VAR);
+    remove_unused = tin_astopt_isoptenabled(TINOPTSTATE_UNUSED_VAR);
     while(variables->count > 0 && variables->values[variables->count - 1].depth > optimizer->depth)
     {
         if(remove_unused && !variables->values[variables->count - 1].used)
         {
             variable = &variables->values[variables->count - 1];
-            lit_ast_destroyexpression(optimizer->state, *variable->declaration);
+            tin_ast_destroyexpression(optimizer->state, *variable->declaration);
             *variable->declaration = NULL;
         }
         variables->count--;
     }
 }
 
-static LitVariable* lit_astopt_addvar(LitAstOptimizer* optimizer, const char* name, size_t length, bool constant, LitAstExpression** declaration)
+static TinVariable* tin_astopt_addvar(TinAstOptimizer* optimizer, const char* name, size_t length, bool constant, TinAstExpression** declaration)
 {
-    lit_varlist_push(optimizer->state, &optimizer->variables,
-                        (LitVariable){ name, length, optimizer->depth, constant, optimizer->mark_used, NULL_VALUE, declaration });
+    tin_varlist_push(optimizer->state, &optimizer->variables,
+                        (TinVariable){ name, length, optimizer->depth, constant, optimizer->mark_used, NULL_VALUE, declaration });
 
     return &optimizer->variables.values[optimizer->variables.count - 1];
 }
 
-static LitVariable* lit_astopt_resolvevar(LitAstOptimizer* optimizer, const char* name, size_t length)
+static TinVariable* tin_astopt_resolvevar(TinAstOptimizer* optimizer, const char* name, size_t length)
 {
     int i;
-    LitVarList* variables;
-    LitVariable* variable;
+    TinVarList* variables;
+    TinVariable* variable;
     variables = &optimizer->variables;
     for(i = variables->count - 1; i >= 0; i--)
     {
@@ -157,36 +157,36 @@ static LitVariable* lit_astopt_resolvevar(LitAstOptimizer* optimizer, const char
     return NULL;
 }
 
-static bool lit_astopt_isemptyexpr(LitAstExpression* expression)
+static bool tin_astopt_isemptyexpr(TinAstExpression* expression)
 {
-    return expression == NULL || (expression->type == LITEXPR_BLOCK && ((LitAstBlockExpr*)expression)->statements.count == 0);
+    return expression == NULL || (expression->type == TINEXPR_BLOCK && ((TinAstBlockExpr*)expression)->statements.count == 0);
 }
 
-static LitValue lit_astopt_evalunaryop(LitAstOptimizer* optimizer, LitValue value, LitAstTokType op)
+static TinValue tin_astopt_evalunaryop(TinAstOptimizer* optimizer, TinValue value, TinAstTokType op)
 {
     switch(op)
     {
-        case LITTOK_MINUS:
+        case TINTOK_MINUS:
             {
-                if(lit_value_isnumber(value))
+                if(tin_value_isnumber(value))
                 {
-                    lit_astopt_optdbg("translating constant unary minus on number to literal value");
-                    return lit_value_makenumber(optimizer->state, -lit_value_asnumber(value));
+                    tin_astopt_optdbg("translating constant unary minus on number to literal value");
+                    return tin_value_makenumber(optimizer->state, -tin_value_asnumber(value));
                 }
             }
             break;
-        case LITTOK_BANG:
+        case TINTOK_BANG:
             {
-                lit_astopt_optdbg("translating constant expression of '=' to literal value");
-                return lit_value_makebool(optimizer->state, lit_value_isfalsey(value));
+                tin_astopt_optdbg("translating constant expression of '=' to literal value");
+                return tin_value_makebool(optimizer->state, tin_value_isfalsey(value));
             }
             break;
-        case LITTOK_TILDE:
+        case TINTOK_TILDE:
             {
-                if(lit_value_isnumber(value))
+                if(tin_value_isnumber(value))
                 {
-                    lit_astopt_optdbg("translating unary tile (~) on number to literal value");
-                    return lit_value_makenumber(optimizer->state, ~((int)lit_value_asnumber(value)));
+                    tin_astopt_optdbg("translating unary tile (~) on number to literal value");
+                    return tin_value_makenumber(optimizer->state, ~((int)tin_value_asnumber(value)));
                 }
             }
             break;
@@ -198,105 +198,105 @@ static LitValue lit_astopt_evalunaryop(LitAstOptimizer* optimizer, LitValue valu
     return NULL_VALUE;
 }
 
-static LitValue lit_astopt_evalbinaryop(LitAstOptimizer* optimizer, LitValue a, LitValue b, LitAstTokType op)
+static TinValue tin_astopt_evalbinaryop(TinAstOptimizer* optimizer, TinValue a, TinValue b, TinAstTokType op)
 {
     switch(op)
     {
-        case LITTOK_PLUS:
+        case TINTOK_PLUS:
             {
                 optc_do_binary_op(+);
             }
             break;
-        case LITTOK_MINUS:
+        case TINTOK_MINUS:
             {
                 optc_do_binary_op(-);
             }
             break;
-        case LITTOK_STAR:
+        case TINTOK_STAR:
             {
                 optc_do_binary_op(*);
             }
             break;
-        case LITTOK_SLASH:
+        case TINTOK_SLASH:
             {
                 optc_do_binary_op(/);
             }
             break;
-        case LITTOK_STAR_STAR:
+        case TINTOK_STAR_STAR:
             {
                 optc_do_fn_op(pow, "**");
             }
             break;
-        case LITTOK_PERCENT:
+        case TINTOK_PERCENT:
             {
                 optc_do_fn_op(fmod, "%");
             }
             break;
-        case LITTOK_GREATER:
+        case TINTOK_GREATER:
             {
                 optc_do_binary_op(>);
             }
             break;
-        case LITTOK_GREATER_EQUAL:
+        case TINTOK_GREATER_EQUAL:
             {
                 optc_do_binary_op(>=);
             }
             break;
-        case LITTOK_LESS:
+        case TINTOK_LESS:
             {
                 optc_do_binary_op(<);
             }
             break;
-        case LITTOK_LESS_EQUAL:
+        case TINTOK_LESS_EQUAL:
             {
                 optc_do_binary_op(<=);
             }
             break;
-        case LITTOK_LESS_LESS:
+        case TINTOK_LESS_LESS:
             {
                 optc_do_bitwise_op(<<);
             }
             break;
-        case LITTOK_GREATER_GREATER:
+        case TINTOK_GREATER_GREATER:
             {
                 optc_do_bitwise_op(>>);
             }
             break;
-        case LITTOK_BAR:
+        case TINTOK_BAR:
             {
                 optc_do_bitwise_op(|);
             }
             break;
-        case LITTOK_AMPERSAND:
+        case TINTOK_AMPERSAND:
             {
                 optc_do_bitwise_op(&);
             }
             break;
-        case LITTOK_CARET:
+        case TINTOK_CARET:
             {
                 optc_do_bitwise_op(^);
             }
             break;
-        case LITTOK_SHARP:
+        case TINTOK_SHARP:
             {
-                if(lit_value_isnumber(a) && lit_value_isnumber(b))
+                if(tin_value_isnumber(a) && tin_value_isnumber(b))
                 {
-                    return lit_value_makenumber(optimizer->state, floor(lit_value_asnumber(a) / lit_value_asnumber(b)));
+                    return tin_value_makenumber(optimizer->state, floor(tin_value_asnumber(a) / tin_value_asnumber(b)));
                 }
                 return NULL_VALUE;
             }
             break;
-        case LITTOK_EQUAL_EQUAL:
+        case TINTOK_EQUAL_EQUAL:
             {
-                return lit_value_makebool(optimizer->state, lit_value_compare(optimizer->state, a, b));
+                return tin_value_makebool(optimizer->state, tin_value_compare(optimizer->state, a, b));
             }
             break;
-        case LITTOK_BANG_EQUAL:
+        case TINTOK_BANG_EQUAL:
             {
-                return lit_value_makebool(optimizer->state, !lit_value_compare(optimizer->state, a, b));
+                return tin_value_makebool(optimizer->state, !tin_value_compare(optimizer->state, a, b));
             }
             break;
-        case LITTOK_IS:
+        case TINTOK_IS:
         default:
             {
             }
@@ -305,42 +305,42 @@ static LitValue lit_astopt_evalbinaryop(LitAstOptimizer* optimizer, LitValue a, 
     return NULL_VALUE;
 }
 
-static LitValue lit_astopt_attemptoptbinary(LitAstOptimizer* optimizer, LitAstBinaryExpr* expression, LitValue value, bool left)
+static TinValue tin_astopt_attemptoptbinary(TinAstOptimizer* optimizer, TinAstBinaryExpr* expression, TinValue value, bool left)
 {
     double number;
-    LitAstTokType op;
+    TinAstTokType op;
     op = expression->op;
-    LitAstExpression* branch;
+    TinAstExpression* branch;
     branch = left ? expression->left : expression->right;
-    if(lit_value_isnumber(value))
+    if(tin_value_isnumber(value))
     {
-        number = lit_value_asnumber(value);
-        if(op == LITTOK_STAR)
+        number = tin_value_asnumber(value);
+        if(op == TINTOK_STAR)
         {
             if(number == 0)
             {
-                lit_astopt_optdbg("reducing expression to literal '0'");
-                return lit_value_makenumber(optimizer->state, 0);
+                tin_astopt_optdbg("reducing expression to literal '0'");
+                return tin_value_makenumber(optimizer->state, 0);
             }
             else if(number == 1)
             {
-                lit_astopt_optdbg("reducing expression to literal '1'");
-                lit_ast_destroyexpression(optimizer->state, left ? expression->right : expression->left);
+                tin_astopt_optdbg("reducing expression to literal '1'");
+                tin_ast_destroyexpression(optimizer->state, left ? expression->right : expression->left);
                 expression->left = branch;
                 expression->right = NULL;
             }
         }
-        else if((op == LITTOK_PLUS || op == LITTOK_MINUS) && number == 0)
+        else if((op == TINTOK_PLUS || op == TINTOK_MINUS) && number == 0)
         {
-            lit_astopt_optdbg("reducing expression that would result in '0' to literal '0'");
-            lit_ast_destroyexpression(optimizer->state, left ? expression->right : expression->left);
+            tin_astopt_optdbg("reducing expression that would result in '0' to literal '0'");
+            tin_ast_destroyexpression(optimizer->state, left ? expression->right : expression->left);
             expression->left = branch;
             expression->right = NULL;
         }
-        else if(((left && op == LITTOK_SLASH) || op == LITTOK_STAR_STAR) && number == 1)
+        else if(((left && op == TINTOK_SLASH) || op == TINTOK_STAR_STAR) && number == 1)
         {
-            lit_astopt_optdbg("reducing expression that would result in '1' to literal '1'");
-            lit_ast_destroyexpression(optimizer->state, left ? expression->right : expression->left);
+            tin_astopt_optdbg("reducing expression that would result in '1' to literal '1'");
+            tin_ast_destroyexpression(optimizer->state, left ? expression->right : expression->left);
             expression->left = branch;
             expression->right = NULL;
         }
@@ -348,50 +348,50 @@ static LitValue lit_astopt_attemptoptbinary(LitAstOptimizer* optimizer, LitAstBi
     return NULL_VALUE;
 }
 
-static LitValue lit_astopt_evalexpr(LitAstOptimizer* optimizer, LitAstExpression* expression)
+static TinValue tin_astopt_evalexpr(TinAstOptimizer* optimizer, TinAstExpression* expression)
 {
-    LitAstUnaryExpr* uexpr;
-    LitAstBinaryExpr* bexpr;
-    LitValue a;
-    LitValue b;
-    LitValue branch;
+    TinAstUnaryExpr* uexpr;
+    TinAstBinaryExpr* bexpr;
+    TinValue a;
+    TinValue b;
+    TinValue branch;
     if(expression == NULL)
     {
         return NULL_VALUE;
     }
     switch(expression->type)
     {
-        case LITEXPR_LITERAL:
+        case TINEXPR_LITERAL:
             {
-                return ((LitAstLiteralExpr*)expression)->value;
+                return ((TinAstLiteralExpr*)expression)->value;
             }
             break;
-        case LITEXPR_UNARY:
+        case TINEXPR_UNARY:
             {
-                uexpr = (LitAstUnaryExpr*)expression;
-                branch = lit_astopt_evalexpr(optimizer, uexpr->right);
-                if(!lit_value_isnull(branch))
+                uexpr = (TinAstUnaryExpr*)expression;
+                branch = tin_astopt_evalexpr(optimizer, uexpr->right);
+                if(!tin_value_isnull(branch))
                 {
-                    return lit_astopt_evalunaryop(optimizer, branch, uexpr->op);
+                    return tin_astopt_evalunaryop(optimizer, branch, uexpr->op);
                 }
             }
             break;
-        case LITEXPR_BINARY:
+        case TINEXPR_BINARY:
             {
-                bexpr = (LitAstBinaryExpr*)expression;
-                a = lit_astopt_evalexpr(optimizer, bexpr->left);
-                b = lit_astopt_evalexpr(optimizer, bexpr->right);
-                if(!lit_value_isnull(a) && !lit_value_isnull(b))
+                bexpr = (TinAstBinaryExpr*)expression;
+                a = tin_astopt_evalexpr(optimizer, bexpr->left);
+                b = tin_astopt_evalexpr(optimizer, bexpr->right);
+                if(!tin_value_isnull(a) && !tin_value_isnull(b))
                 {
-                    return lit_astopt_evalbinaryop(optimizer, a, b, bexpr->op);
+                    return tin_astopt_evalbinaryop(optimizer, a, b, bexpr->op);
                 }
-                else if(!lit_value_isnull(a))
+                else if(!tin_value_isnull(a))
                 {
-                    return lit_astopt_attemptoptbinary(optimizer, bexpr, a, false);
+                    return tin_astopt_attemptoptbinary(optimizer, bexpr, a, false);
                 }
-                else if(!lit_value_isnull(b))
+                else if(!tin_value_isnull(b))
                 {
-                    return lit_astopt_attemptoptbinary(optimizer, bexpr, b, true);
+                    return tin_astopt_attemptoptbinary(optimizer, bexpr, b, true);
                 }
             }
             break;
@@ -404,174 +404,174 @@ static LitValue lit_astopt_evalexpr(LitAstOptimizer* optimizer, LitAstExpression
     return NULL_VALUE;
 }
 
-static void lit_astopt_optexprlist(LitAstOptimizer* optimizer, LitAstExprList* expressions)
+static void tin_astopt_optexprlist(TinAstOptimizer* optimizer, TinAstExprList* expressions)
 {
     for(size_t i = 0; i < expressions->count; i++)
     {
-        lit_astopt_optexpression(optimizer, &expressions->values[i]);
+        tin_astopt_optexpression(optimizer, &expressions->values[i]);
     }
 }
 
-static void lit_astopt_optforstmt(LitState* state, LitAstOptimizer* optimizer, LitAstExpression* expression, LitAstExpression** slot)
+static void tin_astopt_optforstmt(TinState* state, TinAstOptimizer* optimizer, TinAstExpression* expression, TinAstExpression** slot)
 {
-    LitAstForExpr* stmt = (LitAstForExpr*)expression;
-    lit_astopt_beginscope(optimizer);
+    TinAstForExpr* stmt = (TinAstForExpr*)expression;
+    tin_astopt_beginscope(optimizer);
     // This is required, so that optimizer doesn't optimize out our i variable (and such)
     optimizer->mark_used = true;
-    lit_astopt_optexpression(optimizer, &stmt->init);
-    lit_astopt_optexpression(optimizer, &stmt->condition);
-    lit_astopt_optexpression(optimizer, &stmt->increment);
-    lit_astopt_optexpression(optimizer, &stmt->var);
+    tin_astopt_optexpression(optimizer, &stmt->init);
+    tin_astopt_optexpression(optimizer, &stmt->condition);
+    tin_astopt_optexpression(optimizer, &stmt->increment);
+    tin_astopt_optexpression(optimizer, &stmt->var);
     optimizer->mark_used = false;
-    lit_astopt_optexpression(optimizer, &stmt->body);
-    lit_astopt_endscope(optimizer);
-    if(lit_astopt_isoptenabled(LITOPTSTATE_EMPTY_BODY) && lit_astopt_isemptyexpr(stmt->body))
+    tin_astopt_optexpression(optimizer, &stmt->body);
+    tin_astopt_endscope(optimizer);
+    if(tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY) && tin_astopt_isemptyexpr(stmt->body))
     {
-        lit_ast_destroyexpression(optimizer->state, expression);
+        tin_ast_destroyexpression(optimizer->state, expression);
         *slot = NULL;
         return;
     }
-    if(stmt->c_style || !lit_astopt_isoptenabled(LITOPTSTATE_C_FOR) || stmt->condition->type != LITEXPR_RANGE)
+    if(stmt->cstyle || !tin_astopt_isoptenabled(TINOPTSTATE_C_FOR) || stmt->condition->type != TINEXPR_RANGE)
     {
         return;
     }
-    LitAstRangeExpr* range = (LitAstRangeExpr*)stmt->condition;
-    LitValue from = lit_astopt_evalexpr(optimizer, range->from);
-    LitValue to = lit_astopt_evalexpr(optimizer, range->to);
-    if(!lit_value_isnumber(from) || !lit_value_isnumber(to))
+    TinAstRangeExpr* range = (TinAstRangeExpr*)stmt->condition;
+    TinValue from = tin_astopt_evalexpr(optimizer, range->from);
+    TinValue to = tin_astopt_evalexpr(optimizer, range->to);
+    if(!tin_value_isnumber(from) || !tin_value_isnumber(to))
     {
         return;
     }
-    bool reverse = lit_value_asnumber(from) > lit_value_asnumber(to);
-    LitAstAssignVarExpr* var = (LitAstAssignVarExpr*)stmt->var;
+    bool reverse = tin_value_asnumber(from) > tin_value_asnumber(to);
+    TinAstAssignVarExpr* var = (TinAstAssignVarExpr*)stmt->var;
     size_t line = range->exobj.line;
     // var i = from
     var->init = range->from;
     // i <= to
-    stmt->condition = (LitAstExpression*)lit_ast_make_binaryexpr(
-    state, line, (LitAstExpression*)lit_ast_make_varexpr(state, line, var->name, var->length), range->to, LITTOK_LESS_EQUAL);
+    stmt->condition = (TinAstExpression*)tin_ast_make_binaryexpr(
+    state, line, (TinAstExpression*)tin_ast_make_varexpr(state, line, var->name, var->length), range->to, TINTOK_LESS_EQUAL);
     // i++ (or i--)
-    LitAstExpression* var_get = (LitAstExpression*)lit_ast_make_varexpr(state, line, var->name, var->length);
-    LitAstBinaryExpr* assign_value = lit_ast_make_binaryexpr(
-    state, line, var_get, (LitAstExpression*)lit_ast_make_literalexpr(state, line, lit_value_makenumber(optimizer->state, 1)),
-    reverse ? LITTOK_MINUS_MINUS : LITTOK_PLUS);
+    TinAstExpression* var_get = (TinAstExpression*)tin_ast_make_varexpr(state, line, var->name, var->length);
+    TinAstBinaryExpr* assign_value = tin_ast_make_binaryexpr(
+    state, line, var_get, (TinAstExpression*)tin_ast_make_literalexpr(state, line, tin_value_makenumber(optimizer->state, 1)),
+    reverse ? TINTOK_MINUS_MINUS : TINTOK_PLUS);
     assign_value->ignore_left = true;
-    LitAstExpression* increment
-    = (LitAstExpression*)lit_ast_make_assignexpr(state, line, var_get, (LitAstExpression*)assign_value);
-    stmt->increment = (LitAstExpression*)increment;
+    TinAstExpression* increment
+    = (TinAstExpression*)tin_ast_make_assignexpr(state, line, var_get, (TinAstExpression*)assign_value);
+    stmt->increment = (TinAstExpression*)increment;
     range->from = NULL;
     range->to = NULL;
-    stmt->c_style = true;
-    lit_ast_destroyexpression(state, (LitAstExpression*)range);
+    stmt->cstyle = true;
+    tin_ast_destroyexpression(state, (TinAstExpression*)range);
 }
 
-static void lit_astopt_optwhilestmt(LitState* state, LitAstOptimizer* optimizer, LitAstExpression* expression, LitAstExpression** slot)
+static void tin_astopt_optwhilestmt(TinState* state, TinAstOptimizer* optimizer, TinAstExpression* expression, TinAstExpression** slot)
 {
-    LitValue optimized;
-    LitAstWhileExpr* stmt;
+    TinValue optimized;
+    TinAstWhileExpr* stmt;
     (void)state;
-    stmt = (LitAstWhileExpr*)expression;
-    lit_astopt_optexpression(optimizer, &stmt->condition);
-    if(lit_astopt_isoptenabled(LITOPTSTATE_UNREACHABLE_CODE))
+    stmt = (TinAstWhileExpr*)expression;
+    tin_astopt_optexpression(optimizer, &stmt->condition);
+    if(tin_astopt_isoptenabled(TINOPTSTATE_UNREACHABLE_CODE))
     {
-        optimized = lit_astopt_evalexpr(optimizer, stmt->condition);
-        if(!lit_value_isnull(optimized) && lit_value_isfalsey(optimized))
+        optimized = tin_astopt_evalexpr(optimizer, stmt->condition);
+        if(!tin_value_isnull(optimized) && tin_value_isfalsey(optimized))
         {
-            lit_ast_destroyexpression(optimizer->state, expression);
+            tin_ast_destroyexpression(optimizer->state, expression);
             *slot = NULL;
             return;
         }
     }
-    lit_astopt_optexpression(optimizer, &stmt->body);
-    if(lit_astopt_isoptenabled(LITOPTSTATE_EMPTY_BODY) && lit_astopt_isemptyexpr(stmt->body))
+    tin_astopt_optexpression(optimizer, &stmt->body);
+    if(tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY) && tin_astopt_isemptyexpr(stmt->body))
     {
-        lit_ast_destroyexpression(optimizer->state, expression);
+        tin_ast_destroyexpression(optimizer->state, expression);
         *slot = NULL;
     }
 }
 
-static void lit_astopt_optifstmt(LitState* state, LitAstOptimizer* optimizer, LitAstExpression* expression, LitAstExpression** slot)
+static void tin_astopt_optifstmt(TinState* state, TinAstOptimizer* optimizer, TinAstExpression* expression, TinAstExpression** slot)
 {
     bool dead;
     bool empty;
     size_t i;
-    LitValue value;
-    LitValue optimized;
-    LitAstIfExpr* stmt;
+    TinValue value;
+    TinValue optimized;
+    TinAstIfExpr* stmt;
     (void)state;
     (void)slot;
-    stmt = (LitAstIfExpr*)expression;
-    lit_astopt_optexpression(optimizer, &stmt->condition);
-    lit_astopt_optexpression(optimizer, &stmt->if_branch);
-    empty = lit_astopt_isoptenabled(LITOPTSTATE_EMPTY_BODY);
-    dead = lit_astopt_isoptenabled(LITOPTSTATE_UNREACHABLE_CODE);
-    optimized = empty ? lit_astopt_evalexpr(optimizer, stmt->condition) : NULL_VALUE;
-    if((!lit_value_isnull(optimized) && lit_value_isfalsey(optimized)) || (dead && lit_astopt_isemptyexpr(stmt->if_branch)))
+    stmt = (TinAstIfExpr*)expression;
+    tin_astopt_optexpression(optimizer, &stmt->condition);
+    tin_astopt_optexpression(optimizer, &stmt->ifbranch);
+    empty = tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY);
+    dead = tin_astopt_isoptenabled(TINOPTSTATE_UNREACHABLE_CODE);
+    optimized = empty ? tin_astopt_evalexpr(optimizer, stmt->condition) : NULL_VALUE;
+    if((!tin_value_isnull(optimized) && tin_value_isfalsey(optimized)) || (dead && tin_astopt_isemptyexpr(stmt->ifbranch)))
     {
-        lit_ast_destroyexpression(state, stmt->condition);
+        tin_ast_destroyexpression(state, stmt->condition);
         stmt->condition = NULL;
-        lit_ast_destroyexpression(state, stmt->if_branch);
-        stmt->if_branch = NULL;
+        tin_ast_destroyexpression(state, stmt->ifbranch);
+        stmt->ifbranch = NULL;
     }
-    if(stmt->elseif_conditions != NULL)
+    if(stmt->elseifconds != NULL)
     {
-        lit_astopt_optexprlist(optimizer, stmt->elseif_conditions);
-        lit_astopt_optstmtlist(optimizer, stmt->elseif_branches);
+        tin_astopt_optexprlist(optimizer, stmt->elseifconds);
+        tin_astopt_optstmtlist(optimizer, stmt->elseifbranches);
         if(dead || empty)
         {
-            for(i = 0; i < stmt->elseif_conditions->count; i++)
+            for(i = 0; i < stmt->elseifconds->count; i++)
             {
-                if(empty && lit_astopt_isemptyexpr(stmt->elseif_branches->values[i]))
+                if(empty && tin_astopt_isemptyexpr(stmt->elseifbranches->values[i]))
                 {
-                    lit_ast_destroyexpression(state, stmt->elseif_conditions->values[i]);
-                    stmt->elseif_conditions->values[i] = NULL;
-                    lit_ast_destroyexpression(state, stmt->elseif_branches->values[i]);
-                    stmt->elseif_branches->values[i] = NULL;
+                    tin_ast_destroyexpression(state, stmt->elseifconds->values[i]);
+                    stmt->elseifconds->values[i] = NULL;
+                    tin_ast_destroyexpression(state, stmt->elseifbranches->values[i]);
+                    stmt->elseifbranches->values[i] = NULL;
                     continue;
                 }
                 if(dead)
                 {
-                    value = lit_astopt_evalexpr(optimizer, stmt->elseif_conditions->values[i]);
-                    if(!lit_value_isnull(value) && lit_value_isfalsey(value))
+                    value = tin_astopt_evalexpr(optimizer, stmt->elseifconds->values[i]);
+                    if(!tin_value_isnull(value) && tin_value_isfalsey(value))
                     {
-                        lit_ast_destroyexpression(state, stmt->elseif_conditions->values[i]);
-                        stmt->elseif_conditions->values[i] = NULL;
-                        lit_ast_destroyexpression(state, stmt->elseif_branches->values[i]);
-                        stmt->elseif_branches->values[i] = NULL;
+                        tin_ast_destroyexpression(state, stmt->elseifconds->values[i]);
+                        stmt->elseifconds->values[i] = NULL;
+                        tin_ast_destroyexpression(state, stmt->elseifbranches->values[i]);
+                        stmt->elseifbranches->values[i] = NULL;
                     }
                 }
             }
         }
     }
-    lit_astopt_optexpression(optimizer, &stmt->else_branch);
+    tin_astopt_optexpression(optimizer, &stmt->elsebranch);
 }
 
-static void lit_astopt_optblockstmt(LitState* state, LitAstOptimizer* optimizer, LitAstExpression* expression, LitAstExpression** slot)
+static void tin_astopt_optblockstmt(TinState* state, TinAstOptimizer* optimizer, TinAstExpression* expression, TinAstExpression** slot)
 {
     bool found;
     size_t i;
     size_t j;
-    LitAstExpression* step;
-    LitAstBlockExpr* stmt;
+    TinAstExpression* step;
+    TinAstBlockExpr* stmt;
     (void)state;
-    stmt = (LitAstBlockExpr*)expression;
+    stmt = (TinAstBlockExpr*)expression;
     if(stmt->statements.count == 0)
     {
-        lit_ast_destroyexpression(state, expression);
+        tin_ast_destroyexpression(state, expression);
         *slot = NULL;
         return;
     }
-    lit_astopt_beginscope(optimizer);
-    lit_astopt_optstmtlist(optimizer, &stmt->statements);
-    lit_astopt_endscope(optimizer);
+    tin_astopt_beginscope(optimizer);
+    tin_astopt_optstmtlist(optimizer, &stmt->statements);
+    tin_astopt_endscope(optimizer);
     found = false;
     for(i = 0; i < stmt->statements.count; i++)
     {
         step = stmt->statements.values[i];
-        if(!lit_astopt_isemptyexpr(step))
+        if(!tin_astopt_isemptyexpr(step))
         {
             found = true;
-            if(step->type == LITEXPR_RETURN)
+            if(step->type == TINEXPR_RETURN)
             {
                 // Remove all the statements post return
                 for(j = i + 1; j < stmt->statements.count; j++)
@@ -579,7 +579,7 @@ static void lit_astopt_optblockstmt(LitState* state, LitAstOptimizer* optimizer,
                     step = stmt->statements.values[j];
                     if(step != NULL)
                     {
-                        lit_ast_destroyexpression(state, step);
+                        tin_ast_destroyexpression(state, step);
                         stmt->statements.values[j] = NULL;
                     }
                 }
@@ -588,42 +588,42 @@ static void lit_astopt_optblockstmt(LitState* state, LitAstOptimizer* optimizer,
             }
         }
     }
-    if(!found && lit_astopt_isoptenabled(LITOPTSTATE_EMPTY_BODY))
+    if(!found && tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY))
     {
-        lit_ast_destroyexpression(optimizer->state, expression);
+        tin_ast_destroyexpression(optimizer->state, expression);
         *slot = NULL;
     }
 }
 
-static void lit_astopt_optvarstmt(LitState* state, LitAstOptimizer* optimizer, LitAstExpression* expression, LitAstExpression** slot)
+static void tin_astopt_optvarstmt(TinState* state, TinAstOptimizer* optimizer, TinAstExpression* expression, TinAstExpression** slot)
 {
-    LitValue value;
-    LitVariable* variable;
-    LitAstAssignVarExpr* stmt;
+    TinValue value;
+    TinVariable* variable;
+    TinAstAssignVarExpr* stmt;
     (void)state;
-    stmt = (LitAstAssignVarExpr*)expression;
-    variable = lit_astopt_addvar(optimizer, stmt->name, stmt->length, stmt->constant, slot);
-    lit_astopt_optexpression(optimizer, &stmt->init);
-    if(stmt->constant && lit_astopt_isoptenabled(LITOPTSTATE_CONSTANT_FOLDING))
+    stmt = (TinAstAssignVarExpr*)expression;
+    variable = tin_astopt_addvar(optimizer, stmt->name, stmt->length, stmt->constant, slot);
+    tin_astopt_optexpression(optimizer, &stmt->init);
+    if(stmt->constant && tin_astopt_isoptenabled(TINOPTSTATE_CONSTANT_FOLDING))
     {
-        value = lit_astopt_evalexpr(optimizer, stmt->init);
-        if(!lit_value_isnull(value))
+        value = tin_astopt_evalexpr(optimizer, stmt->init);
+        if(!tin_value_isnull(value))
         {
-            variable->constant_value = value;
+            variable->constvalue = value;
         }
     }
 }
 
-static void lit_astopt_optexpression(LitAstOptimizer* optimizer, LitAstExpression** slot)
+static void tin_astopt_optexpression(TinAstOptimizer* optimizer, TinAstExpression** slot)
 {
-    LitValue optimized;
-    LitState* state;
-    LitAstBinaryExpr* binexpr;
-    LitAstAssignExpr* assignexpr;
-    LitAstCallExpr* callexpr;
-    LitAstSetExpr* setexpr;
-    LitAstIndexExpr* indexexpr;
-    LitAstExpression* expression;
+    TinValue optimized;
+    TinState* state;
+    TinAstBinaryExpr* binexpr;
+    TinAstAssignExpr* assignexpr;
+    TinAstCallExpr* callexpr;
+    TinAstSetExpr* setexpr;
+    TinAstIndexExpr* indexexpr;
+    TinAstExpression* expression;
     expression = *slot;
     state = optimizer->state;
     if(expression == NULL)
@@ -632,31 +632,31 @@ static void lit_astopt_optexpression(LitAstOptimizer* optimizer, LitAstExpressio
     }
     switch(expression->type)
     {
-        case LITEXPR_UNARY:
-        case LITEXPR_BINARY:
+        case TINEXPR_UNARY:
+        case TINEXPR_BINARY:
             {
-                if(lit_astopt_isoptenabled(LITOPTSTATE_LITERAL_FOLDING))
+                if(tin_astopt_isoptenabled(TINOPTSTATE_LITERAL_FOLDING))
                 {
-                    optimized = lit_astopt_evalexpr(optimizer, expression);
-                    if(!lit_value_isnull(optimized))
+                    optimized = tin_astopt_evalexpr(optimizer, expression);
+                    if(!tin_value_isnull(optimized))
                     {
-                        *slot = (LitAstExpression*)lit_ast_make_literalexpr(state, expression->line, optimized);
-                        lit_ast_destroyexpression(state, expression);
+                        *slot = (TinAstExpression*)tin_ast_make_literalexpr(state, expression->line, optimized);
+                        tin_ast_destroyexpression(state, expression);
                         break;
                     }
                 }
                 switch(expression->type)
                 {
-                    case LITEXPR_UNARY:
+                    case TINEXPR_UNARY:
                         {
-                            lit_astopt_optexpression(optimizer, &((LitAstUnaryExpr*)expression)->right);
+                            tin_astopt_optexpression(optimizer, &((TinAstUnaryExpr*)expression)->right);
                         }
                         break;
-                    case LITEXPR_BINARY:
+                    case TINEXPR_BINARY:
                         {
-                            binexpr = (LitAstBinaryExpr*)expression;
-                            lit_astopt_optexpression(optimizer, &binexpr->left);
-                            lit_astopt_optexpression(optimizer, &binexpr->right);
+                            binexpr = (TinAstBinaryExpr*)expression;
+                            tin_astopt_optexpression(optimizer, &binexpr->left);
+                            tin_astopt_optexpression(optimizer, &binexpr->right);
                         }
                         break;
                     default:
@@ -667,202 +667,202 @@ static void lit_astopt_optexpression(LitAstOptimizer* optimizer, LitAstExpressio
                 }
             }
             break;
-        case LITEXPR_ASSIGN:
+        case TINEXPR_ASSIGN:
             {
-                assignexpr = (LitAstAssignExpr*)expression;
-                lit_astopt_optexpression(optimizer, &assignexpr->to);
-                lit_astopt_optexpression(optimizer, &assignexpr->value);
+                assignexpr = (TinAstAssignExpr*)expression;
+                tin_astopt_optexpression(optimizer, &assignexpr->to);
+                tin_astopt_optexpression(optimizer, &assignexpr->value);
             }
             break;
-        case LITEXPR_CALL:
+        case TINEXPR_CALL:
             {
-                callexpr = (LitAstCallExpr*)expression;
-                lit_astopt_optexpression(optimizer, &callexpr->callee);
-                lit_astopt_optexprlist(optimizer, &callexpr->args);
+                callexpr = (TinAstCallExpr*)expression;
+                tin_astopt_optexpression(optimizer, &callexpr->callee);
+                tin_astopt_optexprlist(optimizer, &callexpr->args);
             }
             break;
-        case LITEXPR_SET:
+        case TINEXPR_SET:
             {
-                setexpr = (LitAstSetExpr*)expression;
-                lit_astopt_optexpression(optimizer, &setexpr->where);
-                lit_astopt_optexpression(optimizer, &setexpr->value);
+                setexpr = (TinAstSetExpr*)expression;
+                tin_astopt_optexpression(optimizer, &setexpr->where);
+                tin_astopt_optexpression(optimizer, &setexpr->value);
             }
             break;
-        case LITEXPR_GET:
+        case TINEXPR_GET:
             {
-                lit_astopt_optexpression(optimizer, &((LitAstGetExpr*)expression)->where);
+                tin_astopt_optexpression(optimizer, &((TinAstGetExpr*)expression)->where);
             }
             break;
-        case LITEXPR_LAMBDA:
+        case TINEXPR_LAMBDA:
             {
-                lit_astopt_beginscope(optimizer);
-                lit_astopt_optexpression(optimizer, &((LitAstFunctionExpr*)expression)->body);
-                lit_astopt_endscope(optimizer);
+                tin_astopt_beginscope(optimizer);
+                tin_astopt_optexpression(optimizer, &((TinAstFunctionExpr*)expression)->body);
+                tin_astopt_endscope(optimizer);
             }
             break;
-        case LITEXPR_ARRAY:
+        case TINEXPR_ARRAY:
             {
-                lit_astopt_optexprlist(optimizer, &((LitAstArrayExpr*)expression)->values);
+                tin_astopt_optexprlist(optimizer, &((TinAstArrayExpr*)expression)->values);
             }
             break;
-        case LITEXPR_OBJECT:
+        case TINEXPR_OBJECT:
             {
-                lit_astopt_optexprlist(optimizer, &((LitAstObjectExpr*)expression)->values);
+                tin_astopt_optexprlist(optimizer, &((TinAstObjectExpr*)expression)->values);
             }
             break;
-        case LITEXPR_SUBSCRIPT:
+        case TINEXPR_SUBSCRIPT:
             {
-                indexexpr = (LitAstIndexExpr*)expression;
-                lit_astopt_optexpression(optimizer, &indexexpr->array);
-                lit_astopt_optexpression(optimizer, &indexexpr->index);
+                indexexpr = (TinAstIndexExpr*)expression;
+                tin_astopt_optexpression(optimizer, &indexexpr->array);
+                tin_astopt_optexpression(optimizer, &indexexpr->index);
             }
             break;
-        case LITEXPR_RANGE:
+        case TINEXPR_RANGE:
             {
-                LitAstRangeExpr* expr = (LitAstRangeExpr*)expression;
-                lit_astopt_optexpression(optimizer, &expr->from);
-                lit_astopt_optexpression(optimizer, &expr->to);
+                TinAstRangeExpr* expr = (TinAstRangeExpr*)expression;
+                tin_astopt_optexpression(optimizer, &expr->from);
+                tin_astopt_optexpression(optimizer, &expr->to);
             }
             break;
-        case LITEXPR_TERNARY:
+        case TINEXPR_TERNARY:
             {
-                LitAstTernaryExpr* expr = (LitAstTernaryExpr*)expression;
-                LitValue optimized = lit_astopt_evalexpr(optimizer, expr->condition);
-                if(!lit_value_isnull(optimized))
+                TinAstTernaryExpr* expr = (TinAstTernaryExpr*)expression;
+                optimized = tin_astopt_evalexpr(optimizer, expr->condition);
+                if(!tin_value_isnull(optimized))
                 {
-                    if(lit_value_isfalsey(optimized))
+                    if(tin_value_isfalsey(optimized))
                     {
-                        *slot = expr->else_branch;
-                        expr->else_branch = NULL;// So that it doesn't get freed
+                        *slot = expr->elsebranch;
+                        expr->elsebranch = NULL;// So that it doesn't get freed
                     }
                     else
                     {
-                        *slot = expr->if_branch;
-                        expr->if_branch = NULL;// So that it doesn't get freed
+                        *slot = expr->ifbranch;
+                        expr->ifbranch = NULL;// So that it doesn't get freed
                     }
 
-                    lit_astopt_optexpression(optimizer, slot);
-                    lit_ast_destroyexpression(state, expression);
+                    tin_astopt_optexpression(optimizer, slot);
+                    tin_ast_destroyexpression(state, expression);
                 }
                 else
                 {
-                    lit_astopt_optexpression(optimizer, &expr->if_branch);
-                    lit_astopt_optexpression(optimizer, &expr->else_branch);
+                    tin_astopt_optexpression(optimizer, &expr->ifbranch);
+                    tin_astopt_optexpression(optimizer, &expr->elsebranch);
                 }
             }
             break;
-        case LITEXPR_INTERPOLATION:
+        case TINEXPR_INTERPOLATION:
             {
-                lit_astopt_optexprlist(optimizer, &((LitAstStrInterExpr*)expression)->expressions);
+                tin_astopt_optexprlist(optimizer, &((TinAstStrInterExpr*)expression)->expressions);
             }
             break;
-        case LITEXPR_VAREXPR:
+        case TINEXPR_VAREXPR:
             {
-                LitAstVarExpr* expr = (LitAstVarExpr*)expression;
-                LitVariable* variable = lit_astopt_resolvevar(optimizer, expr->name, expr->length);
+                TinAstVarExpr* expr = (TinAstVarExpr*)expression;
+                TinVariable* variable = tin_astopt_resolvevar(optimizer, expr->name, expr->length);
                 if(variable != NULL)
                 {
                     variable->used = true;
 
                     // Not checking here for the enable-ness of constant-folding, since if its off
-                    // the constant_value would be NULL_VALUE anyway (:thinkaboutit:)
-                    if(variable->constant && !lit_value_isnull(variable->constant_value))
+                    // the constvalue would be NULL_VALUE anyway (:thinkaboutit:)
+                    if(variable->constant && !tin_value_isnull(variable->constvalue))
                     {
-                        *slot = (LitAstExpression*)lit_ast_make_literalexpr(state, expression->line, variable->constant_value);
-                        lit_ast_destroyexpression(state, expression);
+                        *slot = (TinAstExpression*)tin_ast_make_literalexpr(state, expression->line, variable->constvalue);
+                        tin_ast_destroyexpression(state, expression);
                     }
                 }
             }
             break;
-        case LITEXPR_REFERENCE:
+        case TINEXPR_REFERENCE:
             {
-                lit_astopt_optexpression(optimizer, &((LitAstRefExpr*)expression)->to);
+                tin_astopt_optexpression(optimizer, &((TinAstRefExpr*)expression)->to);
             }
             break;
-        case LITEXPR_EXPRESSION:
+        case TINEXPR_EXPRESSION:
             {
-                lit_astopt_optexpression(optimizer, &((LitAstExprExpr*)expression)->expression);
+                tin_astopt_optexpression(optimizer, &((TinAstExprExpr*)expression)->expression);
             }
             break;
-        case LITEXPR_BLOCK:
+        case TINEXPR_BLOCK:
             {
-                lit_astopt_optblockstmt(state, optimizer, expression, slot);
+                tin_astopt_optblockstmt(state, optimizer, expression, slot);
             }
             break;
-        case LITEXPR_IFSTMT:
+        case TINEXPR_IFSTMT:
             {
-                lit_astopt_optifstmt(state, optimizer, expression, slot);
+                tin_astopt_optifstmt(state, optimizer, expression, slot);
             }
             break;
-        case LITEXPR_WHILE:
+        case TINEXPR_WHILE:
             {
-                lit_astopt_optwhilestmt(state, optimizer, expression, slot);
+                tin_astopt_optwhilestmt(state, optimizer, expression, slot);
             }
             break;
-        case LITEXPR_FOR:
+        case TINEXPR_FOR:
             {
-                lit_astopt_optforstmt(state, optimizer, expression, slot);
+                tin_astopt_optforstmt(state, optimizer, expression, slot);
             }
             break;
-        case LITEXPR_VARSTMT:
+        case TINEXPR_VARSTMT:
             {
-                lit_astopt_optvarstmt(state, optimizer, expression, slot);
+                tin_astopt_optvarstmt(state, optimizer, expression, slot);
             }
             break;
-        case LITEXPR_FUNCTION:
+        case TINEXPR_FUNCTION:
             {
-                LitAstFunctionExpr* stmt = (LitAstFunctionExpr*)expression;
-                LitVariable* variable = lit_astopt_addvar(optimizer, stmt->name, stmt->length, false, slot);
+                TinAstFunctionExpr* stmt = (TinAstFunctionExpr*)expression;
+                TinVariable* variable = tin_astopt_addvar(optimizer, stmt->name, stmt->length, false, slot);
                 if(stmt->exported)
                 {
                     // Otherwise it will get optimized-out with a big chance
                     variable->used = true;
                 }
-                lit_astopt_beginscope(optimizer);
-                lit_astopt_optexpression(optimizer, &stmt->body);
-                lit_astopt_endscope(optimizer);
+                tin_astopt_beginscope(optimizer);
+                tin_astopt_optexpression(optimizer, &stmt->body);
+                tin_astopt_endscope(optimizer);
             }
             break;
-        case LITEXPR_RETURN:
+        case TINEXPR_RETURN:
             {
-                lit_astopt_optexpression(optimizer, &((LitAstReturnExpr*)expression)->expression);
+                tin_astopt_optexpression(optimizer, &((TinAstReturnExpr*)expression)->expression);
             }
             break;
-        case LITEXPR_METHOD:
+        case TINEXPR_METHOD:
             {
-                lit_astopt_beginscope(optimizer);
-                lit_astopt_optexpression(optimizer, &((LitAstMethodExpr*)expression)->body);
-                lit_astopt_endscope(optimizer);
+                tin_astopt_beginscope(optimizer);
+                tin_astopt_optexpression(optimizer, &((TinAstMethodExpr*)expression)->body);
+                tin_astopt_endscope(optimizer);
             }
             break;
-        case LITEXPR_CLASS:
+        case TINEXPR_CLASS:
             {
-                lit_astopt_optstmtlist(optimizer, &((LitAstClassExpr*)expression)->fields);
+                tin_astopt_optstmtlist(optimizer, &((TinAstClassExpr*)expression)->fields);
             }
             break;
-        case LITEXPR_FIELD:
+        case TINEXPR_FIELD:
             {
-                LitAstFieldExpr* stmt = (LitAstFieldExpr*)expression;
+                TinAstFieldExpr* stmt = (TinAstFieldExpr*)expression;
                 if(stmt->getter != NULL)
                 {
-                    lit_astopt_beginscope(optimizer);
-                    lit_astopt_optexpression(optimizer, &stmt->getter);
-                    lit_astopt_endscope(optimizer);
+                    tin_astopt_beginscope(optimizer);
+                    tin_astopt_optexpression(optimizer, &stmt->getter);
+                    tin_astopt_endscope(optimizer);
                 }
                 if(stmt->setter != NULL)
                 {
-                    lit_astopt_beginscope(optimizer);
-                    lit_astopt_optexpression(optimizer, &stmt->setter);
-                    lit_astopt_endscope(optimizer);
+                    tin_astopt_beginscope(optimizer);
+                    tin_astopt_optexpression(optimizer, &stmt->setter);
+                    tin_astopt_endscope(optimizer);
                 }
             }
             break;
         // Nothing to optimize there
-        case LITEXPR_LITERAL:
-        case LITEXPR_THIS:
-        case LITEXPR_SUPER:
-        case LITEXPR_CONTINUE:
-        case LITEXPR_BREAK:
+        case TINEXPR_LITERAL:
+        case TINEXPR_THIS:
+        case TINEXPR_SUPER:
+        case TINEXPR_CONTINUE:
+        case TINEXPR_BREAK:
             {
                 // Nothing, that we can do here
             }
@@ -870,52 +870,52 @@ static void lit_astopt_optexpression(LitAstOptimizer* optimizer, LitAstExpressio
     }
 }
 
-static void lit_astopt_optstmtlist(LitAstOptimizer* optimizer, LitAstExprList* statements)
+static void tin_astopt_optstmtlist(TinAstOptimizer* optimizer, TinAstExprList* statements)
 {
     size_t i;
     for(i = 0; i < statements->count; i++)
     {
-        lit_astopt_optexpression(optimizer, &statements->values[i]);
+        tin_astopt_optexpression(optimizer, &statements->values[i]);
     }
 }
 
-void lit_astopt_optast(LitAstOptimizer* optimizer, LitAstExprList* statements)
+void tin_astopt_optast(TinAstOptimizer* optimizer, TinAstExprList* statements)
 {
     return;
     if(!optimization_states_setup)
     {
-        lit_astopt_setupstates();
+        tin_astopt_setupstates();
     }
     if(!any_optimization_enabled)
     {
         return;
     }
-    lit_astopt_beginscope(optimizer);
-    lit_astopt_optstmtlist(optimizer, statements);
-    lit_astopt_endscope(optimizer);
-    lit_varlist_destroy(optimizer->state, &optimizer->variables);
+    tin_astopt_beginscope(optimizer);
+    tin_astopt_optstmtlist(optimizer, statements);
+    tin_astopt_endscope(optimizer);
+    tin_varlist_destroy(optimizer->state, &optimizer->variables);
 }
 
-static void lit_astopt_setupstates()
+static void tin_astopt_setupstates()
 {
-    lit_astopt_setoptlevel(LITOPTLEVEL_DEBUG);
+    tin_astopt_setoptlevel(TINOPTLEVEL_DEBUG);
 }
 
-bool lit_astopt_isoptenabled(LitAstOptType optimization)
+bool tin_astopt_isoptenabled(TinAstOptType optimization)
 {
     if(!optimization_states_setup)
     {
-        lit_astopt_setupstates();
+        tin_astopt_setupstates();
     }
     return optimization_states[(int)optimization];
 }
 
-void lit_astopt_setoptenabled(LitAstOptType optimization, bool enabled)
+void tin_astopt_setoptenabled(TinAstOptType optimization, bool enabled)
 {
     size_t i;
     if(!optimization_states_setup)
     {
-        lit_astopt_setupstates();
+        tin_astopt_setupstates();
     }
     optimization_states[(int)optimization] = enabled;
     if(enabled)
@@ -924,7 +924,7 @@ void lit_astopt_setoptenabled(LitAstOptType optimization, bool enabled)
     }
     else
     {
-        for(i = 0; i < LITOPTSTATE_TOTAL; i++)
+        for(i = 0; i < TINOPTSTATE_TOTAL; i++)
         {
             if(optimization_states[i])
             {
@@ -935,56 +935,56 @@ void lit_astopt_setoptenabled(LitAstOptType optimization, bool enabled)
     }
 }
 
-void lit_astopt_setalloptenabled(bool enabled)
+void tin_astopt_setalloptenabled(bool enabled)
 {
     size_t i;
     optimization_states_setup = true;
     any_optimization_enabled = enabled;
-    for(i = 0; i < LITOPTSTATE_TOTAL; i++)
+    for(i = 0; i < TINOPTSTATE_TOTAL; i++)
     {
         optimization_states[i] = enabled;
     }
 }
 
-void lit_astopt_setoptlevel(LitAstOptLevel level)
+void tin_astopt_setoptlevel(TinAstOptLevel level)
 {
     switch(level)
     {
-        case LITOPTLEVEL_NONE:
+        case TINOPTLEVEL_NONE:
             {
-                lit_astopt_setalloptenabled(false);
+                tin_astopt_setalloptenabled(false);
             }
             break;
-        case LITOPTLEVEL_REPL:
+        case TINOPTLEVEL_REPL:
             {
-                lit_astopt_setalloptenabled(true);
-                lit_astopt_setoptenabled(LITOPTSTATE_UNUSED_VAR, false);
-                lit_astopt_setoptenabled(LITOPTSTATE_UNREACHABLE_CODE, false);
-                lit_astopt_setoptenabled(LITOPTSTATE_EMPTY_BODY, false);
-                lit_astopt_setoptenabled(LITOPTSTATE_LINE_INFO, false);
-                lit_astopt_setoptenabled(LITOPTSTATE_PRIVATE_NAMES, false);
+                tin_astopt_setalloptenabled(true);
+                tin_astopt_setoptenabled(TINOPTSTATE_UNUSED_VAR, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_UNREACHABLE_CODE, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_EMPTY_BODY, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_LINE_INFO, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_PRIVATE_NAMES, false);
             }
             break;
-        case LITOPTLEVEL_DEBUG:
+        case TINOPTLEVEL_DEBUG:
             {
-                lit_astopt_setalloptenabled(true);
-                lit_astopt_setoptenabled(LITOPTSTATE_UNUSED_VAR, false);
-                lit_astopt_setoptenabled(LITOPTSTATE_LINE_INFO, false);
-                lit_astopt_setoptenabled(LITOPTSTATE_PRIVATE_NAMES, false);
+                tin_astopt_setalloptenabled(true);
+                tin_astopt_setoptenabled(TINOPTSTATE_UNUSED_VAR, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_LINE_INFO, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_PRIVATE_NAMES, false);
             }
             break;
-        case LITOPTLEVEL_RELEASE:
+        case TINOPTLEVEL_RELEASE:
             {
-                lit_astopt_setalloptenabled(true);
-                lit_astopt_setoptenabled(LITOPTSTATE_LINE_INFO, false);
+                tin_astopt_setalloptenabled(true);
+                tin_astopt_setoptenabled(TINOPTSTATE_LINE_INFO, false);
             }
             break;
-        case LITOPTLEVEL_EXTREME:
+        case TINOPTLEVEL_EXTREME:
             {
-                lit_astopt_setalloptenabled(true);
+                tin_astopt_setalloptenabled(true);
             }
             break;
-        case LITOPTLEVEL_TOTAL:
+        case TINOPTLEVEL_TOTAL:
             {
             }
             break;
@@ -992,17 +992,17 @@ void lit_astopt_setoptlevel(LitAstOptLevel level)
     }
 }
 
-const char* lit_astopt_getoptname(LitAstOptType optimization)
+const char* tin_astopt_getoptname(TinAstOptType optimization)
 {
     return optimization_names[(int)optimization];
 }
 
-const char* lit_astopt_getoptdescr(LitAstOptType optimization)
+const char* tin_astopt_getoptdescr(TinAstOptType optimization)
 {
     return optimization_descriptions[(int)optimization];
 }
 
-const char* lit_astopt_getoptleveldescr(LitAstOptLevel level)
+const char* tin_astopt_getoptleveldescr(TinAstOptLevel level)
 {
     return optimization_level_descriptions[(int)level];
 }

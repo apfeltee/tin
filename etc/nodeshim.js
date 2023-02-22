@@ -25,31 +25,6 @@ Array.prototype.clone = function()
     return JSON.parse(JSON.stringify(this));
 }
 
-function bitnot(n)
-{
-    return (~n);
-}
-
-function substr(s, a, b=null)
-{
-    if(b == null)
-    {
-        return s.substring(a);
-    }
-    return s.substring(a, b);
-}
-
-function shiftleft(a, b)
-{
-    return (a << b);
-}
-
-function shiftright(a, b)
-{
-    return (a >> b);
-}
-
-
 String.split = function(s, a)
 {
     return s.split(a);
@@ -70,10 +45,6 @@ Object.append = function(a, b)
     a.push(b)
 }
 
-function toint(s)
-{
-    return (new Number(s))+0;
-}
 
 function print(...args)
 {
@@ -84,6 +55,17 @@ function print(...args)
         process.stdout.write(arg.toString());
     }
 }
+
+function printc(...args)
+{
+    //process.stdout.write(...args);
+    for(var i=0; i<args.length; i++)
+    {
+        var arg = args[i];
+        process.stdout.write(String.fromCharCode(arg));
+    }
+}
+
 
 function println(...args)
 {

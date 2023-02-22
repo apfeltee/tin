@@ -4,20 +4,20 @@
 #include "priv.h"
 #include "sds.h"
 
-LitUpvalue* lit_object_makeupvalue(LitState* state, LitValue* slot)
+TinUpvalue* tin_object_makeupvalue(TinState* state, TinValue* slot)
 {
-    LitUpvalue* upvalue;
-    upvalue = (LitUpvalue*)lit_gcmem_allocobject(state, sizeof(LitUpvalue), LITTYPE_UPVALUE, false);
+    TinUpvalue* upvalue;
+    upvalue = (TinUpvalue*)tin_gcmem_allocobject(state, sizeof(TinUpvalue), TINTYPE_UPVALUE, false);
     upvalue->location = slot;
     upvalue->closed = NULL_VALUE;
     upvalue->next = NULL;
     return upvalue;
 }
 
-LitModule* lit_object_makemodule(LitState* state, LitString* name)
+TinModule* tin_object_makemodule(TinState* state, TinString* name)
 {
-    LitModule* module;
-    module = (LitModule*)lit_gcmem_allocobject(state, sizeof(LitModule), LITTYPE_MODULE, false);
+    TinModule* module;
+    module = (TinModule*)tin_gcmem_allocobject(state, sizeof(TinModule), TINTYPE_MODULE, false);
     module->name = name;
     module->return_value = NULL_VALUE;
     module->main_function = NULL;
@@ -25,20 +25,20 @@ LitModule* lit_object_makemodule(LitState* state, LitString* name)
     module->ran = false;
     module->main_fiber = NULL;
     module->private_count = 0;
-    module->private_names = lit_create_map(state);
+    module->private_names = tin_create_map(state);
     return module;
 }
 
-LitUserdata* lit_object_makeuserdata(LitState* state, size_t size, bool ispointeronly)
+TinUserdata* tin_object_makeuserdata(TinState* state, size_t size, bool ispointeronly)
 {
-    LitUserdata* userdata;
-    userdata = (LitUserdata*)lit_gcmem_allocobject(state, sizeof(LitUserdata), LITTYPE_USERDATA, false);
+    TinUserdata* userdata;
+    userdata = (TinUserdata*)tin_gcmem_allocobject(state, sizeof(TinUserdata), TINTYPE_USERDATA, false);
     userdata->data = NULL;
     if(size > 0)
     {
         if(!ispointeronly)
         {
-            userdata->data = lit_gcmem_memrealloc(state, NULL, 0, size);
+            userdata->data = tin_gcmem_memrealloc(state, NULL, 0, size);
         }
     }
     userdata->size = size;
@@ -47,149 +47,149 @@ LitUserdata* lit_object_makeuserdata(LitState* state, size_t size, bool ispointe
     return userdata;
 }
 
-LitRange* lit_object_makerange(LitState* state, double from, double to)
+TinRange* tin_object_makerange(TinState* state, double from, double to)
 {
-    LitRange* range;
-    range = (LitRange*)lit_gcmem_allocobject(state, sizeof(LitRange), LITTYPE_RANGE, false);
+    TinRange* range;
+    range = (TinRange*)tin_gcmem_allocobject(state, sizeof(TinRange), TINTYPE_RANGE, false);
     range->from = from;
     range->to = to;
     return range;
 }
 
-LitReference* lit_object_makereference(LitState* state, LitValue* slot)
+TinReference* tin_object_makereference(TinState* state, TinValue* slot)
 {
-    LitReference* reference;
-    reference = (LitReference*)lit_gcmem_allocobject(state, sizeof(LitReference), LITTYPE_REFERENCE, false);
+    TinReference* reference;
+    reference = (TinReference*)tin_gcmem_allocobject(state, sizeof(TinReference), TINTYPE_REFERENCE, false);
     reference->slot = slot;
     return reference;
 }
 
-void lit_object_destroy(LitState* state, LitObject* object)
+void tin_object_destroy(TinState* state, TinObject* object)
 {
-    LitString* string;
-    LitFunction* function;
-    LitFiber* fiber;
-    LitModule* module;
-    LitClosure* closure;
+    TinString* string;
+    TinFunction* function;
+    TinFiber* fiber;
+    TinModule* module;
+    TinClosure* closure;
     if(!object->mustfree)
     {
         return;
     }
-#ifdef LIT_LOG_ALLOCATION
+#ifdef TIN_LOG_ALLOCATION
     printf("(");
-    lit_towriter_value(lit_value_fromobject(object));
-    printf(") %p free %s\n", (void*)object, lit_tostring_typename(object->type));
+    tin_towriter_value(tin_value_fromobject(object));
+    printf(") %p free %s\n", (void*)object, tin_tostring_typename(object->type));
 #endif
 
     switch(object->type)
     {
-        case LITTYPE_NUMBER:
+        case TINTYPE_NUMBER:
             {
                 if(object->mustfree)
                 {
-                    LIT_FREE(state, sizeof(LitNumber), object);
+                    TIN_FREE(state, sizeof(TinNumber), object);
                 }
             }
             break;
-        case LITTYPE_STRING:
+        case TINTYPE_STRING:
             {
-                string = (LitString*)object;
-                //LIT_FREE_ARRAY(state, sizeof(char), string->chars, string->length + 1);
+                string = (TinString*)object;
+                //TIN_FREE_ARRAY(state, sizeof(char), string->chars, string->length + 1);
                 sdsfree(string->chars);
                 string->chars = NULL;
-                LIT_FREE(state, sizeof(LitString), object);
+                TIN_FREE(state, sizeof(TinString), object);
             }
             break;
 
-        case LITTYPE_FUNCTION:
+        case TINTYPE_FUNCTION:
             {
-                function = (LitFunction*)object;
-                lit_chunk_destroy(state, &function->chunk);
-                LIT_FREE(state, sizeof(LitFunction), object);
+                function = (TinFunction*)object;
+                tin_chunk_destroy(state, &function->chunk);
+                TIN_FREE(state, sizeof(TinFunction), object);
             }
             break;
-        case LITTYPE_NATIVE_FUNCTION:
+        case TINTYPE_NATIVE_FUNCTION:
             {
-                LIT_FREE(state, sizeof(LitNativeFunction), object);
+                TIN_FREE(state, sizeof(TinNativeFunction), object);
             }
             break;
-        case LITTYPE_NATIVE_PRIMITIVE:
+        case TINTYPE_NATIVE_PRIMITIVE:
             {
-                LIT_FREE(state, sizeof(LitNativePrimFunction), object);
+                TIN_FREE(state, sizeof(TinNativePrimFunction), object);
             }
             break;
-        case LITTYPE_NATIVE_METHOD:
+        case TINTYPE_NATIVE_METHOD:
             {
-                LIT_FREE(state, sizeof(LitNativeMethod), object);
+                TIN_FREE(state, sizeof(TinNativeMethod), object);
             }
             break;
-        case LITTYPE_PRIMITIVE_METHOD:
+        case TINTYPE_PRIMITIVE_METHOD:
             {
-                LIT_FREE(state, sizeof(LitPrimitiveMethod), object);
+                TIN_FREE(state, sizeof(TinPrimitiveMethod), object);
             }
             break;
-        case LITTYPE_FIBER:
+        case TINTYPE_FIBER:
             {
-                fiber = (LitFiber*)object;
-                LIT_FREE_ARRAY(state, sizeof(LitCallFrame), fiber->frames, fiber->frame_capacity);
-                LIT_FREE_ARRAY(state, sizeof(LitValue), fiber->stack, fiber->stack_capacity);
-                LIT_FREE(state, sizeof(LitFiber), object);
+                fiber = (TinFiber*)object;
+                TIN_FREE_ARRAY(state, sizeof(TinCallFrame), fiber->frames, fiber->frame_capacity);
+                TIN_FREE_ARRAY(state, sizeof(TinValue), fiber->stack, fiber->stack_capacity);
+                TIN_FREE(state, sizeof(TinFiber), object);
             }
             break;
-        case LITTYPE_MODULE:
+        case TINTYPE_MODULE:
             {
-                module = (LitModule*)object;
-                LIT_FREE_ARRAY(state, sizeof(LitValue), module->privates, module->private_count);
-                LIT_FREE(state, sizeof(LitModule), object);
+                module = (TinModule*)object;
+                TIN_FREE_ARRAY(state, sizeof(TinValue), module->privates, module->private_count);
+                TIN_FREE(state, sizeof(TinModule), object);
             }
             break;
-        case LITTYPE_CLOSURE:
+        case TINTYPE_CLOSURE:
             {
-                closure = (LitClosure*)object;
-                LIT_FREE_ARRAY(state, sizeof(LitUpvalue*), closure->upvalues, closure->upvalue_count);
-                LIT_FREE(state, sizeof(LitClosure), object);
+                closure = (TinClosure*)object;
+                TIN_FREE_ARRAY(state, sizeof(TinUpvalue*), closure->upvalues, closure->upvalue_count);
+                TIN_FREE(state, sizeof(TinClosure), object);
             }
             break;
-        case LITTYPE_UPVALUE:
+        case TINTYPE_UPVALUE:
             {
-                LIT_FREE(state, sizeof(LitUpvalue), object);
+                TIN_FREE(state, sizeof(TinUpvalue), object);
             }
             break;
-        case LITTYPE_CLASS:
+        case TINTYPE_CLASS:
             {
-                LitClass* klass = (LitClass*)object;
-                lit_table_destroy(state, &klass->methods);
-                lit_table_destroy(state, &klass->static_fields);
-                LIT_FREE(state, sizeof(LitClass), object);
+                TinClass* klass = (TinClass*)object;
+                tin_table_destroy(state, &klass->methods);
+                tin_table_destroy(state, &klass->static_fields);
+                TIN_FREE(state, sizeof(TinClass), object);
             }
             break;
 
-        case LITTYPE_INSTANCE:
+        case TINTYPE_INSTANCE:
             {
-                lit_table_destroy(state, &((LitInstance*)object)->fields);
-                LIT_FREE(state, sizeof(LitInstance), object);
+                tin_table_destroy(state, &((TinInstance*)object)->fields);
+                TIN_FREE(state, sizeof(TinInstance), object);
             }
             break;
-        case LITTYPE_BOUND_METHOD:
+        case TINTYPE_BOUND_METHOD:
             {
-                LIT_FREE(state, sizeof(LitBoundMethod), object);
+                TIN_FREE(state, sizeof(TinBoundMethod), object);
             }
             break;
-        case LITTYPE_ARRAY:
+        case TINTYPE_ARRAY:
             {
-                lit_vallist_destroy(state, &((LitArray*)object)->list);
-                LIT_FREE(state, sizeof(LitArray), object);
+                tin_vallist_destroy(state, &((TinArray*)object)->list);
+                TIN_FREE(state, sizeof(TinArray), object);
             }
             break;
-        case LITTYPE_MAP:
+        case TINTYPE_MAP:
             {
-                lit_table_destroy(state, &((LitMap*)object)->values);
-                LIT_FREE(state, sizeof(LitMap), object);
+                tin_table_destroy(state, &((TinMap*)object)->values);
+                TIN_FREE(state, sizeof(TinMap), object);
             }
             break;
-        case LITTYPE_USERDATA:
+        case TINTYPE_USERDATA:
             {
-                LitUserdata* data = (LitUserdata*)object;
+                TinUserdata* data = (TinUserdata*)object;
                 if(data->cleanup_fn != NULL)
                 {
                     data->cleanup_fn(state, data, false);
@@ -198,26 +198,26 @@ void lit_object_destroy(LitState* state, LitObject* object)
                 {
                     if(data->canfree)
                     {
-                        lit_gcmem_memrealloc(state, data->data, data->size, 0);
+                        tin_gcmem_memrealloc(state, data->data, data->size, 0);
                     }
                 }
-                LIT_FREE(state, sizeof(LitUserdata), data);
+                TIN_FREE(state, sizeof(TinUserdata), data);
                 //free(data);
             }
             break;
-        case LITTYPE_RANGE:
+        case TINTYPE_RANGE:
             {
-                LIT_FREE(state, sizeof(LitRange), object);
+                TIN_FREE(state, sizeof(TinRange), object);
             }
             break;
-        case LITTYPE_FIELD:
+        case TINTYPE_FIELD:
             {
-                LIT_FREE(state, sizeof(LitField), object);
+                TIN_FREE(state, sizeof(TinField), object);
             }
             break;
-        case LITTYPE_REFERENCE:
+        case TINTYPE_REFERENCE:
             {
-                LIT_FREE(state, sizeof(LitReference), object);
+                TIN_FREE(state, sizeof(TinReference), object);
             }
             break;
         default:
@@ -229,71 +229,71 @@ void lit_object_destroy(LitState* state, LitObject* object)
     }
 }
 
-void lit_object_destroylistof(LitState* state, LitObject* objects)
+void tin_object_destroylistof(TinState* state, TinObject* objects)
 {
-    LitObject* obj;
-    LitObject* next;
+    TinObject* obj;
+    TinObject* next;
     obj = objects;
     while(obj != NULL)
     {
         next = obj->next;
-        lit_object_destroy(state, obj);
+        tin_object_destroy(state, obj);
         obj = next;
     }
-    free(state->vm->gray_stack);
-    state->vm->gray_capacity = 0;
+    free(state->vm->gcgraystack);
+    state->vm->gcgraycapacity = 0;
 }
 
-LitValue lit_function_getname(LitVM* vm, LitValue instance)
+TinValue tin_function_getname(TinVM* vm, TinValue instance)
 {
-    LitString* name;
-    LitField* field;
+    TinString* name;
+    TinField* field;
     name = NULL;
-    switch(lit_value_type(instance))
+    switch(tin_value_type(instance))
     {
-        case LITTYPE_FUNCTION:
+        case TINTYPE_FUNCTION:
             {
-                name = lit_value_asfunction(instance)->name;
+                name = tin_value_asfunction(instance)->name;
             }
             break;
-        case LITTYPE_CLOSURE:
+        case TINTYPE_CLOSURE:
             {
-                name = lit_value_asclosure(instance)->function->name;
+                name = tin_value_asclosure(instance)->function->name;
             }
             break;
-        case LITTYPE_FIELD:
+        case TINTYPE_FIELD:
             {
-                field = lit_value_asfield(instance);
+                field = tin_value_asfield(instance);
                 if(field->getter != NULL)
                 {
-                    return lit_function_getname(vm, lit_value_fromobject(field->getter));
+                    return tin_function_getname(vm, tin_value_fromobject(field->getter));
                 }
-                return lit_function_getname(vm, lit_value_fromobject(field->setter));
+                return tin_function_getname(vm, tin_value_fromobject(field->setter));
             }
             break;
-        case LITTYPE_NATIVE_PRIMITIVE:
+        case TINTYPE_NATIVE_PRIMITIVE:
             {
-                name = lit_value_asnativeprimitive(instance)->name;
+                name = tin_value_asnativeprimitive(instance)->name;
             }
             break;
-        case LITTYPE_NATIVE_FUNCTION:
+        case TINTYPE_NATIVE_FUNCTION:
             {
-                name = lit_value_asnativefunction(instance)->name;
+                name = tin_value_asnativefunction(instance)->name;
             }
             break;
-        case LITTYPE_NATIVE_METHOD:
+        case TINTYPE_NATIVE_METHOD:
             {
-                name = lit_value_asnativemethod(instance)->name;
+                name = tin_value_asnativemethod(instance)->name;
             }
             break;
-        case LITTYPE_PRIMITIVE_METHOD:
+        case TINTYPE_PRIMITIVE_METHOD:
             {
-                name = lit_value_asprimitivemethod(instance)->name;
+                name = tin_value_asprimitivemethod(instance)->name;
             }
             break;
-        case LITTYPE_BOUND_METHOD:
+        case TINTYPE_BOUND_METHOD:
             {
-                return lit_function_getname(vm, lit_value_asboundmethod(instance)->method);
+                return tin_function_getname(vm, tin_value_asboundmethod(instance)->method);
             }
             break;
         default:
@@ -304,46 +304,46 @@ LitValue lit_function_getname(LitVM* vm, LitValue instance)
     }
     if(name == NULL)
     {
-        if(lit_value_isobject(instance))
+        if(tin_value_isobject(instance))
         {
-            return lit_string_format(vm->state, "function #", *((double*)lit_value_asobject(instance)));
+            return tin_string_format(vm->state, "function #", *((double*)tin_value_asobject(instance)));
         }
     }
-    return lit_string_format(vm->state, "function @", lit_value_fromobject(name));
+    return tin_string_format(vm->state, "function @", tin_value_fromobject(name));
 }
 
-static LitValue objfn_object_class(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_object_class(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    return lit_value_fromobject(lit_state_getclassfor(vm->state, instance));
+    return tin_value_fromobject(tin_state_getclassfor(vm->state, instance));
 }
 
-static LitValue objfn_object_super(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_object_super(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    LitClass* cl;
-    cl = lit_state_getclassfor(vm->state, instance)->super;
+    TinClass* cl;
+    cl = tin_state_getclassfor(vm->state, instance)->super;
     if(cl == NULL)
     {
         return NULL_VALUE;
     }
-    return lit_value_fromobject(cl);
+    return tin_value_fromobject(cl);
 }
 
-static LitValue objfn_object_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_object_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    return lit_string_format(vm->state, "@ instance", lit_value_fromobject(lit_state_getclassfor(vm->state, instance)->name));
+    return tin_string_format(vm->state, "@ instance", tin_value_fromobject(tin_state_getclassfor(vm->state, instance)->name));
 }
 
-static void fillmap(LitState* state, LitMap* destmap, LitTable* fromtbl, bool includenullkeys)
+static void fillmap(TinState* state, TinMap* destmap, TinTable* fromtbl, bool includenullkeys)
 {
     size_t i;
-    LitString* key;
-    LitValue val;
+    TinString* key;
+    TinValue val;
     (void)includenullkeys;
     for(i=0; i<(size_t)(fromtbl->count); i++)
     {
@@ -351,138 +351,142 @@ static void fillmap(LitState* state, LitMap* destmap, LitTable* fromtbl, bool in
         if(key != NULL)
         {
             val = fromtbl->entries[i].value;
-            lit_map_set(state, destmap, key, val);
+            tin_map_set(state, destmap, key, val);
         }
     }
 }
 
-static LitValue objfn_object_tomap(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_object_tomap(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    LitMap* map;
-    LitMap* minst;
-    LitMap* mclass;
-    LitMap* mclstatics;
-    LitMap* mclmethods;
-    LitInstance* inst;
+    TinMap* map;
+    TinMap* minst;
+    TinMap* mclass;
+    TinMap* mclstatics;
+    TinMap* mclmethods;
+    TinInstance* inst;
     mclass = NULL;
-    if(!lit_value_isinstance(instance))
+    if(!tin_value_isinstance(instance))
     {
-        lit_vm_raiseexitingerror(vm, "toMap() can only be used on instances");
+        tin_vm_raiseexitingerror(vm, "toMap() can only be used on instances");
     }
-    inst = lit_value_asinstance(instance);
-    map = lit_create_map(vm->state);
+    inst = tin_value_asinstance(instance);
+    map = tin_create_map(vm->state);
     {
-        minst = lit_create_map(vm->state);
+        minst = tin_create_map(vm->state);
         fillmap(vm->state, minst, &(inst->fields), true);
     }
     {
-        mclass = lit_create_map(vm->state);
+        mclass = tin_create_map(vm->state);
         {
-            mclstatics = lit_create_map(vm->state);
+            mclstatics = tin_create_map(vm->state);
             fillmap(vm->state, mclstatics, &(inst->klass->static_fields), false);
         }
         {
-            mclmethods = lit_create_map(vm->state);
+            mclmethods = tin_create_map(vm->state);
             fillmap(vm->state, mclmethods, &(inst->klass->methods), false);
         }
-        lit_map_set(vm->state, mclass, lit_string_copyconst(vm->state, "statics"), lit_value_fromobject(mclstatics));
-        lit_map_set(vm->state, mclass, lit_string_copyconst(vm->state, "methods"), lit_value_fromobject(mclmethods));
+        tin_map_set(vm->state, mclass, tin_string_copyconst(vm->state, "statics"), tin_value_fromobject(mclstatics));
+        tin_map_set(vm->state, mclass, tin_string_copyconst(vm->state, "methods"), tin_value_fromobject(mclmethods));
     }
-    lit_map_set(vm->state, map, lit_string_copyconst(vm->state, "instance"), lit_value_fromobject(minst));
-    lit_map_set(vm->state, map, lit_string_copyconst(vm->state, "class"), lit_value_fromobject(mclass));
-    return lit_value_fromobject(map);
+    tin_map_set(vm->state, map, tin_string_copyconst(vm->state, "instance"), tin_value_fromobject(minst));
+    tin_map_set(vm->state, map, tin_string_copyconst(vm->state, "class"), tin_value_fromobject(mclass));
+    return tin_value_fromobject(map);
 }
 
-static LitValue objfn_object_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_object_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    LitValue value;
-    LitInstance* inst;
-    if(!lit_value_isinstance(instance))
+    TinValue value;
+    TinInstance* inst;
+    if(!tin_value_isinstance(instance))
     {
-        lit_vm_raiseexitingerror(vm, "cannot modify built-in types");
+        tin_vm_raiseexitingerror(vm, "cannot modify built-in types");
     }
-    inst = lit_value_asinstance(instance);
+    inst = tin_value_asinstance(instance);
     if(argc == 2)
     {
-        if(!lit_value_isstring(argv[0]))
+        if(!tin_value_isstring(argv[0]))
         {
-            lit_vm_raiseexitingerror(vm, "object index must be a string");
+            tin_vm_raiseexitingerror(vm, "object index must be a string");
         }
 
-        lit_table_set(vm->state, &inst->fields, lit_value_asstring(argv[0]), argv[1]);
+        tin_table_set(vm->state, &inst->fields, tin_value_asstring(argv[0]), argv[1]);
         return argv[1];
     }
-    if(!lit_value_isstring(argv[0]))
+    if(!tin_value_isstring(argv[0]))
     {
-        lit_vm_raiseexitingerror(vm, "object index must be a string");
+        tin_vm_raiseexitingerror(vm, "object index must be a string");
     }
-    if(lit_table_get(&inst->fields, lit_value_asstring(argv[0]), &value))
-    {
-        return value;
-    }
-    if(lit_table_get(&inst->klass->static_fields, lit_value_asstring(argv[0]), &value))
+    if(tin_table_get(&inst->fields, tin_value_asstring(argv[0]), &value))
     {
         return value;
     }
-    if(lit_table_get(&inst->klass->methods, lit_value_asstring(argv[0]), &value))
+    if(tin_table_get(&inst->klass->static_fields, tin_value_asstring(argv[0]), &value))
+    {
+        return value;
+    }
+    if(tin_table_get(&inst->klass->methods, tin_value_asstring(argv[0]), &value))
     {
         return value;
     }
     return NULL_VALUE;
 }
 
-static LitValue objfn_object_iterator(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_object_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
     int value;
     int index;
-    LitInstance* self;
-    LIT_ENSURE_ARGS(vm->state, 1);
-    self = lit_value_asinstance(instance);
-    index = lit_value_isnull(argv[0]) ? -1 : lit_value_asnumber(argv[0]);
+    TinInstance* self;
+    TIN_ENSURE_ARGS(vm->state, 1);
+    self = tin_value_asinstance(instance);
+    index = tin_value_isnull(argv[0]) ? -1 : tin_value_asnumber(argv[0]);
     value = util_table_iterator(&self->fields, index);
-    return value == -1 ? NULL_VALUE : lit_value_makenumber(vm->state, value);
+    if(value == -1)
+    {
+        return NULL_VALUE;
+    }
+    return tin_value_makefixednumber(vm->state, value);
 }
 
 
-static LitValue objfn_object_iteratorvalue(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_object_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t index;
-    LitInstance* self;
-    index = lit_value_checknumber(vm, argv, argc, 0);
-    self = lit_value_asinstance(instance);
+    TinInstance* self;
+    index = tin_value_checknumber(vm, argv, argc, 0);
+    self = tin_value_asinstance(instance);
     return util_table_iterator_key(&self->fields, index);
 }
 
-void lit_state_openobjectlibrary(LitState* state)
+void tin_state_openobjectlibrary(TinState* state)
 {
-    LitClass* klass;
-    klass = lit_create_classobject(state, "Object");
+    TinClass* klass;
+    klass = tin_create_classobject(state, "Object");
     {
-        lit_class_inheritfrom(state, klass, state->classvalue_class);
-        lit_class_bindgetset(state, klass, "class", objfn_object_class, NULL, false);
-        lit_class_bindgetset(state, klass, "super", objfn_object_super, NULL, false);
-        lit_class_bindmethod(state, klass, "[]", objfn_object_subscript);
+        tin_class_inheritfrom(state, klass, state->primclassclass);
+        tin_class_bindgetset(state, klass, "class", objfn_object_class, NULL, false);
+        tin_class_bindgetset(state, klass, "super", objfn_object_super, NULL, false);
+        tin_class_bindmethod(state, klass, "[]", objfn_object_subscript);
         #if 0
-        lit_class_bindmethod(state, klass, "hasMethod", objfn_object_hasmethod);
+        tin_class_bindmethod(state, klass, "hasMethod", objfn_object_hasmethod);
         #endif
-        lit_class_bindmethod(state, klass, "toString", objfn_object_tostring);
-        lit_class_bindmethod(state, klass, "toMap", objfn_object_tomap);
-        lit_class_bindmethod(state, klass, "iterator", objfn_object_iterator);
-        lit_class_bindmethod(state, klass, "iteratorValue", objfn_object_iteratorvalue);
-        state->objectvalue_class = klass;
-        state->objectvalue_class->super = state->classvalue_class;
+        tin_class_bindmethod(state, klass, "toString", objfn_object_tostring);
+        tin_class_bindmethod(state, klass, "toMap", objfn_object_tomap);
+        tin_class_bindmethod(state, klass, "iterator", objfn_object_iterator);
+        tin_class_bindmethod(state, klass, "iteratorValue", objfn_object_iteratorvalue);
+        state->primobjectclass = klass;
+        state->primobjectclass->super = state->primclassclass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+    tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
     if(klass->super == NULL)
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
     };
 }
 

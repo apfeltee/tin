@@ -13,136 +13,136 @@
     #define rand_r(v) (*v)
 #endif
 
-static LitValue math_abs(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_abs(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, fabs(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, fabs(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_cos(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_cos(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, cos(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, cos(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_sin(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_sin(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, sin(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, sin(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_tan(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_tan(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, tan(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, tan(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_acos(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_acos(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, acos(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, acos(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_asin(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_asin(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, asin(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, asin(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_atan(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_atan(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, atan(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, atan(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_atan2(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_atan2(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, atan2(lit_value_checknumber(vm, argv, argc, 0), lit_value_checknumber(vm, argv, argc, 1)));
+    return tin_value_makefloatnumber(vm->state, atan2(tin_value_checknumber(vm, argv, argc, 0), tin_value_checknumber(vm, argv, argc, 1)));
 }
 
-static LitValue math_floor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_floor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, floor(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, floor(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_ceil(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_ceil(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, ceil(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, ceil(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_round(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_round(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int places;
     double value;
     (void)instance;
-    value = lit_value_checknumber(vm, argv, argc, 0);
+    value = tin_value_checknumber(vm, argv, argc, 0);
     if(argc > 1)
     {
-        places = (int)pow(10, lit_value_checknumber(vm, argv, argc, 1));
-        return lit_value_makenumber(vm->state, round(value * places) / places);
+        places = (int)pow(10, tin_value_checknumber(vm, argv, argc, 1));
+        return tin_value_makefloatnumber(vm->state, round(value * places) / places);
     }
-    return lit_value_makenumber(vm->state, round(value));
+    return tin_value_makefloatnumber(vm->state, round(value));
 }
 
-static LitValue math_min(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_min(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, fmin(lit_value_checknumber(vm, argv, argc, 0), lit_value_checknumber(vm, argv, argc, 1)));
+    return tin_value_makefloatnumber(vm->state, fmin(tin_value_checknumber(vm, argv, argc, 0), tin_value_checknumber(vm, argv, argc, 1)));
 }
 
-static LitValue math_max(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_max(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, fmax(lit_value_checknumber(vm, argv, argc, 0), lit_value_checknumber(vm, argv, argc, 1)));
+    return tin_value_makefloatnumber(vm->state, fmax(tin_value_checknumber(vm, argv, argc, 0), tin_value_checknumber(vm, argv, argc, 1)));
 }
 
-static LitValue math_mid(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_mid(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     double x;
     double y;
     double z;
     (void)instance;
-    x = lit_value_checknumber(vm, argv, argc, 0);
-    y = lit_value_checknumber(vm, argv, argc, 1);
-    z = lit_value_checknumber(vm, argv, argc, 2);
+    x = tin_value_checknumber(vm, argv, argc, 0);
+    y = tin_value_checknumber(vm, argv, argc, 1);
+    z = tin_value_checknumber(vm, argv, argc, 2);
     if(x > y)
     {
-        return lit_value_makenumber(vm->state, fmax(x, fmin(y, z)));
+        return tin_value_makefloatnumber(vm->state, fmax(x, fmin(y, z)));
     }
-    return lit_value_makenumber(vm->state, fmax(y, fmin(x, z)));
+    return tin_value_makefloatnumber(vm->state, fmax(y, fmin(x, z)));
 }
 
-static LitValue math_toRadians(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_toRadians(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, lit_value_checknumber(vm, argv, argc, 0) * M_PI / 180.0);
+    return tin_value_makefloatnumber(vm->state, tin_value_checknumber(vm, argv, argc, 0) * M_PI / 180.0);
 }
 
-static LitValue math_toDegrees(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_toDegrees(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, lit_value_checknumber(vm, argv, argc, 0) * 180.0 / M_PI);
+    return tin_value_makefloatnumber(vm->state, tin_value_checknumber(vm, argv, argc, 0) * 180.0 / M_PI);
 }
 
-static LitValue math_sqrt(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_sqrt(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, sqrt(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, sqrt(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_log(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_log(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, exp(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, exp(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
-static LitValue math_exp(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue math_exp(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return lit_value_makenumber(vm->state, exp(lit_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, exp(tin_value_checknumber(vm, argv, argc, 0)));
 }
 
 /*
@@ -151,33 +151,33 @@ static LitValue math_exp(LitVM* vm, LitValue instance, size_t argc, LitValue* ar
 
 static size_t staticrandomdata;
 
-static size_t* extract_random_data(LitState* state, LitValue instance)
+static size_t* extract_random_data(TinState* state, TinValue instance)
 {
-    if(lit_value_isclass(instance))
+    if(tin_value_isclass(instance))
     {
         return &staticrandomdata;
     }
 
-    LitValue data;
+    TinValue data;
 
-    if(!lit_table_get(&lit_value_asinstance(instance)->fields, lit_string_copyconst(state, "_data"), &data))
+    if(!tin_table_get(&tin_value_asinstance(instance)->fields, tin_string_copyconst(state, "_data"), &data))
     {
         return 0;
     }
 
-    return (size_t*)lit_value_asuserdata(data)->data;
+    return (size_t*)tin_value_asuserdata(data)->data;
 }
 
-static LitValue random_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue random_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitUserdata* userdata = lit_object_makeuserdata(vm->state, sizeof(size_t), false);
-    lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_fromobject(userdata));
+    TinUserdata* userdata = tin_object_makeuserdata(vm->state, sizeof(size_t), false);
+    tin_table_set(vm->state, &tin_value_asinstance(instance)->fields, tin_string_copyconst(vm->state, "_data"), tin_value_fromobject(userdata));
 
     size_t* data = (size_t*)userdata->data;
 
     if(argc == 1)
     {
-        size_t number = (size_t)lit_value_checknumber(vm, argv, argc, 0);
+        size_t number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
         *data = number;
     }
     else
@@ -188,13 +188,13 @@ static LitValue random_constructor(LitVM* vm, LitValue instance, size_t argc, Li
     return instance;
 }
 
-static LitValue random_setSeed(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue random_setSeed(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t* data = extract_random_data(vm->state, instance);
 
     if(argc == 1)
     {
-        size_t number = (size_t)lit_value_checknumber(vm, argv, argc, 0);
+        size_t number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
         *data = number;
     }
     else
@@ -205,69 +205,69 @@ static LitValue random_setSeed(LitVM* vm, LitValue instance, size_t argc, LitVal
     return NULL_VALUE;
 }
 
-static LitValue random_int(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue random_int(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t* data = extract_random_data(vm->state, instance);
 
     if(argc == 1)
     {
-        int bound = (int)lit_value_getnumber(vm, argv, argc, 0, 0);
-        return lit_value_makenumber(vm->state, rand_r((unsigned int*)data) % bound);
+        int bound = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        return tin_value_makefixednumber(vm->state, rand_r((unsigned int*)data) % bound);
     }
     else if(argc == 2)
     {
-        int min = (int)lit_value_getnumber(vm, argv, argc, 0, 0);
-        int max = (int)lit_value_getnumber(vm, argv, argc, 1, 1);
+        int min = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        int max = (int)tin_value_getnumber(vm, argv, argc, 1, 1);
 
         if(max - min == 0)
         {
-            return lit_value_makenumber(vm->state, max);
+            return tin_value_makefixednumber(vm->state, max);
         }
 
-        return lit_value_makenumber(vm->state, min + rand_r((unsigned int*)data) % (max - min));
+        return tin_value_makefixednumber(vm->state, min + rand_r((unsigned int*)data) % (max - min));
     }
 
-    return lit_value_makenumber(vm->state, rand_r((unsigned int*)data));
+    return tin_value_makefixednumber(vm->state, rand_r((unsigned int*)data));
 }
 
-static LitValue random_float(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue random_float(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t* data = extract_random_data(vm->state, instance);
     double value = (double)rand_r((unsigned int*)data) / RAND_MAX;
 
     if(argc == 1)
     {
-        int bound = (int)lit_value_getnumber(vm, argv, argc, 0, 0);
-        return lit_value_makenumber(vm->state, value * bound);
+        int bound = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        return tin_value_makefloatnumber(vm->state, value * bound);
     }
     else if(argc == 2)
     {
-        int min = (int)lit_value_getnumber(vm, argv, argc, 0, 0);
-        int max = (int)lit_value_getnumber(vm, argv, argc, 1, 1);
+        int min = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        int max = (int)tin_value_getnumber(vm, argv, argc, 1, 1);
 
         if(max - min == 0)
         {
-            return lit_value_makenumber(vm->state, max);
+            return tin_value_makefloatnumber(vm->state, max);
         }
 
-        return lit_value_makenumber(vm->state, min + value * (max - min));
+        return tin_value_makefloatnumber(vm->state, min + value * (max - min));
     }
 
-    return lit_value_makenumber(vm->state, value);
+    return tin_value_makefloatnumber(vm->state, value);
 }
 
-static LitValue random_bool(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue random_bool(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makebool(vm->state, rand_r((unsigned int*)extract_random_data(vm->state, instance)) % 2);
+    return tin_value_makebool(vm->state, rand_r((unsigned int*)extract_random_data(vm->state, instance)) % 2);
 }
 
-static LitValue random_chance(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue random_chance(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     float c;
-    c = lit_value_getnumber(vm, argv, argc, 0, 50);
+    c = tin_value_getnumber(vm, argv, argc, 0, 50);
     if((((float)rand_r((unsigned int*)extract_random_data(vm->state, instance))) / ((float)(RAND_MAX-1)) * 100) <= c)
     {
         return TRUE_VALUE;
@@ -275,26 +275,26 @@ static LitValue random_chance(LitVM* vm, LitValue instance, size_t argc, LitValu
     return FALSE_VALUE;
 }
 
-static LitValue random_pick(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue random_pick(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int value = rand_r((unsigned int*)extract_random_data(vm->state, instance));
 
     if(argc == 1)
     {
-        if(lit_value_isarray(argv[0]))
+        if(tin_value_isarray(argv[0]))
         {
-            LitArray* array = lit_value_asarray(argv[0]);
+            TinArray* array = tin_value_asarray(argv[0]);
 
-            if(lit_vallist_count(&array->list) == 0)
+            if(tin_vallist_count(&array->list) == 0)
             {
                 return NULL_VALUE;
             }
 
-            return lit_vallist_get(&array->list, value % lit_vallist_count(&array->list));
+            return tin_vallist_get(&array->list, value % tin_vallist_count(&array->list));
         }
-        else if(lit_value_ismap(argv[0]))
+        else if(tin_value_ismap(argv[0]))
         {
-            LitMap* map = lit_value_asmap(argv[0]);
+            TinMap* map = tin_value_asmap(argv[0]);
             size_t length = map->values.count;
             size_t capacity = map->values.capacity;
 
@@ -321,7 +321,7 @@ static LitValue random_pick(LitVM* vm, LitValue instance, size_t argc, LitValue*
         }
         else
         {
-            lit_vm_raiseexitingerror(vm, "Expected map or array as the argument");
+            tin_vm_raiseexitingerror(vm, "Expected map or array as the argument");
         }
     }
     else
@@ -332,62 +332,62 @@ static LitValue random_pick(LitVM* vm, LitValue instance, size_t argc, LitValue*
     return NULL_VALUE;
 }
 
-void lit_open_math_library(LitState* state)
+void tin_open_math_library(TinState* state)
 {
-    LitClass* klass;
+    TinClass* klass;
     {
-        klass = lit_create_classobject(state, "Math");
+        klass = tin_create_classobject(state, "Math");
         {
-            lit_class_setstaticfield(state, klass, "Pi", lit_value_makenumber(state, M_PI));
-            lit_class_setstaticfield(state, klass, "Tau", lit_value_makenumber(state, M_PI * 2));
-            lit_class_bindstaticmethod(state, klass, "abs", math_abs);
-            lit_class_bindstaticmethod(state, klass, "sin", math_sin);
-            lit_class_bindstaticmethod(state, klass, "cos", math_cos);
-            lit_class_bindstaticmethod(state, klass, "tan", math_tan);
-            lit_class_bindstaticmethod(state, klass, "asin", math_asin);
-            lit_class_bindstaticmethod(state, klass, "acos", math_acos);
-            lit_class_bindstaticmethod(state, klass, "atan", math_atan);
-            lit_class_bindstaticmethod(state, klass, "atan2", math_atan2);
-            lit_class_bindstaticmethod(state, klass, "floor", math_floor);
-            lit_class_bindstaticmethod(state, klass, "ceil", math_ceil);
-            lit_class_bindstaticmethod(state, klass, "round", math_round);
-            lit_class_bindstaticmethod(state, klass, "min", math_min);
-            lit_class_bindstaticmethod(state, klass, "max", math_max);
-            lit_class_bindstaticmethod(state, klass, "mid", math_mid);
-            lit_class_bindstaticmethod(state, klass, "toRadians", math_toRadians);
-            lit_class_bindstaticmethod(state, klass, "toDegrees", math_toDegrees);
-            lit_class_bindstaticmethod(state, klass, "sqrt", math_sqrt);
-            lit_class_bindstaticmethod(state, klass, "log", math_log);
-            lit_class_bindstaticmethod(state, klass, "exp", math_exp);
+            tin_class_setstaticfield(state, klass, "Pi", tin_value_makefloatnumber(state, M_PI));
+            tin_class_setstaticfield(state, klass, "Tau", tin_value_makefloatnumber(state, M_PI * 2));
+            tin_class_bindstaticmethod(state, klass, "abs", math_abs);
+            tin_class_bindstaticmethod(state, klass, "sin", math_sin);
+            tin_class_bindstaticmethod(state, klass, "cos", math_cos);
+            tin_class_bindstaticmethod(state, klass, "tan", math_tan);
+            tin_class_bindstaticmethod(state, klass, "asin", math_asin);
+            tin_class_bindstaticmethod(state, klass, "acos", math_acos);
+            tin_class_bindstaticmethod(state, klass, "atan", math_atan);
+            tin_class_bindstaticmethod(state, klass, "atan2", math_atan2);
+            tin_class_bindstaticmethod(state, klass, "floor", math_floor);
+            tin_class_bindstaticmethod(state, klass, "ceil", math_ceil);
+            tin_class_bindstaticmethod(state, klass, "round", math_round);
+            tin_class_bindstaticmethod(state, klass, "min", math_min);
+            tin_class_bindstaticmethod(state, klass, "max", math_max);
+            tin_class_bindstaticmethod(state, klass, "mid", math_mid);
+            tin_class_bindstaticmethod(state, klass, "toRadians", math_toRadians);
+            tin_class_bindstaticmethod(state, klass, "toDegrees", math_toDegrees);
+            tin_class_bindstaticmethod(state, klass, "sqrt", math_sqrt);
+            tin_class_bindstaticmethod(state, klass, "log", math_log);
+            tin_class_bindstaticmethod(state, klass, "exp", math_exp);
         }
-        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
         if(klass->super == NULL)
         {
-            lit_class_inheritfrom(state, klass, state->objectvalue_class);
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
         };
     }
     srand(time(NULL));
     staticrandomdata = time(NULL);
     {
-        klass = lit_create_classobject(state, "Random");
+        klass = tin_create_classobject(state, "Random");
         {
-            lit_class_bindconstructor(state, klass, random_constructor);
-            lit_class_bindmethod(state, klass, "setSeed", random_setSeed);
-            lit_class_bindmethod(state, klass, "int", random_int);
-            lit_class_bindmethod(state, klass, "float", random_float);
-            lit_class_bindmethod(state, klass, "chance", random_chance);
-            lit_class_bindmethod(state, klass, "pick", random_pick);
-            lit_class_bindstaticmethod(state, klass, "setSeed", random_setSeed);
-            lit_class_bindstaticmethod(state, klass, "int", random_int);
-            lit_class_bindstaticmethod(state, klass, "float", random_float);
-            lit_class_bindstaticmethod(state, klass, "bool", random_bool);
-            lit_class_bindstaticmethod(state, klass, "chance", random_chance);
-            lit_class_bindstaticmethod(state, klass, "pick", random_pick);
+            tin_class_bindconstructor(state, klass, random_constructor);
+            tin_class_bindmethod(state, klass, "setSeed", random_setSeed);
+            tin_class_bindmethod(state, klass, "int", random_int);
+            tin_class_bindmethod(state, klass, "float", random_float);
+            tin_class_bindmethod(state, klass, "chance", random_chance);
+            tin_class_bindmethod(state, klass, "pick", random_pick);
+            tin_class_bindstaticmethod(state, klass, "setSeed", random_setSeed);
+            tin_class_bindstaticmethod(state, klass, "int", random_int);
+            tin_class_bindstaticmethod(state, klass, "float", random_float);
+            tin_class_bindstaticmethod(state, klass, "bool", random_bool);
+            tin_class_bindstaticmethod(state, klass, "chance", random_chance);
+            tin_class_bindstaticmethod(state, klass, "pick", random_pick);
         }
-        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
         if(klass->super == NULL)
         {
-            lit_class_inheritfrom(state, klass, state->objectvalue_class);
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
         }
     }
 }

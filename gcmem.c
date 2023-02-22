@@ -5,13 +5,13 @@
 #include "priv.h"
 
 #if 0
-static LitObject g_stackmem[1024 * (1024 * 4)];
+static TinObject g_stackmem[1024 * (1024 * 4)];
 static size_t g_objcount = 0;
 #endif
 
-LitObject* lit_gcmem_allocobject(LitState* state, size_t size, LitObjType type, bool islight)
+TinObject* tin_gcmem_allocobject(TinState* state, size_t size, TinObjType type, bool islight)
 {
-    LitObject* obj;
+    TinObject* obj;
     islight = false;
     if(islight)
     {
@@ -27,33 +27,33 @@ LitObject* lit_gcmem_allocobject(LitState* state, size_t size, LitObjType type, 
     else
     {
         forcealloc:
-        obj = (LitObject*)lit_gcmem_memrealloc(state, NULL, 0, size);
+        obj = (TinObject*)tin_gcmem_memrealloc(state, NULL, 0, size);
         obj->mustfree = true;
     }
     obj->type = type;
     obj->marked = false;
-    obj->next = state->vm->objects;
-    state->vm->objects = obj;
-    #ifdef LIT_LOG_ALLOCATION
-        printf("%p allocate %ld for %s\n", (void*)obj, size, lit_tostring_typename(type));
+    obj->next = state->vm->gcobjects;
+    state->vm->gcobjects = obj;
+    #ifdef TIN_LOG_ALLOCATION
+        printf("%p allocate %ld for %s\n", (void*)obj, size, tin_tostring_typename(type));
     #endif
 
     return obj;
 }
 
-void* lit_gcmem_memrealloc(LitState* state, void* pointer, size_t oldsize, size_t newsize)
+void* tin_gcmem_memrealloc(TinState* state, void* pointer, size_t oldsize, size_t newsize)
 {
     void* ptr;
     ptr = NULL;
-    state->bytes_allocated += (int64_t)newsize - (int64_t)oldsize;
+    state->gcbytescount += (int64_t)newsize - (int64_t)oldsize;
     if(newsize > oldsize)
     {
-#ifdef LIT_STRESS_TEST_GC
-        lit_gcmem_collectgarbage(state->vm);
+#ifdef TIN_STRESS_TEST_GC
+        tin_gcmem_collectgarbage(state->vm);
 #endif
-        if(state->bytes_allocated > state->next_gc)
+        if(state->gcbytescount > state->gcnext)
         {
-            lit_gcmem_collectgarbage(state->vm);
+            tin_gcmem_collectgarbage(state->vm);
         }
     }
     if(newsize == 0)
@@ -64,25 +64,25 @@ void* lit_gcmem_memrealloc(LitState* state, void* pointer, size_t oldsize, size_
     ptr = (void*)realloc(pointer, newsize);
     if(ptr == NULL)
     {
-        lit_state_raiseerror(state, RUNTIME_ERROR, "Fatal error:\nOut of memory\nProgram terminated");
+        tin_state_raiseerror(state, RUNTIME_ERROR, "Fatal error:\nOut of memory\nProgram terminated");
         exit(111);
     }
     return ptr;
 }
 
-void lit_gcmem_marktable(LitVM* vm, LitTable* table)
+void tin_gcmem_marktable(TinVM* vm, TinTable* table)
 {
     int i;
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     for(i = 0; i <= table->capacity; i++)
     {
         entry = &table->entries[i];
-        lit_gcmem_markobject(vm, (LitObject*)entry->key);
-        lit_gcmem_markvalue(vm, entry->value);
+        tin_gcmem_markobject(vm, (TinObject*)entry->key);
+        tin_gcmem_markvalue(vm, entry->value);
     }
 }
 
-void lit_gcmem_markobject(LitVM* vm, LitObject* object)
+void tin_gcmem_markobject(TinVM* vm, TinObject* object)
 {
     if(object == NULL || object->marked)
     {
@@ -91,217 +91,217 @@ void lit_gcmem_markobject(LitVM* vm, LitObject* object)
 
     object->marked = true;
 
-#ifdef LIT_LOG_MARKING
+#ifdef TIN_LOG_MARKING
     printf("%p mark ", (void*)object);
-    lit_towriter_value(lit_value_fromobject(object));
+    tin_towriter_value(tin_value_fromobject(object));
     printf("\n");
 #endif
 
-    if(vm->gray_capacity < vm->gray_count + 1)
+    if(vm->gcgraycapacity < vm->gcgraycount + 1)
     {
-        vm->gray_capacity = LIT_GROW_CAPACITY(vm->gray_capacity);
-        vm->gray_stack = (LitObject**)realloc(vm->gray_stack, sizeof(LitObject*) * vm->gray_capacity);
+        vm->gcgraycapacity = TIN_GROW_CAPACITY(vm->gcgraycapacity);
+        vm->gcgraystack = (TinObject**)realloc(vm->gcgraystack, sizeof(TinObject*) * vm->gcgraycapacity);
     }
 
-    vm->gray_stack[vm->gray_count++] = object;
+    vm->gcgraystack[vm->gcgraycount++] = object;
 }
 
-void lit_gcmem_markvalue(LitVM* vm, LitValue value)
+void tin_gcmem_markvalue(TinVM* vm, TinValue value)
 {
-    if(lit_value_isobject(value))
+    if(tin_value_isobject(value))
     {
-        lit_gcmem_markobject(vm, lit_value_asobject(value));
+        tin_gcmem_markobject(vm, tin_value_asobject(value));
     }
 }
 
-void lit_gcmem_vmmarkroots(LitVM* vm)
+void tin_gcmem_vmmarkroots(TinVM* vm)
 {
     size_t i;
-    LitState* state;
+    TinState* state;
     state = vm->state;
-    for(i = 0; i < state->root_count; i++)
+    for(i = 0; i < state->gcrootcount; i++)
     {
-        lit_gcmem_markvalue(vm, state->roots[i]);
+        tin_gcmem_markvalue(vm, state->gcroots[i]);
     }
-    lit_gcmem_markobject(vm, (LitObject*)vm->fiber);
-    lit_gcmem_markobject(vm, (LitObject*)state->classvalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->objectvalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->numbervalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->stringvalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->boolvalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->functionvalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->fibervalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->modulevalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->arrayvalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->mapvalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->rangevalue_class);
-    lit_gcmem_markobject(vm, (LitObject*)state->api_name);
-    lit_gcmem_markobject(vm, (LitObject*)state->api_function);
-    lit_gcmem_markobject(vm, (LitObject*)state->api_fiber);
-    lit_gcmem_marktable(vm, &vm->modules->values);
-    lit_gcmem_marktable(vm, &vm->globals->values);
+    tin_gcmem_markobject(vm, (TinObject*)vm->fiber);
+    tin_gcmem_markobject(vm, (TinObject*)state->primclassclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primobjectclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primnumberclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primstringclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primboolclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primfunctionclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primfiberclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primmoduleclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primarrayclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primmapclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->primrangeclass);
+    tin_gcmem_markobject(vm, (TinObject*)state->capiname);
+    tin_gcmem_markobject(vm, (TinObject*)state->capifunction);
+    tin_gcmem_markobject(vm, (TinObject*)state->capifiber);
+    tin_gcmem_marktable(vm, &vm->modules->values);
+    tin_gcmem_marktable(vm, &vm->globals->values);
 }
 
-void lit_gcmem_markarray(LitVM* vm, LitValList* array)
+void tin_gcmem_markarray(TinVM* vm, TinValList* array)
 {
     size_t i;
-    for(i = 0; i < lit_vallist_count(array); i++)
+    for(i = 0; i < tin_vallist_count(array); i++)
     {
-        lit_gcmem_markvalue(vm, lit_vallist_get(array, i));
+        tin_gcmem_markvalue(vm, tin_vallist_get(array, i));
     }
 }
 
-void lit_gcmem_vmblackobject(LitVM* vm, LitObject* object)
+void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
 {
     size_t i;
-    LitUserdata* data;
-    LitFunction* function;
-    LitFiber* fiber;
-    LitUpvalue* upvalue;
-    LitCallFrame* frame;
-    LitModule* module;
-    LitClosure* closure;
-    LitClass* klass;
-    LitBoundMethod* boundmethod;
-    LitField* field;
+    TinUserdata* data;
+    TinFunction* function;
+    TinFiber* fiber;
+    TinUpvalue* upvalue;
+    TinCallFrame* frame;
+    TinModule* module;
+    TinClosure* closure;
+    TinClass* klass;
+    TinBoundMethod* boundmethod;
+    TinField* field;
 
-#ifdef LIT_LOG_BLACKING
+#ifdef TIN_LOG_BLACKING
     printf("%p blacken ", (void*)object);
-    lit_towriter_value(lit_value_fromobject(object));
+    tin_towriter_value(tin_value_fromobject(object));
     printf("\n");
 #endif
     switch(object->type)
     {
-        case LITTYPE_NATIVE_FUNCTION:
-        case LITTYPE_NATIVE_PRIMITIVE:
-        case LITTYPE_NATIVE_METHOD:
-        case LITTYPE_PRIMITIVE_METHOD:
-        case LITTYPE_RANGE:
-        case LITTYPE_STRING:
-        case LITTYPE_NUMBER:
+        case TINTYPE_NATIVE_FUNCTION:
+        case TINTYPE_NATIVE_PRIMITIVE:
+        case TINTYPE_NATIVE_METHOD:
+        case TINTYPE_PRIMITIVE_METHOD:
+        case TINTYPE_RANGE:
+        case TINTYPE_STRING:
+        case TINTYPE_NUMBER:
             {
             }
             break;
-        case LITTYPE_USERDATA:
+        case TINTYPE_USERDATA:
             {
-                data = (LitUserdata*)object;
+                data = (TinUserdata*)object;
                 if(data->cleanup_fn != NULL)
                 {
                     data->cleanup_fn(vm->state, data, true);
                 }
             }
             break;
-        case LITTYPE_FUNCTION:
+        case TINTYPE_FUNCTION:
             {
-                function = (LitFunction*)object;
-                lit_gcmem_markobject(vm, (LitObject*)function->name);
-                lit_gcmem_markarray(vm, &function->chunk.constants);
+                function = (TinFunction*)object;
+                tin_gcmem_markobject(vm, (TinObject*)function->name);
+                tin_gcmem_markarray(vm, &function->chunk.constants);
             }
             break;
-        case LITTYPE_FIBER:
+        case TINTYPE_FIBER:
             {
-                fiber = (LitFiber*)object;
-                for(LitValue* slot = fiber->stack; slot < fiber->stack_top; slot++)
+                fiber = (TinFiber*)object;
+                for(TinValue* slot = fiber->stack; slot < fiber->stack_top; slot++)
                 {
-                    lit_gcmem_markvalue(vm, *slot);
+                    tin_gcmem_markvalue(vm, *slot);
                 }
                 for(i = 0; i < fiber->frame_count; i++)
                 {
                     frame = &fiber->frames[i];
                     if(frame->closure != NULL)
                     {
-                        lit_gcmem_markobject(vm, (LitObject*)frame->closure);
+                        tin_gcmem_markobject(vm, (TinObject*)frame->closure);
                     }
                     else
                     {
-                        lit_gcmem_markobject(vm, (LitObject*)frame->function);
+                        tin_gcmem_markobject(vm, (TinObject*)frame->function);
                     }
                 }
                 for(upvalue = fiber->open_upvalues; upvalue != NULL; upvalue = upvalue->next)
                 {
-                    lit_gcmem_markobject(vm, (LitObject*)upvalue);
+                    tin_gcmem_markobject(vm, (TinObject*)upvalue);
                 }
-                lit_gcmem_markvalue(vm, fiber->errorval);
-                lit_gcmem_markobject(vm, (LitObject*)fiber->module);
-                lit_gcmem_markobject(vm, (LitObject*)fiber->parent);
+                tin_gcmem_markvalue(vm, fiber->errorval);
+                tin_gcmem_markobject(vm, (TinObject*)fiber->module);
+                tin_gcmem_markobject(vm, (TinObject*)fiber->parent);
             }
             break;
-        case LITTYPE_MODULE:
+        case TINTYPE_MODULE:
             {
-                module = (LitModule*)object;
-                lit_gcmem_markvalue(vm, module->return_value);
-                lit_gcmem_markobject(vm, (LitObject*)module->name);
-                lit_gcmem_markobject(vm, (LitObject*)module->main_function);
-                lit_gcmem_markobject(vm, (LitObject*)module->main_fiber);
-                lit_gcmem_markobject(vm, (LitObject*)module->private_names);
+                module = (TinModule*)object;
+                tin_gcmem_markvalue(vm, module->return_value);
+                tin_gcmem_markobject(vm, (TinObject*)module->name);
+                tin_gcmem_markobject(vm, (TinObject*)module->main_function);
+                tin_gcmem_markobject(vm, (TinObject*)module->main_fiber);
+                tin_gcmem_markobject(vm, (TinObject*)module->private_names);
                 for(i = 0; i < module->private_count; i++)
                 {
-                    lit_gcmem_markvalue(vm, module->privates[i]);
+                    tin_gcmem_markvalue(vm, module->privates[i]);
                 }
             }
             break;
-        case LITTYPE_CLOSURE:
+        case TINTYPE_CLOSURE:
             {
-                closure = (LitClosure*)object;
-                lit_gcmem_markobject(vm, (LitObject*)closure->function);
+                closure = (TinClosure*)object;
+                tin_gcmem_markobject(vm, (TinObject*)closure->function);
                 // Check for NULL is needed for a really specific gc-case
                 if(closure->upvalues != NULL)
                 {
                     for(i = 0; i < closure->upvalue_count; i++)
                     {
-                        lit_gcmem_markobject(vm, (LitObject*)closure->upvalues[i]);
+                        tin_gcmem_markobject(vm, (TinObject*)closure->upvalues[i]);
                     }
                 }
             }
             break;
-        case LITTYPE_UPVALUE:
+        case TINTYPE_UPVALUE:
             {
-                lit_gcmem_markvalue(vm, ((LitUpvalue*)object)->closed);
+                tin_gcmem_markvalue(vm, ((TinUpvalue*)object)->closed);
             }
             break;
-        case LITTYPE_CLASS:
+        case TINTYPE_CLASS:
             {
-                klass = (LitClass*)object;
-                lit_gcmem_markobject(vm, (LitObject*)klass->name);
-                lit_gcmem_markobject(vm, (LitObject*)klass->super);
-                lit_gcmem_marktable(vm, &klass->methods);
-                lit_gcmem_marktable(vm, &klass->static_fields);
+                klass = (TinClass*)object;
+                tin_gcmem_markobject(vm, (TinObject*)klass->name);
+                tin_gcmem_markobject(vm, (TinObject*)klass->super);
+                tin_gcmem_marktable(vm, &klass->methods);
+                tin_gcmem_marktable(vm, &klass->static_fields);
             }
             break;
-        case LITTYPE_INSTANCE:
+        case TINTYPE_INSTANCE:
             {
-                LitInstance* instance = (LitInstance*)object;
-                lit_gcmem_markobject(vm, (LitObject*)instance->klass);
-                lit_gcmem_marktable(vm, &instance->fields);
+                TinInstance* instance = (TinInstance*)object;
+                tin_gcmem_markobject(vm, (TinObject*)instance->klass);
+                tin_gcmem_marktable(vm, &instance->fields);
             }
             break;
-        case LITTYPE_BOUND_METHOD:
+        case TINTYPE_BOUND_METHOD:
             {
-                boundmethod = (LitBoundMethod*)object;
-                lit_gcmem_markvalue(vm, boundmethod->receiver);
-                lit_gcmem_markvalue(vm, boundmethod->method);
+                boundmethod = (TinBoundMethod*)object;
+                tin_gcmem_markvalue(vm, boundmethod->receiver);
+                tin_gcmem_markvalue(vm, boundmethod->method);
             }
             break;
-        case LITTYPE_ARRAY:
+        case TINTYPE_ARRAY:
             {
-                lit_gcmem_markarray(vm, &((LitArray*)object)->list);
+                tin_gcmem_markarray(vm, &((TinArray*)object)->list);
             }
             break;
-        case LITTYPE_MAP:
+        case TINTYPE_MAP:
             {
-                lit_gcmem_marktable(vm, &((LitMap*)object)->values);
+                tin_gcmem_marktable(vm, &((TinMap*)object)->values);
             }
             break;
-        case LITTYPE_FIELD:
+        case TINTYPE_FIELD:
             {
-                field = (LitField*)object;
-                lit_gcmem_markobject(vm, (LitObject*)field->getter);
-                lit_gcmem_markobject(vm, (LitObject*)field->setter);
+                field = (TinField*)object;
+                tin_gcmem_markobject(vm, (TinObject*)field->getter);
+                tin_gcmem_markobject(vm, (TinObject*)field->setter);
             }
             break;
-        case LITTYPE_REFERENCE:
+        case TINTYPE_REFERENCE:
             {
-                lit_gcmem_markvalue(vm, *((LitReference*)object)->slot);
+                tin_gcmem_markvalue(vm, *((TinReference*)object)->slot);
             }
             break;
         default:
@@ -313,23 +313,23 @@ void lit_gcmem_vmblackobject(LitVM* vm, LitObject* object)
     }
 }
 
-void lit_gcmem_vmtracerefs(LitVM* vm)
+void tin_gcmem_vmtracerefs(TinVM* vm)
 {
-    LitObject* object;
-    while(vm->gray_count > 0)
+    TinObject* object;
+    while(vm->gcgraycount > 0)
     {
-        object = vm->gray_stack[--vm->gray_count];
-        lit_gcmem_vmblackobject(vm, object);
+        object = vm->gcgraystack[--vm->gcgraycount];
+        tin_gcmem_vmblackobject(vm, object);
     }
 }
 
-void lit_gcmem_vmsweep(LitVM* vm)
+void tin_gcmem_vmsweep(TinVM* vm)
 {
-    LitObject* unreached;
-    LitObject* previous;
-    LitObject* object;
+    TinObject* unreached;
+    TinObject* previous;
+    TinObject* object;
     previous = NULL;
-    object = vm->objects;
+    object = vm->gcobjects;
     while(object != NULL)
     {
         if(object->marked)
@@ -348,89 +348,89 @@ void lit_gcmem_vmsweep(LitVM* vm)
             }
             else
             {
-                vm->objects = object;
+                vm->gcobjects = object;
             }
-            lit_object_destroy(vm->state, unreached);
+            tin_object_destroy(vm->state, unreached);
         }
     }
 }
 
-uint64_t lit_gcmem_collectgarbage(LitVM* vm)
+uint64_t tin_gcmem_collectgarbage(TinVM* vm)
 {
     clock_t t;
     uint64_t before;
     uint64_t collected;
     (void)t;
-    if(!vm->state->allow_gc)
+    if(!vm->state->gcallow)
     {
         return 0;
     }
 
-    vm->state->allow_gc = false;
-    before = vm->state->bytes_allocated;
+    vm->state->gcallow = false;
+    before = vm->state->gcbytescount;
 
-#ifdef LIT_LOG_GC
+#ifdef TIN_LOG_GC
     printf("-- gc begin\n");
     t = clock();
 #endif
 
-    lit_gcmem_vmmarkroots(vm);
-    lit_gcmem_vmtracerefs(vm);
-    lit_table_removewhite(&vm->strings);
-    lit_gcmem_vmsweep(vm);
-    vm->state->next_gc = vm->state->bytes_allocated * LIT_GC_HEAP_GROW_FACTOR;
-    vm->state->allow_gc = true;
-    collected = before - vm->state->bytes_allocated;
+    tin_gcmem_vmmarkroots(vm);
+    tin_gcmem_vmtracerefs(vm);
+    tin_table_removewhite(&vm->gcstrings);
+    tin_gcmem_vmsweep(vm);
+    vm->state->gcnext = vm->state->gcbytescount * TIN_GC_HEAP_GROW_FACTOR;
+    vm->state->gcallow = true;
+    collected = before - vm->state->gcbytescount;
 
-#ifdef LIT_LOG_GC
+#ifdef TIN_LOG_GC
     printf("-- gc end. Collected %imb in %gms\n", ((int)((collected / 1024.0 + 0.5) / 10)) * 10,
            (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
 #endif
     return collected;
 }
 
-static LitValue objfn_gc_memory_used(LitVM* vm, LitValue instance, size_t arg_count, LitValue* args)
+static TinValue objfn_gc_memory_used(TinVM* vm, TinValue instance, size_t arg_count, TinValue* args)
 {
     (void)instance;
     (void)arg_count;
     (void)args;
-    return lit_value_makenumber(vm->state, vm->state->bytes_allocated);
+    return tin_value_makefixednumber(vm->state, vm->state->gcbytescount);
 }
 
-static LitValue objfn_gc_next_round(LitVM* vm, LitValue instance, size_t arg_count, LitValue* args)
+static TinValue objfn_gc_next_round(TinVM* vm, TinValue instance, size_t arg_count, TinValue* args)
 {
     (void)instance;
     (void)arg_count;
     (void)args;
-    return lit_value_makenumber(vm->state, vm->state->next_gc);
+    return tin_value_makefixednumber(vm->state, vm->state->gcnext);
 }
 
-static LitValue objfn_gc_trigger(LitVM* vm, LitValue instance, size_t arg_count, LitValue* args)
+static TinValue objfn_gc_trigger(TinVM* vm, TinValue instance, size_t arg_count, TinValue* args)
 {
     (void)instance;
     (void)arg_count;
     (void)args;
     int64_t collected;
-    vm->state->allow_gc = true;
-    collected = lit_gcmem_collectgarbage(vm);
-    vm->state->allow_gc = false;
+    vm->state->gcallow = true;
+    collected = tin_gcmem_collectgarbage(vm);
+    vm->state->gcallow = false;
 
-    return lit_value_makenumber(vm->state, collected);
+    return tin_value_makefixednumber(vm->state, collected);
 }
 
-void lit_open_gc_library(LitState* state)
+void tin_open_gc_library(TinState* state)
 {
-    LitClass* klass;
-    klass = lit_create_classobject(state, "GC");
+    TinClass* klass;
+    klass = tin_create_classobject(state, "GC");
     {
-        lit_class_bindgetset(state, klass, "memoryUsed", objfn_gc_memory_used, NULL, true);
-        lit_class_bindgetset(state, klass, "nextRound", objfn_gc_next_round, NULL, true);
-        lit_class_bindstaticmethod(state, klass, "trigger", objfn_gc_trigger);
+        tin_class_bindgetset(state, klass, "memoryUsed", objfn_gc_memory_used, NULL, true);
+        tin_class_bindgetset(state, klass, "nextRound", objfn_gc_next_round, NULL, true);
+        tin_class_bindstaticmethod(state, klass, "trigger", objfn_gc_trigger);
     }
-    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+    tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
     if(klass->super == NULL)
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
     };
 }
 

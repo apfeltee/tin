@@ -5,56 +5,56 @@
 #include <errno.h>
 #include "priv.h"
 
-void lit_bytelist_init(LitAstByteList* bl)
+void tin_bytelist_init(TinAstByteList* bl)
 {
     bl->values = NULL;
     bl->capacity = 0;
     bl->count = 0;
 }
 
-void lit_bytelist_destroy(LitState* state, LitAstByteList* bl)
+void tin_bytelist_destroy(TinState* state, TinAstByteList* bl)
 {
-    LIT_FREE_ARRAY(state, sizeof(uint8_t), bl->values, bl->capacity);
-    lit_bytelist_init(bl);
+    TIN_FREE_ARRAY(state, sizeof(uint8_t), bl->values, bl->capacity);
+    tin_bytelist_init(bl);
 }
 
-void lit_bytelist_push(LitState* state, LitAstByteList* bl, uint8_t value)
+void tin_bytelist_push(TinState* state, TinAstByteList* bl, uint8_t value)
 {
     size_t oldcap;
     if(bl->capacity < bl->count + 1)
     {
         oldcap = bl->capacity;
-        bl->capacity = LIT_GROW_CAPACITY(oldcap);
-        bl->values = LIT_GROW_ARRAY(state, bl->values, sizeof(uint8_t), oldcap, bl->capacity);
+        bl->capacity = TIN_GROW_CAPACITY(oldcap);
+        bl->values = TIN_GROW_ARRAY(state, bl->values, sizeof(uint8_t), oldcap, bl->capacity);
     }
     bl->values[bl->count] = value;
     bl->count++;
 }
 
-static inline bool lit_lexutil_isdigit(char c)
+static inline bool tin_lexutil_isdigit(char c)
 {
     return c >= '0' && c <= '9';
 }
 
-static inline bool lit_lexutil_isalpha(char c)
+static inline bool tin_lexutil_isalpha(char c)
 {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-void lit_astlex_init(LitState* state, LitAstScanner* scanner, const char* file_name, const char* source)
+void tin_astlex_init(TinState* state, TinAstScanner* scanner, const char* filename, const char* source)
 {
     scanner->line = 1;
     scanner->start = source;
     scanner->current = source;
-    scanner->file_name = file_name;
+    scanner->filename = filename;
     scanner->state = state;
-    scanner->num_braces = 0;
-    scanner->had_error = false;
+    scanner->numbraces = 0;
+    scanner->haderror = false;
 }
 
-static LitAstToken lit_astlex_maketoken(LitAstScanner* scanner, LitAstTokType type)
+static TinAstToken tin_astlex_maketoken(TinAstScanner* scanner, TinAstTokType type)
 {
-    LitAstToken token;
+    TinAstToken token;
     token.type = type;
     token.start = scanner->start;
     token.length = (size_t)(scanner->current - scanner->start);
@@ -62,36 +62,36 @@ static LitAstToken lit_astlex_maketoken(LitAstScanner* scanner, LitAstTokType ty
     return token;
 }
 
-static LitAstToken lit_astlex_makeerrortoken(LitAstScanner* scanner, const char* fmt, ...)
+static TinAstToken tin_astlex_makeerrortoken(TinAstScanner* scanner, const char* fmt, ...)
 {
     va_list args;
-    LitAstToken token;
-    LitString* result;
-    scanner->had_error = true;
+    TinAstToken token;
+    TinString* result;
+    scanner->haderror = true;
     va_start(args, fmt);
-    result = lit_vformat_error(scanner->state, scanner->line, fmt, args);
+    result = tin_vformat_error(scanner->state, scanner->line, fmt, args);
     va_end(args);
-    token.type = LITTOK_ERROR;
+    token.type = TINTOK_ERROR;
     token.start = result->chars;
-    token.length = lit_string_getlength(result);
+    token.length = tin_string_getlength(result);
     token.line = scanner->line;
     return token;
 }
 
-static bool lit_astlex_isatend(LitAstScanner* scanner)
+static bool tin_astlex_isatend(TinAstScanner* scanner)
 {
     return *scanner->current == '\0';
 }
 
-static char lit_astlex_advance(LitAstScanner* scanner)
+static char tin_astlex_advance(TinAstScanner* scanner)
 {
     scanner->current++;
     return scanner->current[-1];
 }
 
-static bool lit_astlex_matchchar(LitAstScanner* scanner, char expected)
+static bool tin_astlex_matchchar(TinAstScanner* scanner, char expected)
 {
-    if(lit_astlex_isatend(scanner))
+    if(tin_astlex_isatend(scanner))
     {
         return false;
     }
@@ -104,40 +104,40 @@ static bool lit_astlex_matchchar(LitAstScanner* scanner, char expected)
     return true;
 }
 
-static LitAstToken lit_astlex_matchtoken(LitAstScanner* scanner, char c, LitAstTokType a, LitAstTokType b)
+static TinAstToken tin_astlex_matchtoken(TinAstScanner* scanner, char c, TinAstTokType a, TinAstTokType b)
 {
-    return lit_astlex_maketoken(scanner, lit_astlex_matchchar(scanner, c) ? a : b);
+    return tin_astlex_maketoken(scanner, tin_astlex_matchchar(scanner, c) ? a : b);
 }
 
-static LitAstToken lit_astlex_matchntoken(LitAstScanner* scanner, char cr, char cb, LitAstTokType a, LitAstTokType b, LitAstTokType c)
+static TinAstToken tin_astlex_matchntoken(TinAstScanner* scanner, char cr, char cb, TinAstTokType a, TinAstTokType b, TinAstTokType c)
 {
-    //return lit_astlex_maketoken(scanner, lit_astlex_matchchar(scanner, cr) ? a : (lit_astlex_matchchar(scanner, cb) ? b : c));
-    if(lit_astlex_matchchar(scanner, cr))
+    //return tin_astlex_maketoken(scanner, tin_astlex_matchchar(scanner, cr) ? a : (tin_astlex_matchchar(scanner, cb) ? b : c));
+    if(tin_astlex_matchchar(scanner, cr))
     {
-        return lit_astlex_maketoken(scanner, a);
+        return tin_astlex_maketoken(scanner, a);
     }
-    if(lit_astlex_matchchar(scanner, cb))
+    if(tin_astlex_matchchar(scanner, cb))
     {
-        return lit_astlex_maketoken(scanner, b);
+        return tin_astlex_maketoken(scanner, b);
     }
-    return lit_astlex_maketoken(scanner, c);
+    return tin_astlex_maketoken(scanner, c);
 }
 
-static char lit_astlex_peekcurrent(LitAstScanner* scanner)
+static char tin_astlex_peekcurrent(TinAstScanner* scanner)
 {
     return *scanner->current;
 }
 
-static char lit_astlex_peeknext(LitAstScanner* scanner)
+static char tin_astlex_peeknext(TinAstScanner* scanner)
 {
-    if(lit_astlex_isatend(scanner))
+    if(tin_astlex_isatend(scanner))
     {
         return '\0';
     }
     return scanner->current[1];
 }
 
-static bool lit_astlex_skipspace(LitAstScanner* scanner)
+static bool tin_astlex_skipspace(TinAstScanner* scanner)
 {
     char a;
     char b;
@@ -146,50 +146,50 @@ static bool lit_astlex_skipspace(LitAstScanner* scanner)
     (void)b;
     while(true)
     {
-        c = lit_astlex_peekcurrent(scanner);
+        c = tin_astlex_peekcurrent(scanner);
         switch(c)
         {
             case ' ':
             case '\r':
             case '\t':
                 {
-                    lit_astlex_advance(scanner);
+                    tin_astlex_advance(scanner);
                 }
                 break;
             case '\n':
                 {
                     scanner->start = scanner->current;
-                    lit_astlex_advance(scanner);
+                    tin_astlex_advance(scanner);
                     return true;
                 }
                 break;
             case '/':
                 {
-                    if(lit_astlex_peeknext(scanner) == '/')
+                    if(tin_astlex_peeknext(scanner) == '/')
                     {
-                        while(lit_astlex_peekcurrent(scanner) != '\n' && !lit_astlex_isatend(scanner))
+                        while(tin_astlex_peekcurrent(scanner) != '\n' && !tin_astlex_isatend(scanner))
                         {
-                            lit_astlex_advance(scanner);
+                            tin_astlex_advance(scanner);
                         }
-                        return lit_astlex_skipspace(scanner);
+                        return tin_astlex_skipspace(scanner);
                     }
-                    else if(lit_astlex_peeknext(scanner) == '*')
+                    else if(tin_astlex_peeknext(scanner) == '*')
                     {
-                        lit_astlex_advance(scanner);
-                        lit_astlex_advance(scanner);
-                        a = lit_astlex_peekcurrent(scanner);
-                        b = lit_astlex_peeknext(scanner);
-                        while((lit_astlex_peekcurrent(scanner) != '*' || lit_astlex_peeknext(scanner) != '/') && !lit_astlex_isatend(scanner))
+                        tin_astlex_advance(scanner);
+                        tin_astlex_advance(scanner);
+                        a = tin_astlex_peekcurrent(scanner);
+                        b = tin_astlex_peeknext(scanner);
+                        while((tin_astlex_peekcurrent(scanner) != '*' || tin_astlex_peeknext(scanner) != '/') && !tin_astlex_isatend(scanner))
                         {
-                            if(lit_astlex_peekcurrent(scanner) == '\n')
+                            if(tin_astlex_peekcurrent(scanner) == '\n')
                             {
                                 scanner->line++;
                             }
-                            lit_astlex_advance(scanner);
+                            tin_astlex_advance(scanner);
                         }
-                        lit_astlex_advance(scanner);
-                        lit_astlex_advance(scanner);
-                        return lit_astlex_skipspace(scanner);
+                        tin_astlex_advance(scanner);
+                        tin_astlex_advance(scanner);
+                        return tin_astlex_skipspace(scanner);
                     }
                     return false;
                 }
@@ -202,108 +202,108 @@ static bool lit_astlex_skipspace(LitAstScanner* scanner)
     }
 }
 
-static LitAstToken lit_astlex_scanstring(LitAstScanner* scanner, bool interpolation)
+static TinAstToken tin_astlex_scanstring(TinAstScanner* scanner, bool interpolation)
 {
     char c;
-    LitState* state;
-    LitAstByteList bytes;
-    LitAstToken token;
-    LitAstTokType stringtype;
+    TinState* state;
+    TinAstByteList bytes;
+    TinAstToken token;
+    TinAstTokType stringtype;
     state = scanner->state;
-    stringtype = LITTOK_STRING;
-    lit_bytelist_init(&bytes);
+    stringtype = TINTOK_STRING;
+    tin_bytelist_init(&bytes);
     while(true)
     {
-        c = lit_astlex_advance(scanner);
+        c = tin_astlex_advance(scanner);
         if(c == '\"')
         {
             break;
         }
         else if(interpolation && c == '{')
         {
-            if(scanner->num_braces >= LIT_MAX_INTERPOLATION_NESTING)
+            if(scanner->numbraces >= TIN_MAX_INTERPOLATION_NESTING)
             {
-                return lit_astlex_makeerrortoken(scanner, "interpolation nesting is too deep, maximum is %i", LIT_MAX_INTERPOLATION_NESTING);
+                return tin_astlex_makeerrortoken(scanner, "interpolation nesting is too deep, maximum is %i", TIN_MAX_INTERPOLATION_NESTING);
             }
-            stringtype = LITTOK_INTERPOLATION;
-            scanner->braces[scanner->num_braces++] = 1;
+            stringtype = TINTOK_INTERPOLATION;
+            scanner->braces[scanner->numbraces++] = 1;
             break;
         }
         switch(c)
         {
             case '\0':
                 {
-                    return lit_astlex_makeerrortoken(scanner, "unterminated string");
+                    return tin_astlex_makeerrortoken(scanner, "unterminated string");
                 }
                 break;
             case '\n':
                 {
                     scanner->line++;
-                    lit_bytelist_push(state, &bytes, c);
+                    tin_bytelist_push(state, &bytes, c);
                 }
                 break;
             case '\\':
                 {
-                    switch(lit_astlex_advance(scanner))
+                    switch(tin_astlex_advance(scanner))
                     {
                         case '\"':
                             {
-                                lit_bytelist_push(state, &bytes, '\"');
+                                tin_bytelist_push(state, &bytes, '\"');
                             }
                             break;
                         case '\\':
                             {
-                                lit_bytelist_push(state, &bytes, '\\');
+                                tin_bytelist_push(state, &bytes, '\\');
                             }
                             break;
                         case '0':
                             {
-                                lit_bytelist_push(state, &bytes, '\0');
+                                tin_bytelist_push(state, &bytes, '\0');
                             }
                             break;
                         case '{':
                             {
-                                lit_bytelist_push(state, &bytes, '{');
+                                tin_bytelist_push(state, &bytes, '{');
                             }
                             break;
                         case 'a':
                             {
-                                lit_bytelist_push(state, &bytes, '\a');
+                                tin_bytelist_push(state, &bytes, '\a');
                             }
                             break;
                         case 'b':
                             {
-                                lit_bytelist_push(state, &bytes, '\b');
+                                tin_bytelist_push(state, &bytes, '\b');
                             }
                             break;
                         case 'f':
                             {
-                                lit_bytelist_push(state, &bytes, '\f');
+                                tin_bytelist_push(state, &bytes, '\f');
                             }
                             break;
                         case 'n':
                             {
-                                lit_bytelist_push(state, &bytes, '\n');
+                                tin_bytelist_push(state, &bytes, '\n');
                             }
                             break;
                         case 'r':
                             {
-                                lit_bytelist_push(state, &bytes, '\r');
+                                tin_bytelist_push(state, &bytes, '\r');
                             }
                             break;
                         case 't':
                             {
-                                lit_bytelist_push(state, &bytes, '\t');
+                                tin_bytelist_push(state, &bytes, '\t');
                             }
                             break;
                         case 'v':
                             {
-                                lit_bytelist_push(state, &bytes, '\v');
+                                tin_bytelist_push(state, &bytes, '\v');
                             }
                             break;
                         default:
                             {
-                                return lit_astlex_makeerrortoken(scanner, "invalid escape character '%c'", scanner->current[-1]);
+                                return tin_astlex_makeerrortoken(scanner, "invalid escape character '%c'", scanner->current[-1]);
                             }
                             break;
                     }
@@ -311,21 +311,21 @@ static LitAstToken lit_astlex_scanstring(LitAstScanner* scanner, bool interpolat
                 break;
             default:
                 {
-                    lit_bytelist_push(state, &bytes, c);
+                    tin_bytelist_push(state, &bytes, c);
                 }
                 break;
         }
     }
-    token = lit_astlex_maketoken(scanner, stringtype);
-    token.value = lit_value_fromobject(lit_string_copy(state, (const char*)bytes.values, bytes.count));
-    lit_bytelist_destroy(state, &bytes);
+    token = tin_astlex_maketoken(scanner, stringtype);
+    token.value = tin_value_fromobject(tin_string_copy(state, (const char*)bytes.values, bytes.count));
+    tin_bytelist_destroy(state, &bytes);
     return token;
 }
 
-static int lit_astlex_scanhexdigit(LitAstScanner* scanner)
+static int tin_astlex_scanhexdigit(TinAstScanner* scanner)
 {
     char c;
-    c = lit_astlex_advance(scanner);
+    c = tin_astlex_advance(scanner);
     if((c >= '0') && (c <= '9'))
     {
         return (c - '0');
@@ -342,10 +342,10 @@ static int lit_astlex_scanhexdigit(LitAstScanner* scanner)
     return -1;
 }
 
-static int lit_astlex_scanbinarydigit(LitAstScanner* scanner)
+static int tin_astlex_scanbinarydigit(TinAstScanner* scanner)
 {
     char c;
-    c = lit_astlex_advance(scanner);
+    c = tin_astlex_advance(scanner);
     if(c >= '0' && c <= '1')
     {
         return c - '0';
@@ -354,20 +354,20 @@ static int lit_astlex_scanbinarydigit(LitAstScanner* scanner)
     return -1;
 }
 
-static LitAstToken lit_astlex_makenumbertoken(LitAstScanner* scanner, bool ishex, bool isbinary)
+static TinAstToken tin_astlex_makenumbertoken(TinAstScanner* scanner, bool ishex, bool isbinary)
 {
     int64_t itmp;
     double tmp;
-    LitAstToken token;
-    LitValue value;
+    TinAstToken token;
+    TinValue value;
     errno = 0;
     if(ishex)
     {
-        value = lit_value_makefixednumber(scanner->state, (double)strtoll(scanner->start, NULL, 16));
+        value = tin_value_makefixednumber(scanner->state, (double)strtoll(scanner->start, NULL, 16));
     }
     else if(isbinary)
     {
-        value = lit_value_makefixednumber(scanner->state, (int)strtoll(scanner->start + 2, NULL, 2));
+        value = tin_value_makefixednumber(scanner->state, (int)strtoll(scanner->start + 2, NULL, 2));
     }
     else
     {
@@ -375,74 +375,74 @@ static LitAstToken lit_astlex_makenumbertoken(LitAstScanner* scanner, bool ishex
         itmp = (int64_t)tmp;
         if(itmp == tmp)
         {
-            value = lit_value_makefixednumber(scanner->state, tmp);
+            value = tin_value_makefixednumber(scanner->state, tmp);
         }
         else
         {
-            value = lit_value_makefloatnumber(scanner->state, tmp);
+            value = tin_value_makefloatnumber(scanner->state, tmp);
         }
     }
 
     if(errno == ERANGE)
     {
         errno = 0;
-        return lit_astlex_makeerrortoken(scanner, "number is too big to be represented by a single literal");
+        return tin_astlex_makeerrortoken(scanner, "number is too big to be represented by a single literal");
     }
-    token = lit_astlex_maketoken(scanner, LITTOK_NUMBER);
+    token = tin_astlex_maketoken(scanner, TINTOK_NUMBER);
     token.value = value;
     return token;
 }
 
-static LitAstToken lit_astlex_scannumber(LitAstScanner* scanner)
+static TinAstToken tin_astlex_scannumber(TinAstScanner* scanner)
 {
-    if(lit_astlex_matchchar(scanner, 'x'))
+    if(tin_astlex_matchchar(scanner, 'x'))
     {
-        while(lit_astlex_scanhexdigit(scanner) != -1)
+        while(tin_astlex_scanhexdigit(scanner) != -1)
         {
             continue;
         }
-        return lit_astlex_makenumbertoken(scanner, true, false);
+        return tin_astlex_makenumbertoken(scanner, true, false);
     }
-    if(lit_astlex_matchchar(scanner, 'b'))
+    if(tin_astlex_matchchar(scanner, 'b'))
     {
-        while(lit_astlex_scanbinarydigit(scanner) != -1)
+        while(tin_astlex_scanbinarydigit(scanner) != -1)
         {
             continue;
         }
-        return lit_astlex_makenumbertoken(scanner, false, true);
+        return tin_astlex_makenumbertoken(scanner, false, true);
     }
-    while(lit_lexutil_isdigit(lit_astlex_peekcurrent(scanner)))
+    while(tin_lexutil_isdigit(tin_astlex_peekcurrent(scanner)))
     {
-        lit_astlex_advance(scanner);
+        tin_astlex_advance(scanner);
     }
     // Look for a fractional part.
-    if(lit_astlex_peekcurrent(scanner) == '.' && lit_lexutil_isdigit(lit_astlex_peeknext(scanner)))
+    if(tin_astlex_peekcurrent(scanner) == '.' && tin_lexutil_isdigit(tin_astlex_peeknext(scanner)))
     {
         // Consume the '.'
-        lit_astlex_advance(scanner);
-        while(lit_lexutil_isdigit(lit_astlex_peekcurrent(scanner)))
+        tin_astlex_advance(scanner);
+        while(tin_lexutil_isdigit(tin_astlex_peekcurrent(scanner)))
         {
-            lit_astlex_advance(scanner);
+            tin_astlex_advance(scanner);
         }
     }
-    return lit_astlex_makenumbertoken(scanner, false, false);
+    return tin_astlex_makenumbertoken(scanner, false, false);
 }
 
-static LitAstTokType lit_astlex_checkkeyword(LitAstScanner* scanner, int start, int length, const char* rest, LitAstTokType type)
+static TinAstTokType tin_astlex_checkkeyword(TinAstScanner* scanner, int start, int length, const char* rest, TinAstTokType type)
 {
     if(scanner->current - scanner->start == start + length && memcmp(scanner->start + start, rest, length) == 0)
     {
         return type;
     }
-    return LITTOK_IDENTIFIER;
+    return TINTOK_IDENTIFIER;
 }
 
-static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
+static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
 {
     switch(scanner->start[0])
     {
         case 'b':
-            return lit_astlex_checkkeyword(scanner, 1, 4, "reak", LITTOK_BREAK);
+            return tin_astlex_checkkeyword(scanner, 1, 4, "reak", TINTOK_BREAK);
 
         case 'c':
             {
@@ -451,7 +451,7 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 'l':
-                            return lit_astlex_checkkeyword(scanner, 2, 3, "ass", LITTOK_CLASS);
+                            return tin_astlex_checkkeyword(scanner, 2, 3, "ass", TINTOK_CLASS);
                         case 'o':
                         {
                             if(scanner->current - scanner->start > 3)
@@ -459,9 +459,9 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                                 switch(scanner->start[3])
                                 {
                                     case 's':
-                                        return lit_astlex_checkkeyword(scanner, 2, 3, "nst", LITTOK_CONST);
+                                        return tin_astlex_checkkeyword(scanner, 2, 3, "nst", TINTOK_CONST);
                                     case 't':
-                                        return lit_astlex_checkkeyword(scanner, 2, 6, "ntinue", LITTOK_CONTINUE);
+                                        return tin_astlex_checkkeyword(scanner, 2, 6, "ntinue", TINTOK_CONTINUE);
                                 }
                             }
                         }
@@ -476,9 +476,9 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 'l':
-                            return lit_astlex_checkkeyword(scanner, 2, 2, "se", LITTOK_ELSE);
+                            return tin_astlex_checkkeyword(scanner, 2, 2, "se", TINTOK_ELSE);
                         case 'x':
-                            return lit_astlex_checkkeyword(scanner, 2, 4, "port", LITTOK_EXPORT);
+                            return tin_astlex_checkkeyword(scanner, 2, 4, "port", TINTOK_EXPORT);
                     }
                 }
             }
@@ -490,11 +490,11 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 'a':
-                            return lit_astlex_checkkeyword(scanner, 2, 3, "lse", LITTOK_FALSE);
+                            return tin_astlex_checkkeyword(scanner, 2, 3, "lse", TINTOK_FALSE);
                         case 'o':
-                            return lit_astlex_checkkeyword(scanner, 2, 1, "r", LITTOK_FOR);
+                            return tin_astlex_checkkeyword(scanner, 2, 1, "r", TINTOK_FOR);
                         case 'u':
-                            return lit_astlex_checkkeyword(scanner, 2, 6, "nction", LITTOK_FUNCTION);
+                            return tin_astlex_checkkeyword(scanner, 2, 6, "nction", TINTOK_FUNCTION);
                     }
                 }
             }
@@ -506,11 +506,11 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 's':
-                            return lit_astlex_checkkeyword(scanner, 2, 0, "", LITTOK_IS);
+                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_IS);
                         case 'f':
-                            return lit_astlex_checkkeyword(scanner, 2, 0, "", LITTOK_IF);
+                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_IF);
                         case 'n':
-                            return lit_astlex_checkkeyword(scanner, 2, 0, "", LITTOK_IN);
+                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_IN);
                     }
                 }
             }
@@ -522,9 +522,9 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                 switch(scanner->start[1])
                 {
                     case 'u':
-                        return lit_astlex_checkkeyword(scanner, 2, 2, "ll", LITTOK_NULL);
+                        return tin_astlex_checkkeyword(scanner, 2, 2, "ll", TINTOK_NULL);
                     case 'e':
-                        return lit_astlex_checkkeyword(scanner, 2, 1, "w", LITTOK_NEW);
+                        return tin_astlex_checkkeyword(scanner, 2, 1, "w", TINTOK_NEW);
                 }
             }
 
@@ -538,9 +538,9 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                 switch(scanner->start[2])
                 {
                     case 'f':
-                        return lit_astlex_checkkeyword(scanner, 3, 0, "", LITTOK_REF);
+                        return tin_astlex_checkkeyword(scanner, 3, 0, "", TINTOK_REF);
                     case 't':
-                        return lit_astlex_checkkeyword(scanner, 3, 3, "urn", LITTOK_RETURN);
+                        return tin_astlex_checkkeyword(scanner, 3, 3, "urn", TINTOK_RETURN);
                 }
             }
 
@@ -548,7 +548,7 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
         }
 
         case 'o':
-            return lit_astlex_checkkeyword(scanner, 1, 7, "perator", LITTOK_OPERATOR);
+            return tin_astlex_checkkeyword(scanner, 1, 7, "perator", TINTOK_OPERATOR);
 
         case 's':
         {
@@ -557,11 +557,11 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                 switch(scanner->start[1])
                 {
                     case 'u':
-                        return lit_astlex_checkkeyword(scanner, 2, 3, "per", LITTOK_SUPER);
+                        return tin_astlex_checkkeyword(scanner, 2, 3, "per", TINTOK_SUPER);
                     case 't':
-                        return lit_astlex_checkkeyword(scanner, 2, 4, "atic", LITTOK_STATIC);
+                        return tin_astlex_checkkeyword(scanner, 2, 4, "atic", TINTOK_STATIC);
                     case 'e':
-                        return lit_astlex_checkkeyword(scanner, 2, 1, "t", LITTOK_SET);
+                        return tin_astlex_checkkeyword(scanner, 2, 1, "t", TINTOK_SET);
                 }
             }
 
@@ -575,9 +575,9 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
                 switch(scanner->start[1])
                 {
                     case 'h':
-                        return lit_astlex_checkkeyword(scanner, 2, 2, "is", LITTOK_THIS);
+                        return tin_astlex_checkkeyword(scanner, 2, 2, "is", TINTOK_THIS);
                     case 'r':
-                        return lit_astlex_checkkeyword(scanner, 2, 2, "ue", LITTOK_TRUE);
+                        return tin_astlex_checkkeyword(scanner, 2, 2, "ue", TINTOK_TRUE);
                 }
             }
 
@@ -585,143 +585,143 @@ static LitAstTokType lit_astlex_scanidenttype(LitAstScanner* scanner)
         }
 
         case 'v':
-            return lit_astlex_checkkeyword(scanner, 1, 2, "ar", LITTOK_VAR);
+            return tin_astlex_checkkeyword(scanner, 1, 2, "ar", TINTOK_VAR);
         case 'w':
-            return lit_astlex_checkkeyword(scanner, 1, 4, "hile", LITTOK_WHILE);
+            return tin_astlex_checkkeyword(scanner, 1, 4, "hile", TINTOK_WHILE);
         case 'g':
-            return lit_astlex_checkkeyword(scanner, 1, 2, "et", LITTOK_GET);
+            return tin_astlex_checkkeyword(scanner, 1, 2, "et", TINTOK_GET);
     }
 
-    return LITTOK_IDENTIFIER;
+    return TINTOK_IDENTIFIER;
 }
 
-static LitAstToken lit_astlex_scanidentifier(LitAstScanner* scanner)
+static TinAstToken tin_astlex_scanidentifier(TinAstScanner* scanner)
 {
-    while(lit_lexutil_isalpha(lit_astlex_peekcurrent(scanner)) || lit_lexutil_isdigit(lit_astlex_peekcurrent(scanner)))
+    while(tin_lexutil_isalpha(tin_astlex_peekcurrent(scanner)) || tin_lexutil_isdigit(tin_astlex_peekcurrent(scanner)))
     {
-        lit_astlex_advance(scanner);
+        tin_astlex_advance(scanner);
     }
-    return lit_astlex_maketoken(scanner, lit_astlex_scanidenttype(scanner));
+    return tin_astlex_maketoken(scanner, tin_astlex_scanidenttype(scanner));
 }
 
-LitAstToken lit_astlex_scantoken(LitAstScanner* scanner)
+TinAstToken tin_astlex_scantoken(TinAstScanner* scanner)
 {
     char c;
-    LitAstToken token;
-    if(lit_astlex_skipspace(scanner))
+    TinAstToken token;
+    if(tin_astlex_skipspace(scanner))
     {
-        token = lit_astlex_maketoken(scanner, LITTOK_NEW_LINE);
+        token = tin_astlex_maketoken(scanner, TINTOK_NEW_LINE);
         scanner->line++;
         return token;
     }
     scanner->start = scanner->current;
-    if(lit_astlex_isatend(scanner))
+    if(tin_astlex_isatend(scanner))
     {
-        return lit_astlex_maketoken(scanner, LITTOK_EOF);
+        return tin_astlex_maketoken(scanner, TINTOK_EOF);
     }
-    c = lit_astlex_advance(scanner);
-    if(lit_lexutil_isdigit(c))
+    c = tin_astlex_advance(scanner);
+    if(tin_lexutil_isdigit(c))
     {
-        return lit_astlex_scannumber(scanner);
+        return tin_astlex_scannumber(scanner);
     }
-    if(lit_lexutil_isalpha(c))
+    if(tin_lexutil_isalpha(c))
     {
-        return lit_astlex_scanidentifier(scanner);
+        return tin_astlex_scanidentifier(scanner);
     }
     switch(c)
     {
         case '(':
-            return lit_astlex_maketoken(scanner, LITTOK_LEFT_PAREN);
+            return tin_astlex_maketoken(scanner, TINTOK_LEFT_PAREN);
         case ')':
-            return lit_astlex_maketoken(scanner, LITTOK_RIGHT_PAREN);
+            return tin_astlex_maketoken(scanner, TINTOK_RIGHT_PAREN);
         case '{':
             {
-                if(scanner->num_braces > 0)
+                if(scanner->numbraces > 0)
                 {
-                    scanner->braces[scanner->num_braces - 1]++;
+                    scanner->braces[scanner->numbraces - 1]++;
                 }
-                return lit_astlex_maketoken(scanner, LITTOK_LEFT_BRACE);
+                return tin_astlex_maketoken(scanner, TINTOK_LEFT_BRACE);
             }
             break;
         case '}':
             {
-                if(scanner->num_braces > 0 && --scanner->braces[scanner->num_braces - 1] == 0)
+                if(scanner->numbraces > 0 && --scanner->braces[scanner->numbraces - 1] == 0)
                 {
-                    scanner->num_braces--;
-                    return lit_astlex_scanstring(scanner, true);
+                    scanner->numbraces--;
+                    return tin_astlex_scanstring(scanner, true);
                 }
-                return lit_astlex_maketoken(scanner, LITTOK_RIGHT_BRACE);
+                return tin_astlex_maketoken(scanner, TINTOK_RIGHT_BRACE);
             }
             break;
         case '[':
-            return lit_astlex_maketoken(scanner, LITTOK_LEFT_BRACKET);
+            return tin_astlex_maketoken(scanner, TINTOK_LEFT_BRACKET);
         case ']':
-            return lit_astlex_maketoken(scanner, LITTOK_RIGHT_BRACKET);
+            return tin_astlex_maketoken(scanner, TINTOK_RIGHT_BRACKET);
         case ';':
-            return lit_astlex_maketoken(scanner, LITTOK_SEMICOLON);
+            return tin_astlex_maketoken(scanner, TINTOK_SEMICOLON);
         case ',':
-            return lit_astlex_maketoken(scanner, LITTOK_COMMA);
+            return tin_astlex_maketoken(scanner, TINTOK_COMMA);
         case ':':
-            return lit_astlex_maketoken(scanner, LITTOK_COLON);
+            return tin_astlex_maketoken(scanner, TINTOK_COLON);
         case '~':
-            return lit_astlex_maketoken(scanner, LITTOK_TILDE);
+            return tin_astlex_maketoken(scanner, TINTOK_TILDE);
         case '+':
-            return lit_astlex_matchntoken(scanner, '=', '+', LITTOK_PLUS_EQUAL, LITTOK_PLUS_PLUS, LITTOK_PLUS);
+            return tin_astlex_matchntoken(scanner, '=', '+', TINTOK_PLUS_EQUAL, TINTOK_PLUS_PLUS, TINTOK_PLUS);
         case '-':
             {
-                if(lit_astlex_matchchar(scanner, '>'))
+                if(tin_astlex_matchchar(scanner, '>'))
                 {
-                    return lit_astlex_maketoken(scanner, LITTOK_SMALL_ARROW);
+                    return tin_astlex_maketoken(scanner, TINTOK_SMALL_ARROW);
                 }
-                return lit_astlex_matchntoken(scanner, '=', '-', LITTOK_MINUS_EQUAL, LITTOK_MINUS_MINUS, LITTOK_MINUS);
+                return tin_astlex_matchntoken(scanner, '=', '-', TINTOK_MINUS_EQUAL, TINTOK_MINUS_MINUS, TINTOK_MINUS);
             }
         case '/':
-            return lit_astlex_matchtoken(scanner, '=', LITTOK_SLASH_EQUAL, LITTOK_SLASH);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_SLASH_EQUAL, TINTOK_SLASH);
         case '#':
-            return lit_astlex_matchtoken(scanner, '=', LITTOK_SHARP_EQUAL, LITTOK_SHARP);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_SHARP_EQUAL, TINTOK_SHARP);
         case '!':
-            return lit_astlex_matchtoken(scanner, '=', LITTOK_BANG_EQUAL, LITTOK_BANG);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_BANG_EQUAL, TINTOK_BANG);
         case '?':
-            return lit_astlex_matchtoken(scanner, '?', LITTOK_QUESTION_QUESTION, LITTOK_QUESTION);
+            return tin_astlex_matchtoken(scanner, '?', TINTOK_QUESTION_QUESTION, TINTOK_QUESTION);
         case '%':
-            return lit_astlex_matchtoken(scanner, '=', LITTOK_PERCENT_EQUAL, LITTOK_PERCENT);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_PERCENT_EQUAL, TINTOK_PERCENT);
         case '^':
-            return lit_astlex_matchtoken(scanner, '=', LITTOK_CARET_EQUAL, LITTOK_CARET);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_CARET_EQUAL, TINTOK_CARET);
 
         case '>':
-            return lit_astlex_matchntoken(scanner, '=', '>', LITTOK_GREATER_EQUAL, LITTOK_GREATER_GREATER, LITTOK_GREATER);
+            return tin_astlex_matchntoken(scanner, '=', '>', TINTOK_GREATER_EQUAL, TINTOK_GREATER_GREATER, TINTOK_GREATER);
         case '<':
-            return lit_astlex_matchntoken(scanner, '=', '<', LITTOK_LESS_EQUAL, LITTOK_LESS_LESS, LITTOK_LESS);
+            return tin_astlex_matchntoken(scanner, '=', '<', TINTOK_LESS_EQUAL, TINTOK_LESS_LESS, TINTOK_LESS);
         case '*':
-            return lit_astlex_matchntoken(scanner, '=', '*', LITTOK_STAR_EQUAL, LITTOK_STAR_STAR, LITTOK_STAR);
+            return tin_astlex_matchntoken(scanner, '=', '*', TINTOK_STAR_EQUAL, TINTOK_STAR_STAR, TINTOK_STAR);
         case '=':
-            return lit_astlex_matchntoken(scanner, '=', '>', LITTOK_EQUAL_EQUAL, LITTOK_ARROW, LITTOK_EQUAL);
+            return tin_astlex_matchntoken(scanner, '=', '>', TINTOK_EQUAL_EQUAL, TINTOK_ARROW, TINTOK_EQUAL);
         case '|':
-            return lit_astlex_matchntoken(scanner, '=', '|', LITTOK_BAR_EQUAL, LITTOK_BAR_BAR, LITTOK_BAR);
+            return tin_astlex_matchntoken(scanner, '=', '|', TINTOK_BAR_EQUAL, TINTOK_BAR_BAR, TINTOK_BAR);
         case '&':
             {
-                return lit_astlex_matchntoken(scanner, '=', '&', LITTOK_AMPERSAND_EQUAL, LITTOK_AMPERSAND_AMPERSAND, LITTOK_AMPERSAND);
+                return tin_astlex_matchntoken(scanner, '=', '&', TINTOK_AMPERSAND_EQUAL, TINTOK_AMPERSAND_AMPERSAND, TINTOK_AMPERSAND);
             }
             break;
         case '.':
             {
-                if(!lit_astlex_matchchar(scanner, '.'))
+                if(!tin_astlex_matchchar(scanner, '.'))
                 {
-                    return lit_astlex_maketoken(scanner, LITTOK_DOT);
+                    return tin_astlex_maketoken(scanner, TINTOK_DOT);
                 }
-                return lit_astlex_matchtoken(scanner, '.', LITTOK_DOT_DOT_DOT, LITTOK_DOT_DOT);
+                return tin_astlex_matchtoken(scanner, '.', TINTOK_DOT_DOT_DOT, TINTOK_DOT_DOT);
             }
             break;
         case '$':
             {
-                if(!lit_astlex_matchchar(scanner, '\"'))
+                if(!tin_astlex_matchchar(scanner, '\"'))
                 {
-                    return lit_astlex_makeerrortoken(scanner, "expected '%c' after '%c', got '%c'", '\"', '$', lit_astlex_peekcurrent(scanner));
+                    return tin_astlex_makeerrortoken(scanner, "expected '%c' after '%c', got '%c'", '\"', '$', tin_astlex_peekcurrent(scanner));
                 }
-                return lit_astlex_scanstring(scanner, true);
+                return tin_astlex_scanstring(scanner, true);
             }
         case '"':
-            return lit_astlex_scanstring(scanner, false);
+            return tin_astlex_scanstring(scanner, false);
     }
-    return lit_astlex_makeerrortoken(scanner, "unexpected character '%c'", c);
+    return tin_astlex_makeerrortoken(scanner, "unexpected character '%c'", c);
 }

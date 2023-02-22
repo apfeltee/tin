@@ -37,7 +37,7 @@ char* itoa(int value, char* result, int base)
     return result;
 }
 
-static char *lit_util_itoshelper(char *dest, size_t n, int x)
+static char *tin_util_itoshelper(char *dest, size_t n, int x)
 {
     if (n == 0)
     {
@@ -45,7 +45,7 @@ static char *lit_util_itoshelper(char *dest, size_t n, int x)
     }
     if (x <= -10)
     {
-        dest = lit_util_itoshelper(dest, n - 1, x / 10);
+        dest = tin_util_itoshelper(dest, n - 1, x / 10);
         if (dest == NULL)
         {
             return NULL;
@@ -55,7 +55,7 @@ static char *lit_util_itoshelper(char *dest, size_t n, int x)
     return dest + 1;
 }
 
-char *lit_util_inttostring(char *dest, size_t n, int x)
+char *tin_util_inttostring(char *dest, size_t n, int x)
 {
     char *p;
     p = dest;
@@ -77,7 +77,7 @@ char *lit_util_inttostring(char *dest, size_t n, int x)
     {
         x = -x;
     }
-    p = lit_util_itoshelper(p, n, x);
+    p = tin_util_itoshelper(p, n, x);
     if(p == NULL)
     {
         return NULL;
@@ -86,7 +86,7 @@ char *lit_util_inttostring(char *dest, size_t n, int x)
     return dest;
 }
 
-uint32_t lit_util_hashstring(const char* key, size_t length)
+uint32_t tin_util_hashstring(const char* key, size_t length)
 {
     size_t i;
     uint32_t hash = 2166136261u;
@@ -98,7 +98,7 @@ uint32_t lit_util_hashstring(const char* key, size_t length)
     return hash;
 }
 
-int lit_util_decodenumbytes(uint8_t byte)
+int tin_util_decodenumbytes(uint8_t byte)
 {
     if((byte & 0xc0) == 0x80)
     {
@@ -119,52 +119,52 @@ int lit_util_decodenumbytes(uint8_t byte)
     return 1;
 }
 
-int lit_ustring_length(LitString* string)
+int tin_ustring_length(TinString* string)
 {
     int length;
     uint32_t i;
     length = 0;
-    for(i = 0; i < lit_string_getlength(string);)
+    for(i = 0; i < tin_string_getlength(string);)
     {
-        i += lit_util_decodenumbytes(string->chars[i]);
+        i += tin_util_decodenumbytes(string->chars[i]);
         length++;
     }
     return length;
 }
 
-LitString* lit_ustring_codepointat(LitState* state, LitString* string, uint32_t index)
+TinString* tin_ustring_codepointat(TinState* state, TinString* string, uint32_t index)
 {
     char bytes[2];
     int codepoint;
-    if(index >= lit_string_getlength(string))
+    if(index >= tin_string_getlength(string))
     {
         return NULL;
     }
-    codepoint = lit_ustring_decode((uint8_t*)string->chars + index, lit_string_getlength(string) - index);
+    codepoint = tin_ustring_decode((uint8_t*)string->chars + index, tin_string_getlength(string) - index);
     if(codepoint == -1)
     {
         bytes[0] = string->chars[index];
         bytes[1] = '\0';
-        return lit_string_copy(state, bytes, 1);
+        return tin_string_copy(state, bytes, 1);
     }
-    return lit_ustring_fromcodepoint(state, codepoint);
+    return tin_ustring_fromcodepoint(state, codepoint);
 }
 
-LitString* lit_ustring_fromcodepoint(LitState* state, int value)
+TinString* tin_ustring_fromcodepoint(TinState* state, int value)
 {
     int length;
     char* bytes;
-    LitString* rt;
-    length = lit_util_encodenumbytes(value);
-    bytes = LIT_ALLOCATE(state, sizeof(char), length + 1);
-    lit_ustring_encode(value, (uint8_t*)bytes);
-    /* this should be lit_string_take, but something prevents the memory from being free'd. */
-    rt = lit_string_copy(state, bytes, length);
-    LIT_FREE(state, sizeof(char), bytes);
+    TinString* rt;
+    length = tin_util_encodenumbytes(value);
+    bytes = TIN_ALLOCATE(state, sizeof(char), length + 1);
+    tin_ustring_encode(value, (uint8_t*)bytes);
+    /* this should be tin_string_take, but something prevents the memory from being free'd. */
+    rt = tin_string_copy(state, bytes, length);
+    TIN_FREE(state, sizeof(char), bytes);
     return rt;
 }
 
-LitString* lit_ustring_fromrange(LitState* state, LitString* source, int start, uint32_t count)
+TinString* tin_ustring_fromrange(TinState* state, TinString* source, int start, uint32_t count)
 {
     int length;
     int index;
@@ -177,23 +177,23 @@ LitString* lit_ustring_fromrange(LitState* state, LitString* source, int start, 
     length = 0;
     for(i = 0; i < count; i++)
     {
-        length += lit_util_decodenumbytes(from[start + i]);
+        length += tin_util_decodenumbytes(from[start + i]);
     }
     bytes = (char*)malloc(length + 1);
     to = (uint8_t*)bytes;
     for(i = 0; i < count; i++)
     {
         index = start + i;
-        codepoint = lit_ustring_decode(from + index, lit_string_getlength(source) - index);
+        codepoint = tin_ustring_decode(from + index, tin_string_getlength(source) - index);
         if(codepoint != -1)
         {
-            to += lit_ustring_encode(codepoint, to);
+            to += tin_ustring_encode(codepoint, to);
         }
     }
-    return lit_string_take(state, bytes, length, false);
+    return tin_string_take(state, bytes, length, false);
 }
 
-int lit_util_encodenumbytes(int value)
+int tin_util_encodenumbytes(int value)
 {
     if(value <= 0x7f)
     {
@@ -214,7 +214,7 @@ int lit_util_encodenumbytes(int value)
     return 0;
 }
 
-int lit_ustring_encode(int value, uint8_t* bytes)
+int tin_ustring_encode(int value, uint8_t* bytes)
 {
     if(value <= 0x7f)
     {
@@ -252,7 +252,7 @@ int lit_ustring_encode(int value, uint8_t* bytes)
     return 0;
 }
 
-int lit_ustring_decode(const uint8_t* bytes, uint32_t length)
+int tin_ustring_decode(const uint8_t* bytes, uint32_t length)
 {
     int value;
     uint32_t remainingbytes;
@@ -296,7 +296,7 @@ int lit_ustring_decode(const uint8_t* bytes, uint32_t length)
     return value;
 }
 
-int lit_util_ucharoffset(char* str, int index)
+int tin_util_ucharoffset(char* str, int index)
 {
 #define is_utf(c) (((c)&0xC0) != 0x80)
     int offset;
@@ -310,10 +310,10 @@ int lit_util_ucharoffset(char* str, int index)
 #undef is_utf
 }
 
-LitString* lit_string_makeempty(LitState* state, size_t length, bool reuse)
+TinString* tin_string_makeempty(TinState* state, size_t length, bool reuse)
 {
-    LitString* string;
-    string = (LitString*)lit_gcmem_allocobject(state, sizeof(LitString), LITTYPE_STRING, false);
+    TinString* string;
+    string = (TinString*)tin_gcmem_allocobject(state, sizeof(TinString), TINTYPE_STRING, false);
     if(!reuse)
     {
         string->chars = sdsempty();
@@ -326,16 +326,16 @@ LitString* lit_string_makeempty(LitState* state, size_t length, bool reuse)
 }
 
 /*
-* if given $chars was alloc'd via sds, then only a LitString instance is created, without initializing
+* if given $chars was alloc'd via sds, then only a TinString instance is created, without initializing
 * string->chars.
 * if it was not, and not scheduled for reuse, then first an empty sds string is created,
 * and $chars is appended, and finally, $chars is freed.
-* NB. do *not* actually allocate any sds instance here - this is already done in lit_string_makeempty().
+* NB. do *not* actually allocate any sds instance here - this is already done in tin_string_makeempty().
 */
-LitString* lit_string_makelen(LitState* state, char* chars, size_t length, uint32_t hash, bool wassds, bool reuse)
+TinString* tin_string_makelen(TinState* state, char* chars, size_t length, uint32_t hash, bool wassds, bool reuse)
 {
-    LitString* string;
-    string = lit_string_makeempty(state, length, reuse);
+    TinString* string;
+    string = tin_string_makeempty(state, length, reuse);
     if(wassds && reuse)
     {
         string->chars = chars;
@@ -343,7 +343,7 @@ LitString* lit_string_makelen(LitState* state, char* chars, size_t length, uint3
     else
     {
         /*
-        * string->chars is initialized in lit_string_makeempty(),
+        * string->chars is initialized in tin_string_makeempty(),
         * as an empty string!
         */
         string->chars = sdscatlen(string->chars, chars, length);
@@ -351,72 +351,72 @@ LitString* lit_string_makelen(LitState* state, char* chars, size_t length, uint3
     string->hash = hash;
     if(!wassds)
     {
-        LIT_FREE(state, sizeof(char), chars);
+        TIN_FREE(state, sizeof(char), chars);
     }
-    lit_state_regstring(state, string);
+    tin_state_regstring(state, string);
     return string;
 }
 
-void lit_state_regstring(LitState* state, LitString* string)
+void tin_state_regstring(TinState* state, TinString* string)
 {
-    if(lit_string_getlength(string) > 0)
+    if(tin_string_getlength(string) > 0)
     {
-        lit_state_pushroot(state, (LitObject*)string);
-        lit_table_set(state, &state->vm->strings, string, NULL_VALUE);
-        lit_state_poproot(state);
+        tin_state_pushroot(state, (TinObject*)string);
+        tin_table_set(state, &state->vm->gcstrings, string, NULL_VALUE);
+        tin_state_poproot(state);
     }
 }
 
 /* todo: track if $chars is a sds instance - additional argument $fromsds? */
-LitString* lit_string_take(LitState* state, char* chars, size_t length, bool wassds)
+TinString* tin_string_take(TinState* state, char* chars, size_t length, bool wassds)
 {
     bool reuse;
     uint32_t hash;
-    hash = lit_util_hashstring(chars, length);
-    LitString* interned;
-    interned = lit_table_find_string(&state->vm->strings, chars, length, hash);
+    hash = tin_util_hashstring(chars, length);
+    TinString* interned;
+    interned = tin_table_find_string(&state->vm->gcstrings, chars, length, hash);
     if(interned != NULL)
     {
         if(!wassds)
         {
-            LIT_FREE(state, sizeof(char), chars);
+            TIN_FREE(state, sizeof(char), chars);
             //sdsfree(chars);
         }
         return interned;
     }
     reuse = wassds;
-    return lit_string_makelen(state, (char*)chars, length, hash, wassds, reuse);
+    return tin_string_makelen(state, (char*)chars, length, hash, wassds, reuse);
 }
 
-LitString* lit_string_copy(LitState* state, const char* chars, size_t length)
+TinString* tin_string_copy(TinState* state, const char* chars, size_t length)
 {
     uint32_t hash;
     char* heapchars;
-    LitString* interned;
-    hash= lit_util_hashstring(chars, length);
-    interned = lit_table_find_string(&state->vm->strings, chars, length, hash);
+    TinString* interned;
+    hash= tin_util_hashstring(chars, length);
+    interned = tin_table_find_string(&state->vm->gcstrings, chars, length, hash);
     if(interned != NULL)
     {
         return interned;
     }
     /*
-    heapchars = LIT_ALLOCATE(state, sizeof(char), length + 1);
+    heapchars = TIN_ALLOCATE(state, sizeof(char), length + 1);
     memcpy(heapchars, chars, length);
     heapchars[length] = '\0';
     */
     heapchars = sdsnewlen(chars, length);
-#ifdef LIT_LOG_ALLOCATION
+#ifdef TIN_LOG_ALLOCATION
     printf("Allocated new string '%s'\n", chars);
 #endif
-    return lit_string_makelen(state, heapchars, length, hash, true, true);
+    return tin_string_makelen(state, heapchars, length, hash, true, true);
 }
 
-const char* lit_string_getdata(LitString* ls)
+const char* tin_string_getdata(TinString* ls)
 {
     return ls->chars;
 }
 
-size_t lit_string_getlength(LitString* ls)
+size_t tin_string_getlength(TinString* ls)
 {
     if(ls->chars == NULL)
     {
@@ -425,7 +425,7 @@ size_t lit_string_getlength(LitString* ls)
     return sdslen(ls->chars);
 }
 
-void lit_string_appendlen(LitString* ls, const char* s, size_t len)
+void tin_string_appendlen(TinString* ls, const char* s, size_t len)
 {
     if(len > 0)
     {
@@ -440,43 +440,43 @@ void lit_string_appendlen(LitString* ls, const char* s, size_t len)
     }
 }
 
-void lit_string_appendobj(LitString* ls, LitString* other)
+void tin_string_appendobj(TinString* ls, TinString* other)
 {
-    lit_string_appendlen(ls, other->chars, lit_string_getlength(other));
+    tin_string_appendlen(ls, other->chars, tin_string_getlength(other));
 }
 
-void lit_string_appendchar(LitString* ls, char ch)
+void tin_string_appendchar(TinString* ls, char ch)
 {
     ls->chars = sdscatlen(ls->chars, (const char*)&ch, 1);
 }
 
-LitValue lit_string_numbertostring(LitState* state, double value)
+TinValue tin_string_numbertostring(TinState* state, double value)
 {
     if(isnan(value))
     {
-        return lit_value_makestring(state, "nan");
+        return tin_value_makestring(state, "nan");
     }
 
     if(isinf(value))
     {
         if(value > 0.0)
         {
-            return lit_value_makestring(state, "infinity");
+            return tin_value_makestring(state, "infinity");
         }
         else
         {
-            return lit_value_makestring(state, "-infinity");
+            return tin_value_makestring(state, "-infinity");
         }
     }
 
     char buffer[24];
     int length = sprintf(buffer, "%.14g", value);
 
-    return lit_value_fromobject(lit_string_copy(state, buffer, length));
+    return tin_value_fromobject(tin_string_copy(state, buffer, length));
 }
 
 
-LitValue lit_string_format(LitState* state, const char* format, ...)
+TinValue tin_string_format(TinState* state, const char* format, ...)
 {
     char ch;
     size_t length;
@@ -485,15 +485,15 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
     const char* c;
     const char* strval;
     va_list arglist;
-    LitValue val;
-    LitString* string;
-    LitString* result;
-    wasallowed = state->allow_gc;
-    state->allow_gc = false;
+    TinValue val;
+    TinString* string;
+    TinString* result;
+    wasallowed = state->gcallow;
+    state->gcallow = false;
     va_start(arglist, format);
     totallength = strlen(format);
     va_end(arglist);
-    result = lit_string_makeempty(state, totallength + 1, false);
+    result = tin_string_makeempty(state, totallength + 1, false);
     va_start(arglist, format);
     for(c = format; *c != '\0'; c++)
     {
@@ -515,15 +515,15 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
                 break;
             case '@':
                 {
-                    val = va_arg(arglist, LitValue);
-                    if(lit_value_isstring(val))
+                    val = va_arg(arglist, TinValue);
+                    if(tin_value_isstring(val))
                     {
-                        string = lit_value_asstring(val);
+                        string = tin_value_asstring(val);
                     }
                     else
                     {
-                        //fprintf(stderr, "format: not a string, but a '%s'\n", lit_tostring_typename(val));
-                        //string = lit_value_tostring(state, val);
+                        //fprintf(stderr, "format: not a string, but a '%s'\n", tin_tostring_typename(val));
+                        //string = tin_value_tostring(state, val);
                         goto defaultendingcopying;
                     }
                     if(string != NULL)
@@ -542,7 +542,7 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
                 break;
             case '#':
                 {
-                    string = lit_value_asstring(lit_string_numbertostring(state, va_arg(arglist, double)));
+                    string = tin_value_asstring(tin_string_numbertostring(state, va_arg(arglist, double)));
                     length = sdslen(string->chars);
                     if(length > 0)
                     {
@@ -560,13 +560,13 @@ LitValue lit_string_format(LitState* state, const char* format, ...)
         }
     }
     va_end(arglist);
-    result->hash = lit_util_hashstring(result->chars, lit_string_getlength(result));
-    lit_state_regstring(state, result);
-    state->allow_gc = wasallowed;
-    return lit_value_fromobject(result);
+    result->hash = tin_util_hashstring(result->chars, tin_string_getlength(result));
+    tin_state_regstring(state, result);
+    state->gcallow = wasallowed;
+    return tin_value_fromobject(result);
 }
 
-bool lit_string_equal(LitState* state, LitString* a, LitString* b)
+bool tin_string_equal(TinState* state, TinString* a, TinString* b)
 {
     (void)state;
     if((a == NULL) || (b == NULL))
@@ -576,47 +576,47 @@ bool lit_string_equal(LitState* state, LitString* a, LitString* b)
     return (sdscmp(a->chars, b->chars) == 0);
 }
 
-LitValue util_invalid_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv);
+TinValue util_invalid_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv);
 
 
-static LitValue objfn_string_fromcharcode(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_fromcharcode(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     char ch;
-    LitString* s;
+    TinString* s;
     (void)instance;
-    ch = lit_value_checknumber(vm, argv, argc, 0);
-    s = lit_string_copy(vm->state, &ch, 1);
-    return lit_value_fromobject(s);
+    ch = tin_value_checknumber(vm, argv, argc, 0);
+    s = tin_string_copy(vm->state, &ch, 1);
+    return tin_value_fromobject(s);
 }
 
-static LitValue objfn_string_plus(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_plus(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitString* selfstr;
-    LitString* result;
-    LitValue value;
+    TinString* selfstr;
+    TinString* result;
+    TinValue value;
     (void)argc;
-    selfstr = lit_value_asstring(instance);
+    selfstr = tin_value_asstring(instance);
     value = argv[0];
-    LitString* strval = NULL;
-    if(lit_value_isstring(value))
+    TinString* strval = NULL;
+    if(tin_value_isstring(value))
     {
-        strval = lit_value_asstring(value);
+        strval = tin_value_asstring(value);
     }
     else
     {
-        strval = lit_value_tostring(vm->state, value);
+        strval = tin_value_tostring(vm->state, value);
     }
-    result = lit_string_makeempty(vm->state, lit_string_getlength(selfstr) + lit_string_getlength(strval), false);
-    lit_string_appendobj(result, selfstr);
-    lit_string_appendobj(result, strval);
-    lit_state_regstring(vm->state, result);
-    return lit_value_fromobject(result);
+    result = tin_string_makeempty(vm->state, tin_string_getlength(selfstr) + tin_string_getlength(strval), false);
+    tin_string_appendobj(result, selfstr);
+    tin_string_appendobj(result, strval);
+    tin_state_regstring(vm->state, result);
+    return tin_value_fromobject(result);
 }
 
-static LitValue objfn_string_splice(LitVM* vm, LitString* string, int from, int to)
+static TinValue objfn_string_splice(TinVM* vm, TinString* string, int from, int to)
 {
     int length;
-    length = lit_ustring_length(string);
+    length = tin_ustring_length(string);
     if(from < 0)
     {
         from = length + from;
@@ -629,85 +629,85 @@ static LitValue objfn_string_splice(LitVM* vm, LitString* string, int from, int 
     to = fmin(to, length - 1);
     if(from > to)
     {
-        lit_vm_raiseexitingerror(vm, "String.splice argument 'from' is larger than argument 'to'");
+        tin_vm_raiseexitingerror(vm, "String.splice argument 'from' is larger than argument 'to'");
     }
-    from = lit_util_ucharoffset(string->chars, from);
-    to = lit_util_ucharoffset(string->chars, to);
-    return lit_value_fromobject(lit_ustring_fromrange(vm->state, string, from, to - from + 1));
+    from = tin_util_ucharoffset(string->chars, from);
+    to = tin_util_ucharoffset(string->chars, to);
+    return tin_value_fromobject(tin_ustring_fromrange(vm->state, string, from, to - from + 1));
 }
 
-static LitValue objfn_string_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int index;
-    LitString* c;
-    LitString* string;
-    if(lit_value_isrange(argv[0]))
+    TinString* c;
+    TinString* string;
+    if(tin_value_isrange(argv[0]))
     {
-        LitRange* range = lit_value_asrange(argv[0]);
-        return objfn_string_splice(vm, lit_value_asstring(instance), range->from, range->to);
+        TinRange* range = tin_value_asrange(argv[0]);
+        return objfn_string_splice(vm, tin_value_asstring(instance), range->from, range->to);
     }
-    string = lit_value_asstring(instance);
-    index = lit_value_checknumber(vm, argv, argc, 0);
+    string = tin_value_asstring(instance);
+    index = tin_value_checknumber(vm, argv, argc, 0);
     if(argc != 1)
     {
-        lit_vm_raiseexitingerror(vm, "cannot modify strings with the subscript op");
+        tin_vm_raiseexitingerror(vm, "cannot modify strings with the subscript op");
     }
     if(index < 0)
     {
-        index = lit_ustring_length(string) + index;
+        index = tin_ustring_length(string) + index;
 
         if(index < 0)
         {
             return NULL_VALUE;
         }
     }
-    c = lit_ustring_codepointat(vm->state, string, lit_util_ucharoffset(string->chars, index));
-    return c == NULL ? NULL_VALUE : lit_value_fromobject(c);
+    c = tin_ustring_codepointat(vm->state, string, tin_util_ucharoffset(string->chars, index));
+    return c == NULL ? NULL_VALUE : tin_value_fromobject(c);
 }
 
 
-static LitValue objfn_string_compare(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_compare(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitString* self;
-    LitString* other;
+    TinString* self;
+    TinString* other;
     (void)argc;
-    self = lit_value_asstring(instance);
-    if(lit_value_isstring(argv[0]))
+    self = tin_value_asstring(instance);
+    if(tin_value_isstring(argv[0]))
     {
-        other = lit_value_asstring(argv[0]);
-        if(lit_string_getlength(self) == lit_string_getlength(other))
+        other = tin_value_asstring(argv[0]);
+        if(tin_string_getlength(self) == tin_string_getlength(other))
         {
             //fprintf(stderr, "string: same length(self=\"%s\" other=\"%s\")... strncmp=%d\n", self->chars, other->chars, strncmp(self->chars, other->chars, self->length));
-            if(memcmp(self->chars, other->chars, lit_string_getlength(self)) == 0)
+            if(memcmp(self->chars, other->chars, tin_string_getlength(self)) == 0)
             {
                 return TRUE_VALUE;
             }
         }
         return FALSE_VALUE;
     }
-    else if(lit_value_isnull(argv[0]))
+    else if(tin_value_isnull(argv[0]))
     {
-        if((self == NULL) || lit_value_isnull(instance))
+        if((self == NULL) || tin_value_isnull(instance))
         {
             return TRUE_VALUE;
         }
         return FALSE_VALUE;
     }
-    lit_vm_raiseexitingerror(vm, "can only compare string to another string or null");
+    tin_vm_raiseexitingerror(vm, "can only compare string to another string or null");
     return FALSE_VALUE;
 }
 
-static LitValue objfn_string_less(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_less(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    return lit_value_makebool(vm->state, strcmp(lit_value_asstring(instance)->chars, lit_value_checkstring(vm, argv, argc, 0)) < 0);
+    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->chars, tin_value_checkstring(vm, argv, argc, 0)) < 0);
 }
 
-static LitValue objfn_string_greater(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_greater(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    return lit_value_makebool(vm->state, strcmp(lit_value_asstring(instance)->chars, lit_value_checkstring(vm, argv, argc, 0)) > 0);
+    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->chars, tin_value_checkstring(vm, argv, argc, 0)) > 0);
 }
 
-static LitValue objfn_string_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
@@ -715,103 +715,103 @@ static LitValue objfn_string_tostring(LitVM* vm, LitValue instance, size_t argc,
     return instance;
 }
 
-static LitValue objfn_string_tonumber(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_tonumber(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     double result;
     (void)vm;
     (void)argc;
     (void)argv;
-    result = strtod(lit_value_asstring(instance)->chars, NULL);
+    result = strtod(tin_value_asstring(instance)->chars, NULL);
     if(errno == ERANGE)
     {
         errno = 0;
         return NULL_VALUE;
     }
-    return lit_value_makenumber(vm->state, result);
+    return tin_value_makefixednumber(vm->state, result);
 }
 
-static LitValue objfn_string_touppercase(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_touppercase(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
     char* buffer;
-    LitString* rt;
-    LitString* string;
-    string = lit_value_asstring(instance);
+    TinString* rt;
+    TinString* string;
+    string = tin_value_asstring(instance);
     (void)argc;
     (void)argv;
-    buffer = LIT_ALLOCATE(vm->state, sizeof(char), lit_string_getlength(string) + 1);
-    for(i = 0; i < lit_string_getlength(string); i++)
+    buffer = TIN_ALLOCATE(vm->state, sizeof(char), tin_string_getlength(string) + 1);
+    for(i = 0; i < tin_string_getlength(string); i++)
     {
         buffer[i] = (char)toupper(string->chars[i]);
     }
     buffer[i] = 0;
-    rt = lit_string_take(vm->state, buffer, lit_string_getlength(string), false);
-    return lit_value_fromobject(rt);
+    rt = tin_string_take(vm->state, buffer, tin_string_getlength(string), false);
+    return tin_value_fromobject(rt);
 }
 
-static LitValue objfn_string_tolowercase(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_tolowercase(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
     char* buffer;
-    LitString* rt;
-    LitString* string;
-    string = lit_value_asstring(instance);
+    TinString* rt;
+    TinString* string;
+    string = tin_value_asstring(instance);
     (void)argc;
     (void)argv;
-    buffer = LIT_ALLOCATE(vm->state, sizeof(char), lit_string_getlength(string) + 1);
-    for(i = 0; i < lit_string_getlength(string); i++)
+    buffer = TIN_ALLOCATE(vm->state, sizeof(char), tin_string_getlength(string) + 1);
+    for(i = 0; i < tin_string_getlength(string); i++)
     {
         buffer[i] = (char)tolower(string->chars[i]);
     }
     buffer[i] = 0;
-    rt = lit_string_take(vm->state, buffer, lit_string_getlength(string), false);
-    return lit_value_fromobject(rt);
+    rt = tin_string_take(vm->state, buffer, tin_string_getlength(string), false);
+    return tin_value_fromobject(rt);
 }
 
-static LitValue objfn_string_tobyte(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_tobyte(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int iv;
-    LitString* selfstr;
+    TinString* selfstr;
     (void)vm;
     (void)argc;
     (void)argv;
-    selfstr = lit_value_asstring(instance);
-    iv = lit_ustring_decode((const uint8_t*)selfstr->chars, lit_string_getlength(selfstr));
-    return lit_value_makenumber(vm->state, iv);
+    selfstr = tin_value_asstring(instance);
+    iv = tin_ustring_decode((const uint8_t*)selfstr->chars, tin_string_getlength(selfstr));
+    return tin_value_makefixednumber(vm->state, iv);
 }
 
-static LitValue objfn_string_contains(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_contains(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    LitString* sub;
-    LitString* string;
-    string = lit_value_asstring(instance);
-    sub = lit_value_checkobjstring(vm, argv, argc, 0);
+    TinString* sub;
+    TinString* string;
+    string = tin_value_asstring(instance);
+    sub = tin_value_checkobjstring(vm, argv, argc, 0);
     if(sub == string)
     {
         return TRUE_VALUE;
     }
-    return lit_value_makebool(vm->state, strstr(string->chars, sub->chars) != NULL);
+    return tin_value_makebool(vm->state, strstr(string->chars, sub->chars) != NULL);
 }
 
-static LitValue objfn_string_startswith(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_startswith(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
-    LitString* sub;
-    LitString* string;
-    string = lit_value_asstring(instance);
-    sub = lit_value_checkobjstring(vm, argv, argc, 0);
+    TinString* sub;
+    TinString* string;
+    string = tin_value_asstring(instance);
+    sub = tin_value_checkobjstring(vm, argv, argc, 0);
     if(sub == string)
     {
         return TRUE_VALUE;
     }
-    if(lit_string_getlength(sub) > lit_string_getlength(string))
+    if(tin_string_getlength(sub) > tin_string_getlength(string))
     {
         return FALSE_VALUE;
     }
-    for(i = 0; i < lit_string_getlength(sub); i++)
+    for(i = 0; i < tin_string_getlength(sub); i++)
     {
         if(sub->chars[i] != string->chars[i])
         {
@@ -821,24 +821,24 @@ static LitValue objfn_string_startswith(LitVM* vm, LitValue instance, size_t arg
     return TRUE_VALUE;
 }
 
-static LitValue objfn_string_endswith(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_endswith(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
     size_t start;
-    LitString* sub;
-    LitString* string;
-    string = lit_value_asstring(instance);
-    sub = lit_value_checkobjstring(vm, argv, argc, 0);
+    TinString* sub;
+    TinString* string;
+    string = tin_value_asstring(instance);
+    sub = tin_value_checkobjstring(vm, argv, argc, 0);
     if(sub == string)
     {
         return TRUE_VALUE;
     }
-    if(lit_string_getlength(sub) > lit_string_getlength(string))
+    if(tin_string_getlength(sub) > tin_string_getlength(string))
     {
         return FALSE_VALUE;
     }
-    start = lit_string_getlength(string) - lit_string_getlength(sub);
-    for(i = 0; i < lit_string_getlength(sub); i++)
+    start = tin_string_getlength(string) - tin_string_getlength(sub);
+    for(i = 0; i < tin_string_getlength(sub); i++)
     {
         if(sub->chars[i] != string->chars[i + start])
         {
@@ -848,31 +848,30 @@ static LitValue objfn_string_endswith(LitVM* vm, LitValue instance, size_t argc,
     return TRUE_VALUE;
 }
 
-
-static LitValue objfn_string_replace(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_replace(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
     size_t bufferlength;
     size_t bufferindex;
     char* buffer;
-    LitString* string;
-    LitString* what;
-    LitString* with;
-    LIT_ENSURE_ARGS(vm->state, 2);
-    if(!lit_value_isstring(argv[0]) || !lit_value_isstring(argv[1]))
+    TinString* string;
+    TinString* what;
+    TinString* with;
+    TIN_ENSURE_ARGS(vm->state, 2);
+    if(!tin_value_isstring(argv[0]) || !tin_value_isstring(argv[1]))
     {
-        lit_vm_raiseexitingerror(vm, "expected 2 string arguments");
+        tin_vm_raiseexitingerror(vm, "expected 2 string arguments");
     }
-    string = lit_value_asstring(instance);
-    what = lit_value_asstring(argv[0]);
-    with = lit_value_asstring(argv[1]);
+    string = tin_value_asstring(instance);
+    what = tin_value_asstring(argv[0]);
+    with = tin_value_asstring(argv[1]);
     bufferlength = 0;
-    for(i = 0; i < lit_string_getlength(string); i++)
+    for(i = 0; i < tin_string_getlength(string); i++)
     {
-        if(strncmp(string->chars + i, what->chars, lit_string_getlength(what)) == 0)
+        if(strncmp(string->chars + i, what->chars, tin_string_getlength(what)) == 0)
         {
-            i += lit_string_getlength(what) - 1;
-            bufferlength += lit_string_getlength(with);
+            i += tin_string_getlength(what) - 1;
+            bufferlength += tin_string_getlength(with);
         }
         else
         {
@@ -880,14 +879,14 @@ static LitValue objfn_string_replace(LitVM* vm, LitValue instance, size_t argc, 
         }
     }
     bufferindex = 0;
-    buffer = LIT_ALLOCATE(vm->state, sizeof(char), bufferlength+1);
-    for(i = 0; i < lit_string_getlength(string); i++)
+    buffer = TIN_ALLOCATE(vm->state, sizeof(char), bufferlength+1);
+    for(i = 0; i < tin_string_getlength(string); i++)
     {
-        if(strncmp(string->chars + i, what->chars, lit_string_getlength(what)) == 0)
+        if(strncmp(string->chars + i, what->chars, tin_string_getlength(what)) == 0)
         {
-            memcpy(buffer + bufferindex, with->chars, lit_string_getlength(with));
-            bufferindex += lit_string_getlength(with);
-            i += lit_string_getlength(what) - 1;
+            memcpy(buffer + bufferindex, with->chars, tin_string_getlength(with));
+            bufferindex += tin_string_getlength(with);
+            i += tin_string_getlength(what) - 1;
         }
         else
         {
@@ -896,81 +895,79 @@ static LitValue objfn_string_replace(LitVM* vm, LitValue instance, size_t argc, 
         }
     }
     buffer[bufferlength] = '\0';
-    return lit_value_fromobject(lit_string_take(vm->state, buffer, bufferlength, false));
+    return tin_value_fromobject(tin_string_take(vm->state, buffer, bufferlength, false));
 }
 
-static LitValue objfn_string_substring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_substring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int to;
     int from;
-    from = lit_value_checknumber(vm, argv, argc, 0);
-    to = lit_value_checknumber(vm, argv, argc, 1);
-    return objfn_string_splice(vm, lit_value_asstring(instance), from, to);
+    from = tin_value_checknumber(vm, argv, argc, 0);
+    to = tin_value_checknumber(vm, argv, argc, 1);
+    return objfn_string_splice(vm, tin_value_asstring(instance), from, to);
 }
 
-
-static LitValue objfn_string_byteat(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_byteat(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int idx;
-    idx = lit_value_checknumber(vm, argv, argc, 0);
-    return lit_value_makenumber(vm->state, lit_value_asstring(instance)->chars[idx]);
+    idx = tin_value_checknumber(vm, argv, argc, 0);
+    return tin_value_makefixednumber(vm->state, tin_value_asstring(instance)->chars[idx]);
 }
 
-
-static LitValue objfn_string_indexof(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int i;
     int len;
     char findme;
-    LitString* self;
+    TinString* self;
     findme = -1;
-    if(lit_value_isstring(argv[0]))
+    if(tin_value_isstring(argv[0]))
     {
-        findme = lit_value_checkobjstring(vm, argv, argc, 0)->chars[0];
+        findme = tin_value_checkobjstring(vm, argv, argc, 0)->chars[0];
     }
     else
     {
-        if(lit_value_isnull(argv[0]))
+        if(tin_value_isnull(argv[0]))
         {
-            return lit_value_makefixednumber(vm->state, -1);
+            return tin_value_makefixednumber(vm->state, -1);
         }
-        findme = lit_value_checknumber(vm, argv, argc, 0);
+        findme = tin_value_checknumber(vm, argv, argc, 0);
     }
-    self = lit_value_asstring(instance);
-    len = lit_string_getlength(self);
+    self = tin_value_asstring(instance);
+    len = tin_string_getlength(self);
     for(i=0; i<len; i++)
     {
         if(self->chars[i] == findme)
         {
-            return lit_value_makefixednumber(vm->state, i);
+            return tin_value_makefixednumber(vm->state, i);
         }
     }
-    return lit_value_makefixednumber(vm->state, -1);
+    return tin_value_makefixednumber(vm->state, -1);
 }
 
 
-static LitValue objfn_string_length(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_makenumber(vm->state, lit_ustring_length(lit_value_asstring(instance)));
+    return tin_value_makefixednumber(vm->state, tin_ustring_length(tin_value_asstring(instance)));
 }
 
-static LitValue objfn_string_iterator(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int index;
-    LitString* string;
-    string = lit_value_asstring(instance);
-    if(lit_value_isnull(argv[0]))
+    TinString* string;
+    string = tin_value_asstring(instance);
+    if(tin_value_isnull(argv[0]))
     {
-        if(lit_string_getlength(string) == 0)
+        if(tin_string_getlength(string) == 0)
         {
             return NULL_VALUE;
         }
-        return lit_value_makenumber(vm->state, 0);
+        return tin_value_makefixednumber(vm->state, 0);
     }
-    index = lit_value_checknumber(vm, argv, argc, 0);
+    index = tin_value_checknumber(vm, argv, argc, 0);
     if(index < 0)
     {
         return NULL_VALUE;
@@ -978,30 +975,30 @@ static LitValue objfn_string_iterator(LitVM* vm, LitValue instance, size_t argc,
     do
     {
         index++;
-        if(index >= (int)lit_string_getlength(string))
+        if(index >= (int)tin_string_getlength(string))
         {
             return NULL_VALUE;
         }
     } while((string->chars[index] & 0xc0) == 0x80);
-    return lit_value_makenumber(vm->state, index);
+    return tin_value_makefixednumber(vm->state, index);
 }
 
 
-static LitValue objfn_string_iteratorvalue(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     uint32_t index;
-    LitString* string;
-    string = lit_value_asstring(instance);
-    index = lit_value_checknumber(vm, argv, argc, 0);
+    TinString* string;
+    string = tin_value_asstring(instance);
+    index = tin_value_checknumber(vm, argv, argc, 0);
     if(index == UINT32_MAX)
     {
         return FALSE_VALUE;
     }
-    return lit_value_fromobject(lit_ustring_codepointat(vm->state, string, index));
+    return tin_value_fromobject(tin_ustring_codepointat(vm->state, string, index));
 }
 
 
-bool check_fmt_arg(LitVM* vm, char* buf, size_t ai, size_t argc, LitValue* argv, const char* fmttext)
+bool check_fmt_arg(TinVM* vm, char* buf, size_t ai, size_t argc, TinValue* argv, const char* fmttext)
 {
     (void)argv;
     if(ai <= argc)
@@ -1009,11 +1006,11 @@ bool check_fmt_arg(LitVM* vm, char* buf, size_t ai, size_t argc, LitValue* argv,
         return true;
     }
     sdsfree(buf);
-    lit_vm_raiseexitingerror(vm, "too few arguments for format flag '%s' at position %d (argc=%d)", fmttext, ai, argc);
+    tin_vm_raiseexitingerror(vm, "too few arguments for format flag '%s' at position %d (argc=%d)", fmttext, ai, argc);
     return false;
 }
 
-static LitValue objfn_string_format(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     char ch;
     char pch;
@@ -1023,12 +1020,12 @@ static LitValue objfn_string_format(LitVM* vm, LitValue instance, size_t argc, L
     size_t i;
     size_t ai;
     size_t selflen;
-    LitString* selfstr;
-    LitValue rtv;
+    TinString* selfstr;
+    TinValue rtv;
     char* buf;
     (void)pch;
-    selfstr = lit_value_asstring(instance);
-    selflen = lit_string_getlength(selfstr);
+    selfstr = tin_value_asstring(instance);
+    selflen = tin_string_getlength(selfstr);
     buf = sdsempty();
     buf = sdsMakeRoomFor(buf, selflen + 10);
     ai = 0;
@@ -1061,7 +1058,7 @@ static LitValue objfn_string_format(LitVM* vm, LitValue instance, size_t argc, L
                             {
                                 return NULL_VALUE;
                             }
-                            buf = sdscatlen(buf, lit_value_asstring(argv[ai])->chars, lit_string_getlength(lit_value_asstring(argv[ai])));
+                            buf = sdscatlen(buf, tin_value_asstring(argv[ai])->chars, tin_string_getlength(tin_value_asstring(argv[ai])));
                         }
                         break;
                     case 'd':
@@ -1071,9 +1068,9 @@ static LitValue objfn_string_format(LitVM* vm, LitValue instance, size_t argc, L
                             {
                                 return NULL_VALUE;
                             }
-                            if(lit_value_isnumber(argv[ai]))
+                            if(tin_value_isnumber(argv[ai]))
                             {
-                                iv = lit_value_checknumber(vm, argv, argc, ai);
+                                iv = tin_value_checknumber(vm, argv, argc, ai);
                                 buf = sdscatfmt(buf, "%i", iv);
                             }
                             break;
@@ -1085,12 +1082,12 @@ static LitValue objfn_string_format(LitVM* vm, LitValue instance, size_t argc, L
                             {
                                 return NULL_VALUE;
                             }
-                            if(!lit_value_isnumber(argv[ai]))
+                            if(!tin_value_isnumber(argv[ai]))
                             {
                                 sdsfree(buf);
-                                lit_vm_raiseexitingerror(vm, "flag 'c' expects a number");
+                                tin_vm_raiseexitingerror(vm, "flag 'c' expects a number");
                             }
-                            iv = lit_value_checknumber(vm, argv, argc, ai);
+                            iv = tin_value_checknumber(vm, argv, argc, ai);
                             /* TODO: both of these use the same amount of memory. but which is faster? */
                             #if 0
                                 buf = sdscatfmt(buf, "%c", iv);
@@ -1103,7 +1100,7 @@ static LitValue objfn_string_format(LitVM* vm, LitValue instance, size_t argc, L
                     default:
                         {
                             sdsfree(buf);
-                            lit_vm_raiseexitingerror(vm, "unrecognized formatting flag '%c'", nch);
+                            tin_vm_raiseexitingerror(vm, "unrecognized formatting flag '%c'", nch);
                             return NULL_VALUE;
                         }
                         break;
@@ -1116,63 +1113,63 @@ static LitValue objfn_string_format(LitVM* vm, LitValue instance, size_t argc, L
             buf = sdscatlen(buf, &ch, 1);
         }
     }
-    rtv = lit_value_fromobject(lit_string_copy(vm->state, buf, sdslen(buf)));
+    rtv = tin_value_fromobject(tin_string_copy(vm->state, buf, sdslen(buf)));
     sdsfree(buf);
     return rtv;
 }
 
-void lit_open_string_library(LitState* state)
+void tin_open_string_library(TinState* state)
 {
     {
-        LitClass* klass;
-        klass = lit_create_classobject(state, "String");
+        TinClass* klass;
+        klass = tin_create_classobject(state, "String");
         {
-            lit_class_inheritfrom(state, klass, state->objectvalue_class);
-            lit_class_bindconstructor(state, klass, util_invalid_constructor);
-            lit_class_bindstaticmethod(state, klass, "fromCharCode", objfn_string_fromcharcode);
-            lit_class_bindmethod(state, klass, "+", objfn_string_plus);
-            lit_class_bindmethod(state, klass, "[]", objfn_string_subscript);
-            lit_class_bindmethod(state, klass, "<", objfn_string_less);
-            lit_class_bindmethod(state, klass, ">", objfn_string_greater);
-            lit_class_bindmethod(state, klass, "==", objfn_string_compare);
-            lit_class_bindmethod(state, klass, "toString", objfn_string_tostring);
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
+            tin_class_bindconstructor(state, klass, util_invalid_constructor);
+            tin_class_bindstaticmethod(state, klass, "fromCharCode", objfn_string_fromcharcode);
+            tin_class_bindmethod(state, klass, "+", objfn_string_plus);
+            tin_class_bindmethod(state, klass, "[]", objfn_string_subscript);
+            tin_class_bindmethod(state, klass, "<", objfn_string_less);
+            tin_class_bindmethod(state, klass, ">", objfn_string_greater);
+            tin_class_bindmethod(state, klass, "==", objfn_string_compare);
+            tin_class_bindmethod(state, klass, "toString", objfn_string_tostring);
             // js-isms
-            lit_class_bindmethod(state, klass, "indexOf", objfn_string_indexof);
-            lit_class_bindmethod(state, klass, "charCodeAt", objfn_string_byteat);
-            lit_class_bindmethod(state, klass, "charAt", objfn_string_subscript);
+            tin_class_bindmethod(state, klass, "indexOf", objfn_string_indexof);
+            tin_class_bindmethod(state, klass, "charCodeAt", objfn_string_byteat);
+            tin_class_bindmethod(state, klass, "charAt", objfn_string_subscript);
             {
-                lit_class_bindmethod(state, klass, "toNumber", objfn_string_tonumber);
-                lit_class_bindgetset(state, klass, "to_i", objfn_string_tonumber, NULL, false);
+                tin_class_bindmethod(state, klass, "toNumber", objfn_string_tonumber);
+                tin_class_bindgetset(state, klass, "to_i", objfn_string_tonumber, NULL, false);
             }
             {
-                lit_class_bindmethod(state, klass, "toUpperCase", objfn_string_touppercase);
-                lit_class_bindmethod(state, klass, "toUpper", objfn_string_touppercase);
-                lit_class_bindgetset(state, klass, "upper", objfn_string_touppercase, NULL, false);
+                tin_class_bindmethod(state, klass, "toUpperCase", objfn_string_touppercase);
+                tin_class_bindmethod(state, klass, "toUpper", objfn_string_touppercase);
+                tin_class_bindgetset(state, klass, "upper", objfn_string_touppercase, NULL, false);
             }
             {
-                lit_class_bindmethod(state, klass, "toLowerCase", objfn_string_tolowercase);
-                lit_class_bindmethod(state, klass, "toLower", objfn_string_tolowercase);
-                lit_class_bindgetset(state, klass, "lower", objfn_string_tolowercase, NULL, false);
+                tin_class_bindmethod(state, klass, "toLowerCase", objfn_string_tolowercase);
+                tin_class_bindmethod(state, klass, "toLower", objfn_string_tolowercase);
+                tin_class_bindgetset(state, klass, "lower", objfn_string_tolowercase, NULL, false);
             }
             {
-                lit_class_bindgetset(state, klass, "toByte", objfn_string_tobyte, NULL, false);
-                lit_class_bindgetset(state, klass, "ord", objfn_string_tobyte, NULL, false);
+                tin_class_bindgetset(state, klass, "toByte", objfn_string_tobyte, NULL, false);
+                tin_class_bindgetset(state, klass, "ord", objfn_string_tobyte, NULL, false);
             }
-            lit_class_bindmethod(state, klass, "contains", objfn_string_contains);
-            lit_class_bindmethod(state, klass, "startsWith", objfn_string_startswith);
-            lit_class_bindmethod(state, klass, "endsWith", objfn_string_endswith);
-            lit_class_bindmethod(state, klass, "replace", objfn_string_replace);
-            lit_class_bindmethod(state, klass, "substring", objfn_string_substring);
-            lit_class_bindmethod(state, klass, "iterator", objfn_string_iterator);
-            lit_class_bindmethod(state, klass, "iteratorValue", objfn_string_iteratorvalue);
-            lit_class_bindgetset(state, klass, "length", objfn_string_length, NULL, false);
-            lit_class_bindmethod(state, klass, "format", objfn_string_format);
-            state->stringvalue_class = klass;
+            tin_class_bindmethod(state, klass, "contains", objfn_string_contains);
+            tin_class_bindmethod(state, klass, "startsWith", objfn_string_startswith);
+            tin_class_bindmethod(state, klass, "endsWith", objfn_string_endswith);
+            tin_class_bindmethod(state, klass, "replace", objfn_string_replace);
+            tin_class_bindmethod(state, klass, "substring", objfn_string_substring);
+            tin_class_bindmethod(state, klass, "iterator", objfn_string_iterator);
+            tin_class_bindmethod(state, klass, "iteratorValue", objfn_string_iteratorvalue);
+            tin_class_bindgetset(state, klass, "length", objfn_string_length, NULL, false);
+            tin_class_bindmethod(state, klass, "format", objfn_string_format);
+            state->primstringclass = klass;
         }
-        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
         if(klass->super == NULL)
         {
-            lit_class_inheritfrom(state, klass, state->objectvalue_class);
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
         };
     }
 }

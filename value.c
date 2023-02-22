@@ -3,26 +3,22 @@
 #include <stdio.h>
 #include "priv.h"
 
-LitValue lit_value_fromobject_actual(LitObject* obj)
+TinValue tin_value_fromobject_actual(TinObject* obj)
 {
-    LitValue val;
-    val.type = LITVAL_OBJECT;
+    TinValue val;
+    val.type = TINVAL_OBJECT;
     val.isfixednumber = false;
     val.obj = obj;
     return val;
 }
 
-bool lit_value_isobject(LitValue v)
-{
-    return v.type == LITVAL_OBJECT;
-}
 
-LitObject* lit_value_asobject(LitValue v)
+TinObject* tin_value_asobject(TinValue v)
 {
     return v.obj;
 }
 
-LitValue lit_value_makebool(LitState* state, bool b) 
+TinValue tin_value_makebool(TinState* state, bool b) 
 {
     (void)state;
     if(!b)
@@ -32,91 +28,50 @@ LitValue lit_value_makebool(LitState* state, bool b)
     return TRUE_VALUE;
 }
 
-bool lit_value_isbool(LitValue v)
-{
-    return v.type == LITVAL_BOOL;
-}
 
-bool lit_value_isfalsey(LitValue v)
-{
-    return (lit_value_isbool(v) && !v.boolval) || lit_value_isnull(v) || (lit_value_isnumber(v) && lit_value_asnumber(v) == 0);
-}
 
-bool lit_value_asbool(LitValue v)
+TinObjType tin_value_type(TinValue v)
 {
-    return v.boolval;
-}
-
-bool lit_value_isnull(LitValue v)
-{
-    return (v.type == LITVAL_NULL);
-}
-
-LitObjType lit_value_type(LitValue v)
-{
-    LitObject* o;
-    if(lit_value_isobject(v))
+    TinObject* o;
+    if(tin_value_isobject(v))
     {
-        o = lit_value_asobject(v);
+        o = tin_value_asobject(v);
         if(o == NULL)
         {
-            return LITTYPE_UNDEFINED;
+            return TINTYPE_UNDEFINED;
         }
         return o->type;
     }
-    return LITTYPE_UNDEFINED;
+    return TINTYPE_UNDEFINED;
 }
 
-double lit_value_asfloatnumber(LitValue v)
+TinValue tin_value_makenumber(TinState* state, double num)
 {
-    if(v.isfixednumber)
-    {
-        return v.numfixedval;
-    }
-    return v.numfloatval;
+    return tin_value_makefloatnumber(state, num);
 }
 
-int64_t lit_value_asfixednumber(LitValue v)
-{
-    if(!v.isfixednumber)
-    {
-        return v.numfloatval;
-    }
-    return v.numfixedval;
-}
-
-LitValue lit_value_makenumber(LitState* state, double num)
-{
-    return lit_value_makefloatnumber(state, num);
-}
-
-LitValue lit_value_makefloatnumber(LitState* state, double num)
+TinValue tin_value_makefloatnumber(TinState* state, double num)
 {
     (void)state;
-    LitValue v;
-    v.type = LITVAL_NUMBER;
+    TinValue v;
+    v.type = TINVAL_NUMBER;
     v.isfixednumber = false;
     v.numfloatval = num;
     return v;
 }
 
 
-LitValue lit_value_makefixednumber(LitState* state, int64_t num)
+TinValue tin_value_makefixednumber(TinState* state, int64_t num)
 {
     (void)state;
-    LitValue v;
-    v.type = LITVAL_NUMBER;
+    TinValue v;
+    v.type = TINVAL_NUMBER;
     v.isfixednumber = true;
     v.numfixedval = num;
     return v;
 }
 
-bool lit_value_isnumber(LitValue v)
-{
-    return v.type == LITVAL_NUMBER;
-}
-
-bool lit_valcompare_object(LitState* state, const LitValue a, const LitValue b)
+bool tin_valcompare_object(TinState* state, const TinValue a, const TinValue b)
 {
     (void)state;
     (void)b;
@@ -124,27 +79,27 @@ bool lit_valcompare_object(LitState* state, const LitValue a, const LitValue b)
     {
         default:
             {
-                fprintf(stderr, "missing equality comparison for type '%s'", lit_tostring_typename(a));
+                fprintf(stderr, "missing equality comparison for type '%s'", tin_tostring_typename(a));
             }
             break;
     }
     return false;
 }
 
-bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
+bool tin_value_compare(TinState* state, const TinValue a, const TinValue b)
 {
-    LitValType t1;
-    LitValType t2;
-    LitInterpretResult inret;
-    LitValue args[3];
-    if(lit_value_isinstance(a))
+    TinValType t1;
+    TinValType t2;
+    TinInterpretResult inret;
+    TinValue args[3];
+    if(tin_value_isinstance(a))
     {
         args[0] = b;
-        inret = lit_state_callinstancemethod(state, a, lit_string_copyconst(state, "=="), args, 1);
-        if(inret.type == LITRESULT_OK)
+        inret = tin_state_callinstancemethod(state, a, tin_string_copyconst(state, "=="), args, 1);
+        if(inret.type == TINRESULT_OK)
         {
             /*
-            if(lit_value_makebool(state, inret.result.) == TRUE_VALUE)
+            if(tin_value_makebool(state, inret.result.) == TRUE_VALUE)
             {
                 return true;
             }
@@ -159,32 +114,32 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
     {
         switch(t1)
         {
-            case LITVAL_NUMBER:
+            case TINVAL_NUMBER:
                 {
                     if(a.isfixednumber && b.isfixednumber)
                     {
-                        return (lit_value_asfixednumber(a) == lit_value_asfixednumber(b));
+                        return (tin_value_asfixednumber(a) == tin_value_asfixednumber(b));
                     }
                     else if(!a.isfixednumber && !b.isfixednumber)
                     {
-                        return (lit_value_asfloatnumber(a) == lit_value_asfloatnumber(b));
+                        return (tin_value_asfloatnumber(a) == tin_value_asfloatnumber(b));
                     }
-                    return (lit_value_asnumber(a) == lit_value_asnumber(b));
+                    return (tin_value_asnumber(a) == tin_value_asnumber(b));
                 }
                 break;
-            case LITVAL_NULL:
+            case TINVAL_NULL:
                 {
                     return true;
                 }
                 break;
-            case LITVAL_BOOL:
+            case TINVAL_BOOL:
                 {
                     return a.boolval == b.boolval;
                 }
                 break;
-            case LITVAL_OBJECT:
+            case TINVAL_OBJECT:
                 {
-                    return lit_valcompare_object(state, a, b);
+                    return tin_valcompare_object(state, a, b);
                 }
                 break;
         }
@@ -192,66 +147,66 @@ bool lit_value_compare(LitState* state, const LitValue a, const LitValue b)
     return false;
 }
 
-LitString* lit_value_tostring(LitState* state, LitValue object)
+TinString* tin_value_tostring(TinState* state, TinValue object)
 {
-    LitValue* slot;
-    LitVM* vm;
-    LitFiber* fiber;
-    LitFunction* function;
-    LitChunk* chunk;
-    LitCallFrame* frame;
-    LitInterpretResult result;
-    if(lit_value_isstring(object))
+    TinValue* slot;
+    TinVM* vm;
+    TinFiber* fiber;
+    TinFunction* function;
+    TinChunk* chunk;
+    TinCallFrame* frame;
+    TinInterpretResult result;
+    if(tin_value_isstring(object))
     {
-        return lit_value_asstring(object);
+        return tin_value_asstring(object);
     }
-    else if(!lit_value_isobject(object))
+    else if(!tin_value_isobject(object))
     {
-        if(lit_value_isnull(object))
+        if(tin_value_isnull(object))
         {
-            return lit_string_copyconst(state, "null");
+            return tin_string_copyconst(state, "null");
         }
-        else if(lit_value_isnumber(object))
+        else if(tin_value_isnumber(object))
         {
-            return lit_value_asstring(lit_string_numbertostring(state, lit_value_asnumber(object)));
+            return tin_value_asstring(tin_string_numbertostring(state, tin_value_asnumber(object)));
         }
-        else if(lit_value_isbool(object))
+        else if(tin_value_isbool(object))
         {
-            return lit_string_copyconst(state, lit_value_asbool(object) ? "true" : "false");
+            return tin_string_copyconst(state, tin_value_asbool(object) ? "true" : "false");
         }
     }
-    else if(lit_value_isreference(object))
+    else if(tin_value_isreference(object))
     {
-        slot = lit_value_asreference(object)->slot;
+        slot = tin_value_asreference(object)->slot;
 
         if(slot == NULL)
         {
-            return lit_string_copyconst(state, "null");
+            return tin_string_copyconst(state, "null");
         }
-        return lit_value_tostring(state, *slot);
+        return tin_value_tostring(state, *slot);
     }
     vm = state->vm;
     fiber = vm->fiber;
-    if(lit_state_ensurefiber(vm, fiber))
+    if(tin_state_ensurefiber(vm, fiber))
     {
-        return lit_string_copyconst(state, "null");
+        return tin_string_copyconst(state, "null");
     }
-    function = state->api_function;
+    function = state->capifunction;
     if(function == NULL)
     {
-        function = state->api_function = lit_object_makefunction(state, fiber->module);
+        function = state->capifunction = tin_object_makefunction(state, fiber->module);
         function->chunk.has_line_info = false;
-        function->name = state->api_name;
+        function->name = state->capiname;
         chunk = &function->chunk;
         chunk->count = 0;
-        lit_vallist_setcount(&chunk->constants, 0);
-        function->max_slots = 3;
-        lit_chunk_push(state, chunk, OP_INVOKE, 1);
-        lit_chunk_emitbyte(state, chunk, 0);
-        lit_chunk_emitshort(state, chunk, lit_chunk_addconst(state, chunk, lit_value_makestring(state, "toString")));
-        lit_chunk_emitbyte(state, chunk, OP_RETURN);
+        tin_vallist_setcount(&chunk->constants, 0);
+        function->maxslots = 3;
+        tin_chunk_push(state, chunk, OP_INVOKE, 1);
+        tin_chunk_emitbyte(state, chunk, 0);
+        tin_chunk_emitshort(state, chunk, tin_chunk_addconst(state, chunk, tin_value_makestring(state, "toString")));
+        tin_chunk_emitbyte(state, chunk, OP_RETURN);
     }
-    lit_ensure_fiber_stack(state, fiber, function->max_slots + (int)(fiber->stack_top - fiber->stack));
+    tin_ensure_fiber_stack(state, fiber, function->maxslots + (int)(fiber->stack_top - fiber->stack));
     frame = &fiber->frames[fiber->frame_count++];
     frame->ip = function->chunk.code;
     frame->closure = NULL;
@@ -259,159 +214,159 @@ LitString* lit_value_tostring(LitState* state, LitValue object)
     frame->slots = fiber->stack_top;
     frame->result_ignored = false;
     frame->return_to_c = true;
-    PUSH(lit_value_fromobject(function));
+    PUSH(tin_value_fromobject(function));
     PUSH(object);
-    result = lit_vm_execfiber(state, fiber);
-    if(result.type != LITRESULT_OK)
+    result = tin_vm_execfiber(state, fiber);
+    if(result.type != TINRESULT_OK)
     {
-        return lit_string_copyconst(state, "null");
+        return tin_string_copyconst(state, "null");
     }
-    return lit_value_asstring(result.result);
+    return tin_value_asstring(result.result);
 }
 
 
-double lit_value_checknumber(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id)
+double tin_value_checknumber(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
-    if(arg_count <= id || !lit_value_isnumber(args[id]))
+    if(arg_count <= id || !tin_value_isnumber(args[id]))
     {
-        lit_vm_raiseexitingerror(vm, "expected a number as argument #%i, got a %s", (int)id,
-                                  id >= arg_count ? "null" : lit_tostring_typename(args[id]));
+        tin_vm_raiseexitingerror(vm, "expected a number as argument #%i, got a %s", (int)id,
+                                  id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
-    return lit_value_asnumber(args[id]);
+    return tin_value_asnumber(args[id]);
 }
 
-double lit_value_getnumber(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id, double def)
+double tin_value_getnumber(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id, double def)
 {
     (void)vm;
-    if(arg_count <= id || !lit_value_isnumber(args[id]))
+    if(arg_count <= id || !tin_value_isnumber(args[id]))
     {
         return def;
     }
-    return lit_value_asnumber(args[id]);
+    return tin_value_asnumber(args[id]);
 }
 
-bool lit_value_checkbool(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id)
+bool tin_value_checkbool(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
-    if(arg_count <= id || !lit_value_isbool(args[id]))
+    if(arg_count <= id || !tin_value_isbool(args[id]))
     {
-        lit_vm_raiseexitingerror(vm, "expected a boolean as argument #%i, got a %s", (int)id,
-                                  id >= arg_count ? "null" : lit_tostring_typename(args[id]));
+        tin_vm_raiseexitingerror(vm, "expected a boolean as argument #%i, got a %s", (int)id,
+                                  id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
 
-    return lit_value_asbool(args[id]);
+    return tin_value_asbool(args[id]);
 }
 
-bool lit_value_getbool(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id, bool def)
+bool tin_value_getbool(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id, bool def)
 {
     (void)vm;
-    if(arg_count <= id || !lit_value_isbool(args[id]))
+    if(arg_count <= id || !tin_value_isbool(args[id]))
     {
         return def;
     }
-    return lit_value_asbool(args[id]);
+    return tin_value_asbool(args[id]);
 }
 
-const char* lit_value_checkstring(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id)
+const char* tin_value_checkstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
-    if(arg_count <= id || !lit_value_isstring(args[id]))
+    if(arg_count <= id || !tin_value_isstring(args[id]))
     {
-        lit_vm_raiseexitingerror(vm, "expected a string as argument #%i, got a %s", (int)id,
-                                  id >= arg_count ? "null" : lit_tostring_typename(args[id]));
+        tin_vm_raiseexitingerror(vm, "expected a string as argument #%i, got a %s", (int)id,
+                                  id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
 
-    return lit_value_asstring(args[id])->chars;
+    return tin_value_asstring(args[id])->chars;
 }
 
-const char* lit_value_getstring(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id, const char* def)
+const char* tin_value_getstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id, const char* def)
 {
     (void)vm;
-    if(arg_count <= id || !lit_value_isstring(args[id]))
+    if(arg_count <= id || !tin_value_isstring(args[id]))
     {
         return def;
     }
 
-    return lit_value_asstring(args[id])->chars;
+    return tin_value_asstring(args[id])->chars;
 }
 
-LitString* lit_value_checkobjstring(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id)
+TinString* tin_value_checkobjstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
-    if(arg_count <= id || !lit_value_isstring(args[id]))
+    if(arg_count <= id || !tin_value_isstring(args[id]))
     {
-        lit_vm_raiseexitingerror(vm, "expected a string as argument #%i, got a %s", (int)id,
-                                  id >= arg_count ? "null" : lit_tostring_typename(args[id]));
+        tin_vm_raiseexitingerror(vm, "expected a string as argument #%i, got a %s", (int)id,
+                                  id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
 
-    return lit_value_asstring(args[id]);
+    return tin_value_asstring(args[id]);
 }
 
-LitInstance* lit_value_checkinstance(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id)
+TinInstance* tin_value_checkinstance(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
-    if(arg_count <= id || !lit_value_isinstance(args[id]))
+    if(arg_count <= id || !tin_value_isinstance(args[id]))
     {
-        lit_vm_raiseexitingerror(vm, "expected an instance as argument #%i, got a %s", (int)id,
-                                  id >= arg_count ? "null" : lit_tostring_typename(args[id]));
+        tin_vm_raiseexitingerror(vm, "expected an instance as argument #%i, got a %s", (int)id,
+                                  id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
 
-    return lit_value_asinstance(args[id]);
+    return tin_value_asinstance(args[id]);
 }
 
-LitValue* lit_value_checkreference(LitVM* vm, LitValue* args, uint8_t arg_count, uint8_t id)
+TinValue* tin_value_checkreference(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
-    if(arg_count <= id || !lit_value_isreference(args[id]))
+    if(arg_count <= id || !tin_value_isreference(args[id]))
     {
-        lit_vm_raiseexitingerror(vm, "expected a reference as argument #%i, got a %s", (int)id,
-                                  id >= arg_count ? "null" : lit_tostring_typename(args[id]));
+        tin_vm_raiseexitingerror(vm, "expected a reference as argument #%i, got a %s", (int)id,
+                                  id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
 
-    return lit_value_asreference(args[id])->slot;
+    return tin_value_asreference(args[id])->slot;
 }
 
-void lit_value_ensurebool(LitVM* vm, LitValue value, const char* emsg)
+void tin_value_ensurebool(TinVM* vm, TinValue value, const char* emsg)
 {
-    if(!lit_value_isbool(value))
+    if(!tin_value_isbool(value))
     {
-        lit_vm_raiseexitingerror(vm, emsg);
-    }
-}
-
-void lit_value_ensurestring(LitVM* vm, LitValue value, const char* emsg)
-{
-    if(!lit_value_isstring(value))
-    {
-        lit_vm_raiseexitingerror(vm, emsg);
+        tin_vm_raiseexitingerror(vm, emsg);
     }
 }
 
-void lit_value_ensurenumber(LitVM* vm, LitValue value, const char* emsg)
+void tin_value_ensurestring(TinVM* vm, TinValue value, const char* emsg)
 {
-    if(!lit_value_isnumber(value))
+    if(!tin_value_isstring(value))
     {
-        lit_vm_raiseexitingerror(vm, emsg);
+        tin_vm_raiseexitingerror(vm, emsg);
     }
 }
 
-void lit_value_ensureobjtype(LitVM* vm, LitValue value, LitObjType type, const char* emsg)
+void tin_value_ensurenumber(TinVM* vm, TinValue value, const char* emsg)
 {
-    if(!lit_value_isobject(value) || lit_value_type(value) != type)
+    if(!tin_value_isnumber(value))
     {
-        lit_vm_raiseexitingerror(vm, emsg);
+        tin_vm_raiseexitingerror(vm, emsg);
     }
 }
 
-LitValue lit_value_callnew(LitVM* vm, const char* name, LitValue* args, size_t argc, bool ignfiber)
+void tin_value_ensureobjtype(TinVM* vm, TinValue value, TinObjType type, const char* emsg)
 {
-    LitValue value;
-    LitClass* klass;
-    if(!lit_table_get(&vm->globals->values, lit_string_copyconst(vm->state, name), &value))
+    if(!tin_value_isobject(value) || tin_value_type(value) != type)
     {
-        lit_vm_raiseerror(vm, "failed to create instance of class %s: class not found", name);
-        return lit_value_makenull(vm->state);
+        tin_vm_raiseexitingerror(vm, emsg);
     }
-    klass = lit_value_asclass(value);
+}
+
+TinValue tin_value_callnew(TinVM* vm, const char* name, TinValue* args, size_t argc, bool ignfiber)
+{
+    TinValue value;
+    TinClass* klass;
+    if(!tin_table_get(&vm->globals->values, tin_string_copyconst(vm->state, name), &value))
+    {
+        tin_vm_raiseerror(vm, "failed to create instance of class %s: class not found", name);
+        return tin_value_makenull(vm->state);
+    }
+    klass = tin_value_asclass(value);
     if(klass->init_method == NULL)
     {
-        return lit_value_fromobject(lit_create_instance(vm->state, klass));
+        return tin_value_fromobject(tin_create_instance(vm->state, klass));
     }
-    return lit_state_callmethod(vm->state, value, value, args, argc, ignfiber).result;
+    return tin_state_callmethod(vm->state, value, value, args, argc, ignfiber).result;
 }
 

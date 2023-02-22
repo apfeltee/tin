@@ -1,7 +1,7 @@
 
 #include "priv.h"
 
-void lit_table_init(LitState* state, LitTable* table)
+void tin_table_init(TinState* state, TinTable* table)
 {
     table->state = state;
     table->capacity = -1;
@@ -9,20 +9,20 @@ void lit_table_init(LitState* state, LitTable* table)
     table->entries = NULL;
 }
 
-void lit_table_destroy(LitState* state, LitTable* table)
+void tin_table_destroy(TinState* state, TinTable* table)
 {
     if(table->capacity > 0)
     {
-        LIT_FREE_ARRAY(state, sizeof(LitTableEntry), table->entries, table->capacity + 1);
+        TIN_FREE_ARRAY(state, sizeof(TinTableEntry), table->entries, table->capacity + 1);
     }
-    lit_table_init(state, table);
+    tin_table_init(state, table);
 }
 
-static LitTableEntry* find_entry(LitTableEntry* entries, int capacity, LitString* key)
+static TinTableEntry* find_entry(TinTableEntry* entries, int capacity, TinString* key)
 {
     uint32_t index;
-    LitTableEntry* entry;
-    LitTableEntry* tombstone;
+    TinTableEntry* entry;
+    TinTableEntry* tombstone;
     index = key->hash % capacity;
     tombstone = NULL;
     while(true)
@@ -30,7 +30,7 @@ static LitTableEntry* find_entry(LitTableEntry* entries, int capacity, LitString
         entry = &entries[index];
         if(entry->key == NULL)
         {
-            if(lit_value_isnull(entry->value))
+            if(tin_value_isnull(entry->value))
             {
                 return tombstone != NULL ? tombstone : entry;
             }
@@ -47,13 +47,13 @@ static LitTableEntry* find_entry(LitTableEntry* entries, int capacity, LitString
     }
 }
 
-static void adjust_capacity(LitState* state, LitTable* table, int capacity)
+static void adjust_capacity(TinState* state, TinTable* table, int capacity)
 {
     int i;
-    LitTableEntry* destination;
-    LitTableEntry* entries;
-    LitTableEntry* entry;
-    entries = LIT_ALLOCATE(state, sizeof(LitTableEntry), capacity + 1);
+    TinTableEntry* destination;
+    TinTableEntry* entries;
+    TinTableEntry* entry;
+    entries = TIN_ALLOCATE(state, sizeof(TinTableEntry), capacity + 1);
     for(i = 0; i <= capacity; i++)
     {
         entries[i].key = NULL;
@@ -72,24 +72,24 @@ static void adjust_capacity(LitState* state, LitTable* table, int capacity)
         destination->value = entry->value;
         table->count++;
     }
-    LIT_FREE_ARRAY(state, sizeof(LitTableEntry), table->entries, table->capacity + 1);
+    TIN_FREE_ARRAY(state, sizeof(TinTableEntry), table->entries, table->capacity + 1);
     table->capacity = capacity;
     table->entries = entries;
 }
 
-bool lit_table_set(LitState* state, LitTable* table, LitString* key, LitValue value)
+bool tin_table_set(TinState* state, TinTable* table, TinString* key, TinValue value)
 {
     bool isnew;
     int capacity;
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     if(table->count + 1 > (table->capacity + 1) * TABLE_MAX_LOAD)
     {
-        capacity = LIT_GROW_CAPACITY(table->capacity + 1) - 1;
+        capacity = TIN_GROW_CAPACITY(table->capacity + 1) - 1;
         adjust_capacity(state, table, capacity);
     }
     entry = find_entry(table->entries, table->capacity, key);
     isnew = entry->key == NULL;
-    if(isnew && lit_value_isnull(entry->value))
+    if(isnew && tin_value_isnull(entry->value))
     {
         table->count++;
     }
@@ -98,9 +98,9 @@ bool lit_table_set(LitState* state, LitTable* table, LitString* key, LitValue va
     return isnew;
 }
 
-bool lit_table_get(LitTable* table, LitString* key, LitValue* value)
+bool tin_table_get(TinTable* table, TinString* key, TinValue* value)
 {
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     if(table->count == 0)
     {
         return false;
@@ -114,9 +114,9 @@ bool lit_table_get(LitTable* table, LitString* key, LitValue* value)
     return true;
 }
 
-bool lit_table_get_slot(LitTable* table, LitString* key, LitValue** value)
+bool tin_table_get_slot(TinTable* table, TinString* key, TinValue** value)
 {
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     if(table->count == 0)
     {
         return false;
@@ -130,9 +130,9 @@ bool lit_table_get_slot(LitTable* table, LitString* key, LitValue** value)
     return true;
 }
 
-bool lit_table_delete(LitTable* table, LitString* key)
+bool tin_table_delete(TinTable* table, TinString* key)
 {
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     if(table->count == 0)
     {
         return false;
@@ -143,14 +143,14 @@ bool lit_table_delete(LitTable* table, LitString* key)
         return false;
     }
     entry->key = NULL;
-    entry->value = lit_value_makebool(table->state, true);
+    entry->value = tin_value_makebool(table->state, true);
     return true;
 }
 
-LitString* lit_table_find_string(LitTable* table, const char* chars, size_t length, uint32_t hash)
+TinString* tin_table_find_string(TinTable* table, const char* chars, size_t length, uint32_t hash)
 {
     uint32_t index;
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     if(table->count == 0)
     {
         return NULL;
@@ -161,12 +161,12 @@ LitString* lit_table_find_string(LitTable* table, const char* chars, size_t leng
         entry = &table->entries[index];
         if(entry->key == NULL)
         {
-            if(lit_value_isnull(entry->value))
+            if(tin_value_isnull(entry->value))
             {
                 return NULL;
             }
         }
-        else if(lit_string_getlength(entry->key) == length && entry->key->hash == hash && memcmp(entry->key->chars, chars, length) == 0)
+        else if(tin_string_getlength(entry->key) == length && entry->key->hash == hash && memcmp(entry->key->chars, chars, length) == 0)
         {
             return entry->key;
         }
@@ -174,36 +174,36 @@ LitString* lit_table_find_string(LitTable* table, const char* chars, size_t leng
     }
 }
 
-void lit_table_add_all(LitState* state, LitTable* from, LitTable* to)
+void tin_table_add_all(TinState* state, TinTable* from, TinTable* to)
 {
     int i;
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     for(i = 0; i <= from->capacity; i++)
     {
         entry = &from->entries[i];
         if(entry->key != NULL)
         {
-            lit_table_set(state, to, entry->key, entry->value);
+            tin_table_set(state, to, entry->key, entry->value);
         }
     }
 }
 
-void lit_table_removewhite(LitTable* table)
+void tin_table_removewhite(TinTable* table)
 {
     int i;
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     for(i = 0; i <= table->capacity; i++)
     {
         entry = &table->entries[i];
         if(entry->key != NULL && !entry->key->object.marked)
         {
-            lit_table_delete(table, entry->key);
+            tin_table_delete(table, entry->key);
         }
     }
 }
 
 
-int util_table_iterator(LitTable* table, int number)
+int util_table_iterator(TinTable* table, int number)
 {
     if(table->count == 0)
     {
@@ -225,78 +225,78 @@ int util_table_iterator(LitTable* table, int number)
     return -1;
 }
 
-LitValue util_table_iterator_key(LitTable* table, int index)
+TinValue util_table_iterator_key(TinTable* table, int index)
 {
     if(table->capacity <= index)
     {
         return NULL_VALUE;
     }
-    return lit_value_fromobject(table->entries[index].key);
+    return tin_value_fromobject(table->entries[index].key);
 }
 
-LitMap* lit_create_map(LitState* state)
+TinMap* tin_create_map(TinState* state)
 {
-    LitMap* map;
-    map = (LitMap*)lit_gcmem_allocobject(state, sizeof(LitMap), LITTYPE_MAP, false);
-    lit_table_init(state, &map->values);
+    TinMap* map;
+    map = (TinMap*)tin_gcmem_allocobject(state, sizeof(TinMap), TINTYPE_MAP, false);
+    tin_table_init(state, &map->values);
     map->index_fn = NULL;
     return map;
 }
 
-bool lit_map_set(LitState* state, LitMap* map, LitString* key, LitValue value)
+bool tin_map_set(TinState* state, TinMap* map, TinString* key, TinValue value)
 {
-    if(lit_value_isnull(value))
+    if(tin_value_isnull(value))
     {
-        lit_map_delete(map, key);
+        tin_map_delete(map, key);
         return false;
     }
-    return lit_table_set(state, &map->values, key, value);
+    return tin_table_set(state, &map->values, key, value);
 }
 
-bool lit_map_get(LitMap* map, LitString* key, LitValue* value)
+bool tin_map_get(TinMap* map, TinString* key, TinValue* value)
 {
-    return lit_table_get(&map->values, key, value);
+    return tin_table_get(&map->values, key, value);
 }
 
-bool lit_map_delete(LitMap* map, LitString* key)
+bool tin_map_delete(TinMap* map, TinString* key)
 {
-    return lit_table_delete(&map->values, key);
+    return tin_table_delete(&map->values, key);
 }
 
-void lit_map_add_all(LitState* state, LitMap* from, LitMap* to)
+void tin_map_add_all(TinState* state, TinMap* from, TinMap* to)
 {
     int i;
-    LitTableEntry* entry;
+    TinTableEntry* entry;
     for(i = 0; i <= from->values.capacity; i++)
     {
         entry = &from->values.entries[i];
         if(entry->key != NULL)
         {
-            lit_table_set(state, &to->values, entry->key, entry->value);
+            tin_table_set(state, &to->values, entry->key, entry->value);
         }
     }
 }
 
-static LitValue objfn_map_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_fromobject(lit_create_map(vm->state));
+    return tin_value_fromobject(tin_create_map(vm->state));
 }
 
-static LitValue objfn_map_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitValue val;
-    LitValue value;
-    LitMap* map;
-    LitString* index;
-    if(!lit_value_isstring(argv[0]))
+    TinValue val;
+    TinValue value;
+    TinMap* map;
+    TinString* index;
+    if(!tin_value_isstring(argv[0]))
     {
-        lit_vm_raiseexitingerror(vm, "map index must be a string");
+        tin_vm_raiseexitingerror(vm, "map index must be a string");
     }
-    map = lit_value_asmap(instance);
-    index = lit_value_asstring(argv[0]);
+    map = tin_value_asmap(instance);
+    index = tin_value_asstring(argv[0]);
     if(argc == 2)
     {
         val = argv[1];
@@ -304,72 +304,76 @@ static LitValue objfn_map_subscript(LitVM* vm, LitValue instance, size_t argc, L
         {
             return map->index_fn(vm, map, index, &val);
         }
-        lit_map_set(vm->state, map, index, val);
+        tin_map_set(vm->state, map, index, val);
         return val;
     }
     if(map->index_fn != NULL)
     {
         return map->index_fn(vm, map, index, NULL);
     }
-    if(!lit_table_get(&map->values, index, &value))
+    if(!tin_table_get(&map->values, index, &value))
     {
         return NULL_VALUE;
     }
     return value;
 }
 
-static LitValue objfn_map_addall(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_addall(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LIT_ENSURE_ARGS(vm->state, 1);
-    if(!lit_value_ismap(argv[0]))
+    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_value_ismap(argv[0]))
     {
-        lit_vm_raiseexitingerror(vm, "expected map as the argument");
+        tin_vm_raiseexitingerror(vm, "expected map as the argument");
     }
-    lit_map_add_all(vm->state, lit_value_asmap(argv[0]), lit_value_asmap(instance));
+    tin_map_add_all(vm->state, tin_value_asmap(argv[0]), tin_value_asmap(instance));
     return NULL_VALUE;
 }
 
 
-static LitValue objfn_map_clear(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_clear(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argv;
     (void)argc;
-    lit_value_asmap(instance)->values.count = 0;
+    tin_value_asmap(instance)->values.count = 0;
     return NULL_VALUE;
 }
 
-static LitValue objfn_map_iterator(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LIT_ENSURE_ARGS(vm->state, 1);
+    TIN_ENSURE_ARGS(vm->state, 1);
     (void)vm;
     int index;
     int value;
-    index = lit_value_isnull(argv[0]) ? -1 : lit_value_asnumber(argv[0]);
-    value = util_table_iterator(&lit_value_asmap(instance)->values, index);
-    return value == -1 ? NULL_VALUE : lit_value_makenumber(vm->state, value);
+    index = tin_value_isnull(argv[0]) ? -1 : tin_value_asnumber(argv[0]);
+    value = util_table_iterator(&tin_value_asmap(instance)->values, index);
+    if(value == -1)
+    {
+        return NULL_VALUE;
+    }
+    return tin_value_makefixednumber(vm->state, value);
 }
 
-static LitValue objfn_map_iteratorvalue(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t index;
-    index = lit_value_checknumber(vm, argv, argc, 0);
-    return util_table_iterator_key(&lit_value_asmap(instance)->values, index);
+    index = tin_value_checknumber(vm, argv, argc, 0);
+    return util_table_iterator_key(&tin_value_asmap(instance)->values, index);
 }
 
-static LitValue objfn_map_clone(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_clone(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    LitState* state;
-    LitMap* map;
+    TinState* state;
+    TinMap* map;
     state = vm->state;
-    map = lit_create_map(state);
-    lit_table_add_all(state, &lit_value_asmap(instance)->values, &map->values);
-    return lit_value_fromobject(map);
+    map = tin_create_map(state);
+    tin_table_add_all(state, &tin_value_asmap(instance)->values, &map->values);
+    return tin_value_fromobject(map);
 }
 
-static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
@@ -381,28 +385,28 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
     size_t olength;
     size_t bufferindex;
     char* buffer;
-    LitState* state;
-    LitMap* map;
-    LitTable* values;
-    LitTableEntry* entry;
-    LitValue field;
-    LitString* strobval;
-    LitString* key;
-    LitString* value;
-    LitString** valuesconverted;
-    LitString** keys;
+    TinState* state;
+    TinMap* map;
+    TinTable* values;
+    TinTableEntry* entry;
+    TinValue field;
+    TinString* strobval;
+    TinString* key;
+    TinString* value;
+    TinString** valuesconverted;
+    TinString** keys;
     state = vm->state;
-    map = lit_value_asmap(instance);
+    map = tin_value_asmap(instance);
     values = &map->values;
     if(values->count == 0)
     {
-        return lit_value_makestring(state, "{}");
+        return tin_value_makestring(state, "{}");
     }
     haswrapper = map->index_fn != NULL;
-    hasmore = values->count > LIT_CONTAINER_OUTPUT_MAX;
-    valueamount = hasmore ? LIT_CONTAINER_OUTPUT_MAX : values->count;
-    valuesconverted = LIT_ALLOCATE(vm->state, sizeof(LitString*), valueamount+1);
-    keys = LIT_ALLOCATE(vm->state, sizeof(LitString*), valueamount+1);
+    hasmore = values->count > TIN_CONTAINER_OUTPUT_MAX;
+    valueamount = hasmore ? TIN_CONTAINER_OUTPUT_MAX : values->count;
+    valuesconverted = TIN_ALLOCATE(vm->state, sizeof(TinString*), valueamount+1);
+    keys = TIN_ALLOCATE(vm->state, sizeof(TinString*), valueamount+1);
     olength = 3;
     if(hasmore)
     {
@@ -418,12 +422,12 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
             // Special hidden key
             field = haswrapper ? map->index_fn(vm, map, entry->key, NULL) : entry->value;
             // This check is required to prevent infinite loops when playing with Module.privates and such
-            strobval = (lit_value_ismap(field) && lit_value_asmap(field)->index_fn != NULL) ? lit_string_copyconst(state, "map") : lit_value_tostring(state, field);
-            lit_state_pushroot(state, (LitObject*)strobval);
+            strobval = (tin_value_ismap(field) && tin_value_asmap(field)->index_fn != NULL) ? tin_string_copyconst(state, "map") : tin_value_tostring(state, field);
+            tin_state_pushroot(state, (TinObject*)strobval);
             valuesconverted[i] = strobval;
             keys[i] = entry->key;
             olength += (
-                lit_string_getlength(entry->key) + 3 + lit_string_getlength(strobval) +
+                tin_string_getlength(entry->key) + 3 + tin_string_getlength(strobval) +
                 #ifdef SINGLE_LINE_MAPS
                     (i == valueamount - 1 ? 1 : 2)
                 #else
@@ -433,7 +437,7 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
             i++;
         }
     } while(i < valueamount);
-    buffer = LIT_ALLOCATE(vm->state, sizeof(char), olength+1);
+    buffer = TIN_ALLOCATE(vm->state, sizeof(char), olength+1);
     #ifdef SINGLE_LINE_MAPS
     memcpy(buffer, "{ ", 2);
     #else
@@ -447,12 +451,12 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
         #ifndef SINGLE_LINE_MAPS
         buffer[bufferindex++] = '\t';
         #endif
-        memcpy(&buffer[bufferindex], key->chars, lit_string_getlength(key));
-        bufferindex += lit_string_getlength(key);
+        memcpy(&buffer[bufferindex], key->chars, tin_string_getlength(key));
+        bufferindex += tin_string_getlength(key);
         memcpy(&buffer[bufferindex], " = ", 3);
         bufferindex += 3;
-        memcpy(&buffer[bufferindex], value->chars, lit_string_getlength(value));
-        bufferindex += lit_string_getlength(value);
+        memcpy(&buffer[bufferindex], value->chars, tin_string_getlength(value));
+        bufferindex += tin_string_getlength(value);
         if(hasmore && i == valueamount - 1)
         {
             #ifdef SINGLE_LINE_MAPS
@@ -471,43 +475,43 @@ static LitValue objfn_map_tostring(LitVM* vm, LitValue instance, size_t argc, Li
             #endif
             bufferindex += 2;
         }
-        lit_state_poproot(state);
+        tin_state_poproot(state);
     }
     buffer[olength] = '\0';
-    LIT_FREE(vm->state, sizeof(LitString*), keys);
-    LIT_FREE(vm->state, sizeof(LitString*), valuesconverted);
-    return lit_value_fromobject(lit_string_take(vm->state, buffer, olength, false));
+    TIN_FREE(vm->state, sizeof(TinString*), keys);
+    TIN_FREE(vm->state, sizeof(TinString*), valuesconverted);
+    return tin_value_fromobject(tin_string_take(vm->state, buffer, olength, false));
 }
 
-static LitValue objfn_map_length(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_map_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_makenumber(vm->state, lit_value_asmap(instance)->values.count);
+    return tin_value_makefixednumber(vm->state, tin_value_asmap(instance)->values.count);
 }
 
-void lit_open_map_library(LitState* state)
+void tin_open_map_library(TinState* state)
 {
-    LitClass* klass;
-    klass = lit_create_classobject(state, "Map");
+    TinClass* klass;
+    klass = tin_create_classobject(state, "Map");
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
-        lit_class_bindconstructor(state, klass, objfn_map_constructor);
-        lit_class_bindmethod(state, klass, "[]", objfn_map_subscript);
-        lit_class_bindmethod(state, klass, "addAll", objfn_map_addall);
-        lit_class_bindmethod(state, klass, "clear", objfn_map_clear);
-        lit_class_bindmethod(state, klass, "iterator", objfn_map_iterator);
-        lit_class_bindmethod(state, klass, "iteratorValue", objfn_map_iteratorvalue);
-        lit_class_bindmethod(state, klass, "clone", objfn_map_clone);
-        lit_class_bindmethod(state, klass, "toString", objfn_map_tostring);
-        lit_class_bindgetset(state, klass, "length", objfn_map_length, NULL, false);
-        state->mapvalue_class = klass;
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
+        tin_class_bindconstructor(state, klass, objfn_map_constructor);
+        tin_class_bindmethod(state, klass, "[]", objfn_map_subscript);
+        tin_class_bindmethod(state, klass, "addAll", objfn_map_addall);
+        tin_class_bindmethod(state, klass, "clear", objfn_map_clear);
+        tin_class_bindmethod(state, klass, "iterator", objfn_map_iterator);
+        tin_class_bindmethod(state, klass, "iteratorValue", objfn_map_iteratorvalue);
+        tin_class_bindmethod(state, klass, "clone", objfn_map_clone);
+        tin_class_bindmethod(state, klass, "toString", objfn_map_tostring);
+        tin_class_bindgetset(state, klass, "length", objfn_map_length, NULL, false);
+        state->primmapclass = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+    tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
     if(klass->super == NULL)
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
     };
 }
 

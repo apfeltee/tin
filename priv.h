@@ -1,509 +1,504 @@
 
-#include "lit.h"
+#include "tin.h"
 
-enum LitOpCode
+enum TinOpCode
 {
 #define OPCODE(name, effect) OP_##name,
 #include "opcodes.inc"
 #undef OPCODE
 };
 
-enum LitAstExprType
+enum TinAstExprType
 {
-    LITEXPR_LITERAL,
-    LITEXPR_BINARY,
-    LITEXPR_UNARY,
-    LITEXPR_VAREXPR,
-    LITEXPR_ASSIGN,
-    LITEXPR_CALL,
-    LITEXPR_SET,
-    LITEXPR_GET,
-    LITEXPR_LAMBDA,
-    LITEXPR_ARRAY,
-    LITEXPR_OBJECT,
-    LITEXPR_SUBSCRIPT,
-    LITEXPR_THIS,
-    LITEXPR_SUPER,
-    LITEXPR_RANGE,
-    LITEXPR_TERNARY,
-    LITEXPR_INTERPOLATION,
-    LITEXPR_REFERENCE,
+    TINEXPR_LITERAL,
+    TINEXPR_BINARY,
+    TINEXPR_UNARY,
+    TINEXPR_VAREXPR,
+    TINEXPR_ASSIGN,
+    TINEXPR_CALL,
+    TINEXPR_SET,
+    TINEXPR_GET,
+    TINEXPR_LAMBDA,
+    TINEXPR_ARRAY,
+    TINEXPR_OBJECT,
+    TINEXPR_SUBSCRIPT,
+    TINEXPR_THIS,
+    TINEXPR_SUPER,
+    TINEXPR_RANGE,
+    TINEXPR_TERNARY,
+    TINEXPR_INTERPOLATION,
+    TINEXPR_REFERENCE,
 
-    LITEXPR_EXPRESSION,
-    LITEXPR_BLOCK,
-    LITEXPR_IFSTMT,
-    LITEXPR_WHILE,
-    LITEXPR_FOR,
-    LITEXPR_VARSTMT,
-    LITEXPR_CONTINUE,
-    LITEXPR_BREAK,
-    LITEXPR_FUNCTION,
-    LITEXPR_RETURN,
-    LITEXPR_METHOD,
-    LITEXPR_CLASS,
-    LITEXPR_FIELD
+    TINEXPR_EXPRESSION,
+    TINEXPR_BLOCK,
+    TINEXPR_IFSTMT,
+    TINEXPR_WHILE,
+    TINEXPR_FOR,
+    TINEXPR_VARSTMT,
+    TINEXPR_CONTINUE,
+    TINEXPR_BREAK,
+    TINEXPR_FUNCTION,
+    TINEXPR_RETURN,
+    TINEXPR_METHOD,
+    TINEXPR_CLASS,
+    TINEXPR_FIELD
 };
 
-enum LitAstPrecedence
+enum TinAstPrecedence
 {
-    LITPREC_NONE,
-    LITPREC_ASSIGNMENT,// =
-    LITPREC_OR,// ||
-    LITPREC_AND,// &&
-    LITPREC_BOR,// | ^
-    LITPREC_BAND,// &
-    LITPREC_SHIFT,// << >>
-    LITPREC_EQUALITY,// == !=
-    LITPREC_COMPARISON,// < > <= >=
-    LITPREC_COMPOUND,// += -= *= /= ++ --
-    LITPREC_TERM,// + -
-    LITPREC_FACTOR,// * /
-    LITPREC_IS,// is
-    LITPREC_RANGE,// ..
-    LITPREC_UNARY,// ! - ~
-    LITPREC_NULL,// ??
-    LITPREC_CALL,// . ()
-    LITPREC_PRIMARY
+    TINPREC_NONE,
+    TINPREC_ASSIGNMENT,// =
+    TINPREC_OR,// ||
+    TINPREC_AND,// &&
+    TINPREC_BOR,// | ^
+    TINPREC_BAND,// &
+    TINPREC_SHIFT,// << >>
+    TINPREC_EQUALITY,// == !=
+    TINPREC_COMPARISON,// < > <= >=
+    TINPREC_COMPOUND,// += -= *= /= ++ --
+    TINPREC_TERM,// + -
+    TINPREC_FACTOR,// * /
+    TINPREC_IS,// is
+    TINPREC_RANGE,// ..
+    TINPREC_UNARY,// ! - ~
+    TINPREC_NULL,// ??
+    TINPREC_CALL,// . ()
+    TINPREC_PRIMARY
 };
 
-enum LitAstTokType
+enum TinAstTokType
 {
-    LITTOK_NEW_LINE,
+    TINTOK_NEW_LINE,
 
     // Single-character tokens.
-    LITTOK_LEFT_PAREN,
-    LITTOK_RIGHT_PAREN,
-    LITTOK_LEFT_BRACE,
-    LITTOK_RIGHT_BRACE,
-    LITTOK_LEFT_BRACKET,
-    LITTOK_RIGHT_BRACKET,
-    LITTOK_COMMA,
-    LITTOK_SEMICOLON,
-    LITTOK_COLON,
+    TINTOK_LEFT_PAREN,
+    TINTOK_RIGHT_PAREN,
+    TINTOK_LEFT_BRACE,
+    TINTOK_RIGHT_BRACE,
+    TINTOK_LEFT_BRACKET,
+    TINTOK_RIGHT_BRACKET,
+    TINTOK_COMMA,
+    TINTOK_SEMICOLON,
+    TINTOK_COLON,
 
     // One or two character tokens.
-    LITTOK_BAR_EQUAL,
-    LITTOK_BAR,
-    LITTOK_BAR_BAR,
-    LITTOK_AMPERSAND_EQUAL,
-    LITTOK_AMPERSAND,
-    LITTOK_AMPERSAND_AMPERSAND,
-    LITTOK_BANG,
-    LITTOK_BANG_EQUAL,
-    LITTOK_EQUAL,
-    LITTOK_EQUAL_EQUAL,
-    LITTOK_GREATER,
-    LITTOK_GREATER_EQUAL,
-    LITTOK_GREATER_GREATER,
-    LITTOK_LESS,
-    LITTOK_LESS_EQUAL,
-    LITTOK_LESS_LESS,
-    LITTOK_PLUS,
-    LITTOK_PLUS_EQUAL,
-    LITTOK_PLUS_PLUS,
-    LITTOK_MINUS,
-    LITTOK_MINUS_EQUAL,
-    LITTOK_MINUS_MINUS,
-    LITTOK_STAR,
-    LITTOK_STAR_EQUAL,
-    LITTOK_STAR_STAR,
-    LITTOK_SLASH,
-    LITTOK_SLASH_EQUAL,
-    LITTOK_QUESTION,
-    LITTOK_QUESTION_QUESTION,
-    LITTOK_PERCENT,
-    LITTOK_PERCENT_EQUAL,
-    LITTOK_ARROW,
-    LITTOK_SMALL_ARROW,
-    LITTOK_TILDE,
-    LITTOK_CARET,
-    LITTOK_CARET_EQUAL,
-    LITTOK_DOT,
-    LITTOK_DOT_DOT,
-    LITTOK_DOT_DOT_DOT,
-    LITTOK_SHARP,
-    LITTOK_SHARP_EQUAL,
+    TINTOK_BAR_EQUAL,
+    TINTOK_BAR,
+    TINTOK_BAR_BAR,
+    TINTOK_AMPERSAND_EQUAL,
+    TINTOK_AMPERSAND,
+    TINTOK_AMPERSAND_AMPERSAND,
+    TINTOK_BANG,
+    TINTOK_BANG_EQUAL,
+    TINTOK_EQUAL,
+    TINTOK_EQUAL_EQUAL,
+    TINTOK_GREATER,
+    TINTOK_GREATER_EQUAL,
+    TINTOK_GREATER_GREATER,
+    TINTOK_LESS,
+    TINTOK_LESS_EQUAL,
+    TINTOK_LESS_LESS,
+    TINTOK_PLUS,
+    TINTOK_PLUS_EQUAL,
+    TINTOK_PLUS_PLUS,
+    TINTOK_MINUS,
+    TINTOK_MINUS_EQUAL,
+    TINTOK_MINUS_MINUS,
+    TINTOK_STAR,
+    TINTOK_STAR_EQUAL,
+    TINTOK_STAR_STAR,
+    TINTOK_SLASH,
+    TINTOK_SLASH_EQUAL,
+    TINTOK_QUESTION,
+    TINTOK_QUESTION_QUESTION,
+    TINTOK_PERCENT,
+    TINTOK_PERCENT_EQUAL,
+    TINTOK_ARROW,
+    TINTOK_SMALL_ARROW,
+    TINTOK_TILDE,
+    TINTOK_CARET,
+    TINTOK_CARET_EQUAL,
+    TINTOK_DOT,
+    TINTOK_DOT_DOT,
+    TINTOK_DOT_DOT_DOT,
+    TINTOK_SHARP,
+    TINTOK_SHARP_EQUAL,
 
-    // Literals.
-    LITTOK_IDENTIFIER,
-    LITTOK_STRING,
-    LITTOK_INTERPOLATION,
-    LITTOK_NUMBER,
+    // Tinerals.
+    TINTOK_IDENTIFIER,
+    TINTOK_STRING,
+    TINTOK_INTERPOLATION,
+    TINTOK_NUMBER,
 
     // Keywords.
-    LITTOK_CLASS,
-    LITTOK_ELSE,
-    LITTOK_FALSE,
-    LITTOK_FOR,
-    LITTOK_FUNCTION,
-    LITTOK_IF,
-    LITTOK_NULL,
-    LITTOK_RETURN,
-    LITTOK_SUPER,
-    LITTOK_THIS,
-    LITTOK_TRUE,
-    LITTOK_VAR,
-    LITTOK_WHILE,
-    LITTOK_CONTINUE,
-    LITTOK_BREAK,
-    LITTOK_NEW,
-    LITTOK_EXPORT,
-    LITTOK_IS,
-    LITTOK_STATIC,
-    LITTOK_OPERATOR,
-    LITTOK_GET,
-    LITTOK_SET,
-    LITTOK_IN,
-    LITTOK_CONST,
-    LITTOK_REF,
+    TINTOK_CLASS,
+    TINTOK_ELSE,
+    TINTOK_FALSE,
+    TINTOK_FOR,
+    TINTOK_FUNCTION,
+    TINTOK_IF,
+    TINTOK_NULL,
+    TINTOK_RETURN,
+    TINTOK_SUPER,
+    TINTOK_THIS,
+    TINTOK_TRUE,
+    TINTOK_VAR,
+    TINTOK_WHILE,
+    TINTOK_CONTINUE,
+    TINTOK_BREAK,
+    TINTOK_NEW,
+    TINTOK_EXPORT,
+    TINTOK_IS,
+    TINTOK_STATIC,
+    TINTOK_OPERATOR,
+    TINTOK_GET,
+    TINTOK_SET,
+    TINTOK_IN,
+    TINTOK_CONST,
+    TINTOK_REF,
 
-    LITTOK_ERROR,
-    LITTOK_EOF
+    TINTOK_ERROR,
+    TINTOK_EOF
 };
 
-
-enum LitAstFuncType
+enum TinAstFuncType
 {
-    LITFUNC_REGULAR,
-    LITFUNC_SCRIPT,
-    LITFUNC_METHOD,
-    LITFUNC_STATIC_METHOD,
-    LITFUNC_CONSTRUCTOR
+    TINFUNC_REGULAR,
+    TINFUNC_SCRIPT,
+    TINFUNC_METHOD,
+    TINFUNC_STATIC_METHOD,
+    TINFUNC_CONSTRUCTOR
 };
 
-struct LitAstExpression
+struct TinAstExpression
 {
-    LitAstExprType type;
+    TinAstExprType type;
     size_t line;
 };
 
-struct LitAstPrivate
+struct TinAstPrivate
 {
     bool initialized;
     bool constant;
 };
 
-struct LitAstPrivList
+struct TinAstPrivList
 {
     size_t capacity;
     size_t count;
-    LitAstPrivate* values;
+    TinAstPrivate* values;
 };
 
-struct LitAstEmitter
+struct TinAstEmitter
 {
-    LitState* state;
-    LitChunk* chunk;
-    LitAstCompiler* compiler;
-    size_t last_line;
-    size_t loop_start;
-    LitAstPrivList privates;
-    LitUintList breaks;
-    LitUintList continues;
-    LitModule* module;
-    LitString* class_name;
-    bool class_has_super;
-    bool previous_was_expression_statement;
-    int emit_reference;
+    TinState* state;
+    TinChunk* chunk;
+    TinAstCompiler* compiler;
+    size_t lastline;
+    size_t loopstart;
+    TinAstPrivList privates;
+    TinUintList breaks;
+    TinUintList continues;
+    TinModule* module;
+    TinString* classname;
+    bool classisinheriting;
+    bool prevwasexprstmt;
+    int emitref;
 };
 
-struct LitAstParseRule
+struct TinAstParseRule
 {
-    LitAstParsePrefixFn prefix;
-    LitAstParseInfixFn infix;
-    LitAstPrecedence precedence;
+    TinAstParsePrefixFn prefix;
+    TinAstParseInfixFn infix;
+    TinAstPrecedence precedence;
 };
 
 /*
  * Expressions
  */
-struct LitAstExprList
+struct TinAstExprList
 {
     size_t capacity;
     size_t count;
-    LitAstExpression** values;
+    TinAstExpression** values;
 };
 
-struct LitAstLiteralExpr
+struct TinAstLiteralExpr
 {
-    LitAstExpression exobj;
-    LitValue value;
+    TinAstExpression exobj;
+    TinValue value;
 };
 
-struct LitAstBinaryExpr
+struct TinAstBinaryExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* left;
-    LitAstExpression* right;
-    LitAstTokType op;
+    TinAstExpression exobj;
+    TinAstExpression* left;
+    TinAstExpression* right;
+    TinAstTokType op;
     bool ignore_left;
 };
 
-struct LitAstUnaryExpr
+struct TinAstUnaryExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* right;
-    LitAstTokType op;
+    TinAstExpression exobj;
+    TinAstExpression* right;
+    TinAstTokType op;
 };
 
-struct LitAstVarExpr
+struct TinAstVarExpr
 {
-    LitAstExpression exobj;
+    TinAstExpression exobj;
     const char* name;
     size_t length;
 };
 
-struct LitAstAssignExpr
+struct TinAstAssignExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* to;
-    LitAstExpression* value;
+    TinAstExpression exobj;
+    TinAstExpression* to;
+    TinAstExpression* value;
 };
 
-struct LitAstCallExpr
+struct TinAstCallExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* callee;
-    LitAstExprList args;
-    LitAstExpression* init;
+    TinAstExpression exobj;
+    TinAstExpression* callee;
+    TinAstExprList args;
+    TinAstExpression* init;
 };
 
-struct LitAstGetExpr
+struct TinAstGetExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* where;
+    TinAstExpression exobj;
+    TinAstExpression* where;
     const char* name;
     size_t length;
     int jump;
-    bool ignore_emit;
-    bool ignore_result;
+    bool ignemit;
+    bool ignresult;
 };
 
-struct LitAstSetExpr
+struct TinAstSetExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* where;
+    TinAstExpression exobj;
+    TinAstExpression* where;
     const char* name;
     size_t length;
-    LitAstExpression* value;
+    TinAstExpression* value;
 };
 
-struct LitAstParameter
+struct TinAstParameter
 {
     const char* name;
     size_t length;
-    LitAstExpression* default_value;
+    TinAstExpression* defaultexpr;
 };
 
-struct LitAstParamList
+struct TinAstParamList
 {
     size_t capacity;
     size_t count;
-    LitAstParameter* values;
+    TinAstParameter* values;
 };
 
-
-
-struct LitAstArrayExpr
+struct TinAstArrayExpr
 {
-    LitAstExpression exobj;
-    LitAstExprList values;
+    TinAstExpression exobj;
+    TinAstExprList values;
 };
 
-struct LitAstObjectExpr
+struct TinAstObjectExpr
 {
-    LitAstExpression exobj;
-    LitValList keys;
-    LitAstExprList values;
+    TinAstExpression exobj;
+    TinValList keys;
+    TinAstExprList values;
 };
 
-struct LitAstIndexExpr
+struct TinAstIndexExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* array;
-    LitAstExpression* index;
+    TinAstExpression exobj;
+    TinAstExpression* array;
+    TinAstExpression* index;
 };
 
-struct LitAstThisExpr
+struct TinAstThisExpr
 {
-    LitAstExpression exobj;
+    TinAstExpression exobj;
 };
 
-struct LitAstSuperExpr
+struct TinAstSuperExpr
 {
-    LitAstExpression exobj;
-    LitString* method;
-    bool ignore_emit;
-    bool ignore_result;
+    TinAstExpression exobj;
+    TinString* method;
+    bool ignemit;
+    bool ignresult;
 };
 
-struct LitAstRangeExpr
+struct TinAstRangeExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* from;
-    LitAstExpression* to;
+    TinAstExpression exobj;
+    TinAstExpression* from;
+    TinAstExpression* to;
 };
 
-struct LitAstTernaryExpr
+struct TinAstTernaryExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* condition;
-    LitAstExpression* if_branch;
-    LitAstExpression* else_branch;
+    TinAstExpression exobj;
+    TinAstExpression* condition;
+    TinAstExpression* ifbranch;
+    TinAstExpression* elsebranch;
 };
 
-struct LitAstStrInterExpr
+struct TinAstStrInterExpr
 {
-    LitAstExpression exobj;
-    LitAstExprList expressions;
+    TinAstExpression exobj;
+    TinAstExprList expressions;
 };
 
-struct LitAstRefExpr
+struct TinAstRefExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* to;
+    TinAstExpression exobj;
+    TinAstExpression* to;
 };
 
 /*
  * Statements
  */
 
-struct LitAstExprExpr
+struct TinAstExprExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* expression;
+    TinAstExpression exobj;
+    TinAstExpression* expression;
     bool pop;
 };
 
-struct LitAstBlockExpr
+struct TinAstBlockExpr
 {
-    LitAstExpression exobj;
-    LitAstExprList statements;
+    TinAstExpression exobj;
+    TinAstExprList statements;
 };
 
-struct LitAstAssignVarExpr
+struct TinAstAssignVarExpr
 {
-    LitAstExpression exobj;
+    TinAstExpression exobj;
     const char* name;
     size_t length;
     bool constant;
-    LitAstExpression* init;
+    TinAstExpression* init;
 };
 
-struct LitAstIfExpr
+struct TinAstIfExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* condition;
-    LitAstExpression* if_branch;
-    LitAstExpression* else_branch;
-    LitAstExprList* elseif_conditions;
-    LitAstExprList* elseif_branches;
+    TinAstExpression exobj;
+    TinAstExpression* condition;
+    TinAstExpression* ifbranch;
+    TinAstExpression* elsebranch;
+    TinAstExprList* elseifconds;
+    TinAstExprList* elseifbranches;
 };
 
-struct LitAstWhileExpr
+struct TinAstWhileExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* condition;
-    LitAstExpression* body;
+    TinAstExpression exobj;
+    TinAstExpression* condition;
+    TinAstExpression* body;
 };
 
-struct LitAstForExpr
+struct TinAstForExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* init;
-    LitAstExpression* var;
-    LitAstExpression* condition;
-    LitAstExpression* increment;
-    LitAstExpression* body;
-    bool c_style;
+    TinAstExpression exobj;
+    TinAstExpression* init;
+    TinAstExpression* var;
+    TinAstExpression* condition;
+    TinAstExpression* increment;
+    TinAstExpression* body;
+    bool cstyle;
 };
 
-struct LitAstContinueExpr
+struct TinAstContinueExpr
 {
-    LitAstExpression exobj;
+    TinAstExpression exobj;
 };
 
-struct LitAstBreakExpr
+struct TinAstBreakExpr
 {
-    LitAstExpression exobj;
+    TinAstExpression exobj;
 };
 
-struct LitAstFunctionExpr
+struct TinAstFunctionExpr
 {
-    LitAstExpression exobj;
+    TinAstExpression exobj;
     const char* name;
     size_t length;
-    LitAstParamList parameters;
-    LitAstExpression* body;
+    TinAstParamList parameters;
+    TinAstExpression* body;
     bool exported;
 };
 
-struct LitAstReturnExpr
+struct TinAstReturnExpr
 {
-    LitAstExpression exobj;
-    LitAstExpression* expression;
+    TinAstExpression exobj;
+    TinAstExpression* expression;
 };
 
-struct LitAstMethodExpr
+struct TinAstMethodExpr
 {
-    LitAstExpression exobj;
-    LitString* name;
-    LitAstParamList parameters;
-    LitAstExpression* body;
-    bool is_static;
+    TinAstExpression exobj;
+    TinString* name;
+    TinAstParamList parameters;
+    TinAstExpression* body;
+    bool isstatic;
 };
 
-struct LitAstClassExpr
+struct TinAstClassExpr
 {
-    LitAstExpression exobj;
-    LitString* name;
-    LitString* parent;
-    LitAstExprList fields;
+    TinAstExpression exobj;
+    TinString* name;
+    TinString* parent;
+    TinAstExprList fields;
 };
 
-struct LitAstFieldExpr
+struct TinAstFieldExpr
 {
-    LitAstExpression exobj;
-    LitString* name;
-    LitAstExpression* getter;
-    LitAstExpression* setter;
-    bool is_static;
+    TinAstExpression exobj;
+    TinString* name;
+    TinAstExpression* getter;
+    TinAstExpression* setter;
+    bool isstatic;
 };
 
-struct LitVariable
+struct TinVariable
 {
     const char* name;
     size_t length;
     int depth;
     bool constant;
     bool used;
-    LitValue constant_value;
-    LitAstExpression** declaration;
+    TinValue constvalue;
+    TinAstExpression** declaration;
 };
 
 
-struct LitExecState
+struct TinExecState
 {
-    LitValue* slots;
-    LitValue* privates;
-    LitUpvalue** upvalues;
+    TinValue* slots;
+    TinValue* privates;
+    TinUpvalue** upvalues;
     uint8_t* ip;
-    LitCallFrame* frame;
-    LitChunk* current_chunk;
-
+    TinCallFrame* frame;
+    TinChunk* currentchunk;
 };
 
-
-struct LitAstToken
+struct TinAstToken
 {
     const char* start;
-    LitAstTokType type;
+    TinAstTokType type;
     size_t length;
     size_t line;
-    LitValue value;
+    TinValue value;
 };
 
-struct LitAstLocal
+struct TinAstLocal
 {
     const char* name;
     size_t length;
@@ -512,81 +507,81 @@ struct LitAstLocal
     bool constant;
 };
 
-struct LitAstLocList
+struct TinAstLocList
 {
     size_t capacity;
     size_t count;
-    LitAstLocal* values;
+    TinAstLocal* values;
 };
 
-struct LitAstCompUpvalue
+struct TinAstCompUpvalue
 {
     uint8_t index;
     bool isLocal;
 };
 
-struct LitAstCompiler
+struct TinAstCompiler
 {
-    LitAstLocList locals;
+    TinAstLocList locals;
     int scope_depth;
-    LitFunction* function;
-    LitAstFuncType type;
-    LitAstCompUpvalue upvalues[UINT8_COUNT];
-    LitAstCompiler* enclosing;
-    bool skip_return;
-    size_t loop_depth;
+    TinFunction* function;
+    TinAstFuncType type;
+    TinAstCompUpvalue upvalues[UINT8_COUNT];
+    TinAstCompiler* enclosing;
+    bool skipreturn;
+    size_t loopdepth;
     int slots;
-    int max_slots;
+    int maxslots;
 };
 
-struct LitAstParser
+struct TinAstParser
 {
-    LitState* state;
-    bool had_error;
+    TinState* state;
+    bool haderror;
     bool panic_mode;
-    LitAstToken previous;
-    LitAstToken current;
-    LitAstCompiler* compiler;
+    TinAstToken previous;
+    TinAstToken current;
+    TinAstCompiler* compiler;
     uint8_t exprrootcnt;
     uint8_t stmtrootcnt;
 };
 
-struct LitEmulatedFile
+struct TinEmulatedFile
 {
     const char* source;
     size_t length;
     size_t position;
 };
 
-struct LitAstScanner
+struct TinAstScanner
 {
     size_t line;
     const char* start;
     const char* current;
-    const char* file_name;
-    LitState* state;
-    size_t braces[LIT_MAX_INTERPOLATION_NESTING];
-    size_t num_braces;
-    bool had_error;
+    const char* filename;
+    TinState* state;
+    size_t braces[TIN_MAX_INTERPOLATION_NESTING];
+    size_t numbraces;
+    bool haderror;
 };
 
-struct LitAstOptimizer
+struct TinAstOptimizer
 {
-    LitState* state;
-    LitVarList variables;
+    TinState* state;
+    TinVarList variables;
     int depth;
     bool mark_used;
 };
 
-static inline void lit_vm_push(LitVM* vm, LitValue value)
+static inline void tin_vm_push(TinVM* vm, TinValue value)
 {
     *(vm->fiber->stack_top) = value;
     vm->fiber->stack_top++;
 }
 
-static inline LitValue lit_vm_pop(LitVM* vm)
+static inline TinValue tin_vm_pop(TinVM* vm)
 {
-    LitValue rt;
+    TinValue rt;
     rt = *(vm->fiber->stack_top);
     vm->fiber->stack_top--;
     return rt;

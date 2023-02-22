@@ -1,0 +1,11 @@
+
+
+va = [1, 2, 3, 4, 5]
+//va[0] = va[0] ^ 255
+for(var i=0; i<va.length; i++)
+{
+    va[i] *= 255
+    //va[i] = va[i] * 255
+}
+println(va);
+

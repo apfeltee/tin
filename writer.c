@@ -4,13 +4,13 @@
 #include "priv.h"
 #include "sds.h"
 
-static void litwr_cb_writebyte(LitWriter* wr, int byte)
+static void litwr_cb_writebyte(TinWriter* wr, int byte)
 {
-    LitString* ds;
+    TinString* ds;
     if(wr->stringmode)
     {
-        ds = (LitString*)wr->uptr;
-        lit_string_appendchar(ds, byte);        
+        ds = (TinString*)wr->uptr;
+        tin_string_appendchar(ds, byte);        
     }
     else
     {
@@ -18,13 +18,13 @@ static void litwr_cb_writebyte(LitWriter* wr, int byte)
     }
 }
 
-static void litwr_cb_writestring(LitWriter* wr, const char* string, size_t len)
+static void litwr_cb_writestring(TinWriter* wr, const char* string, size_t len)
 {
-    LitString* ds;
+    TinString* ds;
     if(wr->stringmode)
     {
-        ds = (LitString*)wr->uptr;
-        lit_string_appendlen(ds, string, len);
+        ds = (TinString*)wr->uptr;
+        tin_string_appendlen(ds, string, len);
     }
     else
     {
@@ -32,12 +32,12 @@ static void litwr_cb_writestring(LitWriter* wr, const char* string, size_t len)
     }
 }
 
-static void litwr_cb_writeformat(LitWriter* wr, const char* fmt, va_list va)
+static void litwr_cb_writeformat(TinWriter* wr, const char* fmt, va_list va)
 {
-    LitString* ds;
+    TinString* ds;
     if(wr->stringmode)
     {
-        ds = (LitString*)wr->uptr;
+        ds = (TinString*)wr->uptr;
         ds->chars = sdscatvprintf(ds->chars, fmt, va);
     }
     else
@@ -46,7 +46,7 @@ static void litwr_cb_writeformat(LitWriter* wr, const char* fmt, va_list va)
     }
 }
 
-static void lit_writer_init_default(LitState* state, LitWriter* wr)
+static void tin_writer_init_default(TinState* state, TinWriter* wr)
 {
     wr->state = state;
     wr->forceflush = false;
@@ -56,36 +56,36 @@ static void lit_writer_init_default(LitState* state, LitWriter* wr)
     wr->fnformat = litwr_cb_writeformat;
 }
 
-void lit_writer_init_file(LitState* state, LitWriter* wr, FILE* fh, bool forceflush)
+void tin_writer_init_file(TinState* state, TinWriter* wr, FILE* fh, bool forceflush)
 {
-    lit_writer_init_default(state, wr);
+    tin_writer_init_default(state, wr);
     wr->uptr = fh;
     wr->forceflush = forceflush;
 }
 
-void lit_writer_init_string(LitState* state, LitWriter* wr)
+void tin_writer_init_string(TinState* state, TinWriter* wr)
 {
-    lit_writer_init_default(state, wr);
+    tin_writer_init_default(state, wr);
     wr->stringmode = true;
-    wr->uptr = lit_string_makeempty(state, 0, false);
+    wr->uptr = tin_string_makeempty(state, 0, false);
 }
 
-void lit_writer_writebyte(LitWriter* wr, int byte)
+void tin_writer_writebyte(TinWriter* wr, int byte)
 {
     wr->fnbyte(wr, byte);
 }
 
-void lit_writer_writestringl(LitWriter* wr, const char* str, size_t len)
+void tin_writer_writestringl(TinWriter* wr, const char* str, size_t len)
 {
     wr->fnstring(wr, str, len);
 }
 
-void lit_writer_writestring(LitWriter* wr, const char* str)
+void tin_writer_writestring(TinWriter* wr, const char* str)
 {
     wr->fnstring(wr, str, strlen(str));
 }
 
-void lit_writer_writeformat(LitWriter* wr, const char* fmt, ...)
+void tin_writer_writeformat(TinWriter* wr, const char* fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
@@ -94,59 +94,59 @@ void lit_writer_writeformat(LitWriter* wr, const char* fmt, ...)
 }
 
 
-void lit_writer_writeescapedbyte(LitWriter* wr, int ch)
+void tin_writer_writeescapedbyte(TinWriter* wr, int ch)
 {
     switch(ch)
     {
         case '\'':
             {
-                lit_writer_writestring(wr, "\\\'");
+                tin_writer_writestring(wr, "\\\'");
             }
             break;
         case '\"':
             {
-                lit_writer_writestring(wr, "\\\"");
+                tin_writer_writestring(wr, "\\\"");
             }
             break;
         case '\\':
             {
-                lit_writer_writestring(wr, "\\\\");
+                tin_writer_writestring(wr, "\\\\");
             }
             break;
         case '\b':
             {
-                lit_writer_writestring(wr, "\\b");
+                tin_writer_writestring(wr, "\\b");
             }
             break;
         case '\f':
             {
-                lit_writer_writestring(wr, "\\f");
+                tin_writer_writestring(wr, "\\f");
             }
             break;
         case '\n':
             {
-                lit_writer_writestring(wr, "\\n");
+                tin_writer_writestring(wr, "\\n");
             }
             break;
         case '\r':
             {
-                lit_writer_writestring(wr, "\\r");
+                tin_writer_writestring(wr, "\\r");
             }
             break;
         case '\t':
             {
-                lit_writer_writestring(wr, "\\t");
+                tin_writer_writestring(wr, "\\t");
             }
             break;
         default:
             {
-                lit_writer_writeformat(wr, "\\x%02x", (unsigned char)ch);
+                tin_writer_writeformat(wr, "\\x%02x", (unsigned char)ch);
             }
             break;
     }
 }
 
-void lit_writer_writeescapedstring(LitWriter* wr, const char* str, size_t len, bool withquot)
+void tin_writer_writeescapedstring(TinWriter* wr, const char* str, size_t len, bool withquot)
 {
     size_t i;
     int bch;
@@ -154,37 +154,37 @@ void lit_writer_writeescapedstring(LitWriter* wr, const char* str, size_t len, b
     quotch = '"';
     if(withquot)
     {
-        lit_writer_writebyte(wr, quotch);
+        tin_writer_writebyte(wr, quotch);
         for(i=0; i<len; i++)
         {
             bch = str[i];
             if((bch < 32) || (bch > 127) || (bch == '\"') || (bch == '\\'))
             {
-                lit_writer_writeescapedbyte(wr, bch);
+                tin_writer_writeescapedbyte(wr, bch);
             }
             else
             {
-                lit_writer_writebyte(wr, bch);
+                tin_writer_writebyte(wr, bch);
             }
         }
-        lit_writer_writebyte(wr, quotch);
+        tin_writer_writebyte(wr, quotch);
     }
     else
     {
-        lit_writer_writestringl(wr, str, len);
+        tin_writer_writestringl(wr, str, len);
     }
 }
 
-LitString* lit_writer_get_string(LitWriter* wr)
+TinString* tin_writer_get_string(TinWriter* wr)
 {
     if(wr->stringmode)
     {
-        return (LitString*)wr->uptr;
+        return (TinString*)wr->uptr;
     }
     return NULL;
 }
 
-static const char* lit_object_type_names[] =
+static const char* tin_object_type_names[] =
 {
     "string",
     "function",
@@ -207,42 +207,42 @@ static const char* lit_object_type_names[] =
     "reference"
 };
 
-void lit_towriter_array(LitState* state, LitWriter* wr, LitArray* array, size_t size)
+void tin_towriter_array(TinState* state, TinWriter* wr, TinArray* array, size_t size)
 {
     size_t i;
-    lit_writer_writeformat(wr, "(%u) [", (unsigned int)size);
+    tin_writer_writeformat(wr, "(%u) [", (unsigned int)size);
     if(size > 0)
     {
-        lit_writer_writestring(wr, " ");
+        tin_writer_writestring(wr, " ");
         for(i = 0; i < size; i++)
         {
-            if(lit_value_isarray(lit_vallist_get(&array->list, i)) && (array == lit_value_asarray(lit_vallist_get(&array->list,i))))
+            if(tin_value_isarray(tin_vallist_get(&array->list, i)) && (array == tin_value_asarray(tin_vallist_get(&array->list,i))))
             {
-                lit_writer_writestring(wr, "(recursion)");
+                tin_writer_writestring(wr, "(recursion)");
             }
             else
             {
-                lit_towriter_value(state, wr, lit_vallist_get(&array->list, i), true);
+                tin_towriter_value(state, wr, tin_vallist_get(&array->list, i), true);
             }
             if(i + 1 < size)
             {
-                lit_writer_writestring(wr, ", ");
+                tin_writer_writestring(wr, ", ");
             }
             else
             {
-                lit_writer_writestring(wr, " ");
+                tin_writer_writestring(wr, " ");
             }
         }
     }
-    lit_writer_writestring(wr, "]");
+    tin_writer_writestring(wr, "]");
 }
 
-void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
+void tin_towriter_map(TinState* state, TinWriter* wr, TinMap* map, size_t size)
 {
     bool hadbefore;
     size_t i;
-    LitTableEntry* entry;
-    lit_writer_writeformat(wr, "(%u) {", (unsigned int)size);
+    TinTableEntry* entry;
+    tin_writer_writeformat(wr, "(%u) {", (unsigned int)size);
     hadbefore = false;
     if(size > 0)
     {
@@ -253,20 +253,20 @@ void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
             {
                 if(hadbefore)
                 {
-                    lit_writer_writestring(wr, ", ");
+                    tin_writer_writestring(wr, ", ");
                 }
                 else
                 {
-                    lit_writer_writestring(wr, " ");
+                    tin_writer_writestring(wr, " ");
                 }
-                lit_writer_writeformat(wr, "%s = ", entry->key->chars);
-                if(lit_value_ismap(entry->value) && (map == lit_value_asmap(entry->value)))
+                tin_writer_writeformat(wr, "%s = ", entry->key->chars);
+                if(tin_value_ismap(entry->value) && (map == tin_value_asmap(entry->value)))
                 {
-                    lit_writer_writestring(wr, "(recursion)");
+                    tin_writer_writestring(wr, "(recursion)");
                 }
                 else
                 {
-                    lit_towriter_value(state, wr, entry->value, true);
+                    tin_towriter_value(state, wr, entry->value, true);
                 }
                 hadbefore = true;
             }
@@ -274,165 +274,165 @@ void lit_towriter_map(LitState* state, LitWriter* wr, LitMap* map, size_t size)
     }
     if(hadbefore)
     {
-        lit_writer_writestring(wr, " }");
+        tin_writer_writestring(wr, " }");
     }
     else
     {
-        lit_writer_writestring(wr, "}");
+        tin_writer_writestring(wr, "}");
     }
 }
 
-void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value, bool withquot)
+void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool withquot)
 {
     size_t size;
-    LitMap* map;
-    LitArray* array;
-    LitRange* range;
-    LitValue* slot;
-    LitObject* obj;
-    LitUpvalue* upvalue;
-    LitString* s;
-    obj = lit_value_asobject(value);
+    TinMap* map;
+    TinArray* array;
+    TinRange* range;
+    TinValue* slot;
+    TinObject* obj;
+    TinUpvalue* upvalue;
+    TinString* s;
+    obj = tin_value_asobject(value);
     if(obj != NULL)
     {
         switch(obj->type)
         {
-            case LITTYPE_STRING:
+            case TINTYPE_STRING:
                 {
-                    s = lit_value_asstring(value);
-                    lit_writer_writeescapedstring(wr, s->chars, lit_string_getlength(s), withquot);
+                    s = tin_value_asstring(value);
+                    tin_writer_writeescapedstring(wr, s->chars, tin_string_getlength(s), withquot);
                 }
                 break;
-            case LITTYPE_FUNCTION:
+            case TINTYPE_FUNCTION:
                 {
-                    lit_writer_writeformat(wr, "function %s", lit_value_asfunction(value)->name->chars);
+                    tin_writer_writeformat(wr, "function %s", tin_value_asfunction(value)->name->chars);
                 }
                 break;
-            case LITTYPE_CLOSURE:
+            case TINTYPE_CLOSURE:
                 {
-                    lit_writer_writeformat(wr, "closure %s", lit_value_asclosure(value)->function->name->chars);
+                    tin_writer_writeformat(wr, "closure %s", tin_value_asclosure(value)->function->name->chars);
                 }
                 break;
-            case LITTYPE_NATIVE_PRIMITIVE:
+            case TINTYPE_NATIVE_PRIMITIVE:
                 {
-                    lit_writer_writeformat(wr, "function %s", lit_value_asnativeprimitive(value)->name->chars);
+                    tin_writer_writeformat(wr, "function %s", tin_value_asnativeprimitive(value)->name->chars);
                 }
                 break;
-            case LITTYPE_NATIVE_FUNCTION:
+            case TINTYPE_NATIVE_FUNCTION:
                 {
-                    lit_writer_writeformat(wr, "function %s", lit_value_asnativefunction(value)->name->chars);
+                    tin_writer_writeformat(wr, "function %s", tin_value_asnativefunction(value)->name->chars);
                 }
                 break;
-            case LITTYPE_PRIMITIVE_METHOD:
+            case TINTYPE_PRIMITIVE_METHOD:
                 {
-                    lit_writer_writeformat(wr, "function %s", lit_value_asprimitivemethod(value)->name->chars);
+                    tin_writer_writeformat(wr, "function %s", tin_value_asprimitivemethod(value)->name->chars);
                 }
                 break;
-            case LITTYPE_NATIVE_METHOD:
+            case TINTYPE_NATIVE_METHOD:
                 {
-                    lit_writer_writeformat(wr, "function %s", lit_value_asnativemethod(value)->name->chars);
+                    tin_writer_writeformat(wr, "function %s", tin_value_asnativemethod(value)->name->chars);
                 }
                 break;
-            case LITTYPE_FIBER:
+            case TINTYPE_FIBER:
                 {
-                    lit_writer_writeformat(wr, "fiber");
+                    tin_writer_writeformat(wr, "fiber");
                 }
                 break;
-            case LITTYPE_MODULE:
+            case TINTYPE_MODULE:
                 {
-                    lit_writer_writeformat(wr, "module %s", lit_value_asmodule(value)->name->chars);
+                    tin_writer_writeformat(wr, "module %s", tin_value_asmodule(value)->name->chars);
                 }
                 break;
 
-            case LITTYPE_UPVALUE:
+            case TINTYPE_UPVALUE:
                 {
-                    upvalue = lit_value_asupvalue(value);
+                    upvalue = tin_value_asupvalue(value);
                     if(upvalue->location == NULL)
                     {
-                        lit_towriter_value(state, wr, upvalue->closed, withquot);
+                        tin_towriter_value(state, wr, upvalue->closed, withquot);
                     }
                     else
                     {
-                        lit_towriter_object(state, wr, *upvalue->location, withquot);
+                        tin_towriter_object(state, wr, *upvalue->location, withquot);
                     }
                 }
                 break;
-            case LITTYPE_CLASS:
+            case TINTYPE_CLASS:
                 {
-                    lit_writer_writeformat(wr, "class %s", lit_value_asclass(value)->name->chars);
+                    tin_writer_writeformat(wr, "class %s", tin_value_asclass(value)->name->chars);
                 }
                 break;
-            case LITTYPE_INSTANCE:
+            case TINTYPE_INSTANCE:
                 {
                     /*
-                    if(lit_value_asinstance(value)->klass->object.type == LITTYPE_MAP)
+                    if(tin_value_asinstance(value)->klass->object.type == TINTYPE_MAP)
                     {
                         fprintf(stderr, "instance is a map\n");
                     }
-                    printf("%s instance", lit_value_asinstance(value)->klass->name->chars);
+                    printf("%s instance", tin_value_asinstance(value)->klass->name->chars);
                     */
-                    lit_writer_writeformat(wr, "<instance '%s' ", lit_value_asinstance(value)->klass->name->chars);
-                    map = lit_value_asmap(value);
+                    tin_writer_writeformat(wr, "<instance '%s' ", tin_value_asinstance(value)->klass->name->chars);
+                    map = tin_value_asmap(value);
                     size = map->values.count;
-                    lit_towriter_map(state, wr, map, size);
-                    lit_writer_writestring(wr, ">");
+                    tin_towriter_map(state, wr, map, size);
+                    tin_writer_writestring(wr, ">");
                 }
                 break;
-            case LITTYPE_BOUND_METHOD:
+            case TINTYPE_BOUND_METHOD:
                 {
-                    lit_towriter_value(state, wr, lit_value_asboundmethod(value)->method, withquot);
+                    tin_towriter_value(state, wr, tin_value_asboundmethod(value)->method, withquot);
                     return;
                 }
                 break;
-            case LITTYPE_ARRAY:
+            case TINTYPE_ARRAY:
                 {
-                    #ifdef LIT_MINIMIZE_CONTAINERS
-                        lit_writer_writestring(wr, "array");
+                    #ifdef TIN_MINIMIZE_CONTAINERS
+                        tin_writer_writestring(wr, "array");
                     #else
-                        array = lit_value_asarray(value);
-                        size = lit_vallist_count(&array->list);
-                        lit_towriter_array(state, wr, array, size);
+                        array = tin_value_asarray(value);
+                        size = tin_vallist_count(&array->list);
+                        tin_towriter_array(state, wr, array, size);
                     #endif
                 }
                 break;
-            case LITTYPE_MAP:
+            case TINTYPE_MAP:
                 {
-                    #ifdef LIT_MINIMIZE_CONTAINERS
-                        lit_writer_writeformat(wr, "map");
+                    #ifdef TIN_MINIMIZE_CONTAINERS
+                        tin_writer_writeformat(wr, "map");
                     #else
-                        map = lit_value_asmap(value);
+                        map = tin_value_asmap(value);
                         size = map->values.count;
-                        lit_towriter_map(state, wr, map, size);
+                        tin_towriter_map(state, wr, map, size);
                     #endif
                 }
                 break;
-            case LITTYPE_USERDATA:
+            case TINTYPE_USERDATA:
                 {
-                    lit_writer_writeformat(wr, "userdata");
+                    tin_writer_writeformat(wr, "userdata");
                 }
                 break;
-            case LITTYPE_RANGE:
+            case TINTYPE_RANGE:
                 {
-                    range = lit_value_asrange(value);
-                    lit_writer_writeformat(wr, "%g .. %g", range->from, range->to);
+                    range = tin_value_asrange(value);
+                    tin_writer_writeformat(wr, "%g .. %g", range->from, range->to);
                 }
                 break;
-            case LITTYPE_FIELD:
+            case TINTYPE_FIELD:
                 {
-                    lit_writer_writeformat(wr, "field");
+                    tin_writer_writeformat(wr, "field");
                 }
                 break;
-            case LITTYPE_REFERENCE:
+            case TINTYPE_REFERENCE:
                 {
-                    lit_writer_writeformat(wr, "reference => ");
-                    slot = lit_value_asreference(value)->slot;
+                    tin_writer_writeformat(wr, "reference => ");
+                    slot = tin_value_asreference(value)->slot;
                     if(slot == NULL)
                     {
-                        lit_writer_writestring(wr, "null");
+                        tin_writer_writestring(wr, "null");
                     }
                     else
                     {
-                        lit_towriter_value(state, wr, *slot, withquot);
+                        tin_towriter_value(state, wr, *slot, withquot);
                     }
                 }
                 break;
@@ -444,187 +444,187 @@ void lit_towriter_object(LitState* state, LitWriter* wr, LitValue value, bool wi
     }
     else
     {
-        lit_writer_writestring(wr, "!nullpointer!");
+        tin_writer_writestring(wr, "!nullpointer!");
     }
 }
 
-//LitInterpretResult lit_call_instance_method(LitState* state, LitInstance* instance, LitString* mthname, LitValue* argv, size_t argc)
+//TinInterpretResult tin_call_instance_method(TinState* state, TinInstance* instance, TinString* mthname, TinValue* argv, size_t argc)
 //
-void lit_towriter_value(LitState* state, LitWriter* wr, LitValue value, bool withquot)
+void tin_towriter_value(TinState* state, TinWriter* wr, TinValue value, bool withquot)
 {
-    if(lit_value_isbool(value))
+    if(tin_value_isbool(value))
     {
-        lit_writer_writestring(wr, lit_value_asbool(value) ? "true" : "false");
+        tin_writer_writestring(wr, tin_value_asbool(value) ? "true" : "false");
     }
-    else if(lit_value_isnull(value))
+    else if(tin_value_isnull(value))
     {
-        lit_writer_writestring(wr, "null");
+        tin_writer_writestring(wr, "null");
     }
-    else if(lit_value_isnumber(value))
+    else if(tin_value_isnumber(value))
     {
         if(value.isfixednumber)
         {
-            lit_writer_writeformat(wr, "%ld", lit_value_asfixednumber(value));
+            tin_writer_writeformat(wr, "%ld", tin_value_asfixednumber(value));
         }
         else
         {
-            lit_writer_writeformat(wr, "%g", lit_value_asfloatnumber(value));
+            tin_writer_writeformat(wr, "%g", tin_value_asfloatnumber(value));
         }
     }
-    else if(lit_value_isobject(value))
+    else if(tin_value_isobject(value))
     {
-        lit_towriter_object(state, wr, value, withquot);
+        tin_towriter_object(state, wr, value, withquot);
     }
 }
 
-const char* lit_tostring_typename(LitValue value)
+const char* tin_tostring_typename(TinValue value)
 {
-    if(lit_value_isbool(value))
+    if(tin_value_isbool(value))
     {
         return "bool";
     }
-    else if(lit_value_isnull(value))
+    else if(tin_value_isnull(value))
     {
         return "null";
     }
-    else if(lit_value_isnumber(value))
+    else if(tin_value_isnumber(value))
     {
         return "number";
     }
-    else if(lit_value_isobject(value))
+    else if(tin_value_isobject(value))
     {
-        return lit_object_type_names[lit_value_type(value)];
+        return tin_object_type_names[tin_value_type(value)];
     }
     return "unknown";
 }
 
-const char* lit_tostring_exprtype(LitAstExprType t)
+const char* tin_tostring_exprtype(TinAstExprType t)
 {
     switch(t)
     {
-        case LITEXPR_LITERAL: return "LITERAL";
-        case LITEXPR_BINARY: return "BINARY";
-        case LITEXPR_UNARY: return "UNARY";
-        case LITEXPR_VAREXPR: return "VAREXPR";
-        case LITEXPR_ASSIGN: return "ASSIGN";
-        case LITEXPR_CALL: return "CALL";
-        case LITEXPR_SET: return "SET";
-        case LITEXPR_GET: return "GET";
-        case LITEXPR_LAMBDA: return "LAMBDA";
-        case LITEXPR_ARRAY: return "ARRAY";
-        case LITEXPR_OBJECT: return "OBJECT";
-        case LITEXPR_SUBSCRIPT: return "SUBSCRIPT";
-        case LITEXPR_THIS: return "THIS";
-        case LITEXPR_SUPER: return "SUPER";
-        case LITEXPR_RANGE: return "RANGE";
-        case LITEXPR_TERNARY: return "TERNARY";
-        case LITEXPR_INTERPOLATION: return "INTERPOLATION";
-        case LITEXPR_REFERENCE: return "REFERENCE";
-        case LITEXPR_EXPRESSION: return "EXPRESSION";
-        case LITEXPR_BLOCK: return "BLOCK";
-        case LITEXPR_IFSTMT: return "IFSTMT";
-        case LITEXPR_WHILE: return "WHILE";
-        case LITEXPR_FOR: return "FOR";
-        case LITEXPR_VARSTMT: return "VARSTMT";
-        case LITEXPR_CONTINUE: return "CONTINUE";
-        case LITEXPR_BREAK: return "BREAK";
-        case LITEXPR_FUNCTION: return "FUNCTION";
-        case LITEXPR_RETURN: return "RETURN";
-        case LITEXPR_METHOD: return "METHOD";
-        case LITEXPR_CLASS: return "CLASS";
-        case LITEXPR_FIELD: return "FIELD";
+        case TINEXPR_LITERAL: return "TINERAL";
+        case TINEXPR_BINARY: return "BINARY";
+        case TINEXPR_UNARY: return "UNARY";
+        case TINEXPR_VAREXPR: return "VAREXPR";
+        case TINEXPR_ASSIGN: return "ASSIGN";
+        case TINEXPR_CALL: return "CALL";
+        case TINEXPR_SET: return "SET";
+        case TINEXPR_GET: return "GET";
+        case TINEXPR_LAMBDA: return "LAMBDA";
+        case TINEXPR_ARRAY: return "ARRAY";
+        case TINEXPR_OBJECT: return "OBJECT";
+        case TINEXPR_SUBSCRIPT: return "SUBSCRIPT";
+        case TINEXPR_THIS: return "THIS";
+        case TINEXPR_SUPER: return "SUPER";
+        case TINEXPR_RANGE: return "RANGE";
+        case TINEXPR_TERNARY: return "TERNARY";
+        case TINEXPR_INTERPOLATION: return "INTERPOLATION";
+        case TINEXPR_REFERENCE: return "REFERENCE";
+        case TINEXPR_EXPRESSION: return "EXPRESSION";
+        case TINEXPR_BLOCK: return "BLOCK";
+        case TINEXPR_IFSTMT: return "IFSTMT";
+        case TINEXPR_WHILE: return "WHILE";
+        case TINEXPR_FOR: return "FOR";
+        case TINEXPR_VARSTMT: return "VARSTMT";
+        case TINEXPR_CONTINUE: return "CONTINUE";
+        case TINEXPR_BREAK: return "BREAK";
+        case TINEXPR_FUNCTION: return "FUNCTION";
+        case TINEXPR_RETURN: return "RETURN";
+        case TINEXPR_METHOD: return "METHOD";
+        case TINEXPR_CLASS: return "CLASS";
+        case TINEXPR_FIELD: return "FIELD";
         default:
             break;
     }
     return "unknown";
 }
 
-const char* lit_tostring_optok(LitAstTokType t)
+const char* tin_tostring_optok(TinAstTokType t)
 {
     switch(t)
     {
-        case LITTOK_NEW_LINE: return "NEW_LINE";
-        case LITTOK_LEFT_PAREN: return "(";
-        case LITTOK_RIGHT_PAREN: return ")";
-        case LITTOK_LEFT_BRACE: return "{";
-        case LITTOK_RIGHT_BRACE: return "}";
-        case LITTOK_LEFT_BRACKET: return "[";
-        case LITTOK_RIGHT_BRACKET: return "]";
-        case LITTOK_COMMA: return ",";
-        case LITTOK_SEMICOLON: return ";";
-        case LITTOK_COLON: return ":";
-        case LITTOK_BAR_EQUAL: return "|=";
-        case LITTOK_BAR: return "|";
-        case LITTOK_BAR_BAR: return "||";
-        case LITTOK_AMPERSAND_EQUAL: return "&=";
-        case LITTOK_AMPERSAND: return "&";
-        case LITTOK_AMPERSAND_AMPERSAND: return "&&";
-        case LITTOK_BANG: return "!";
-        case LITTOK_BANG_EQUAL: return "!=";
-        case LITTOK_EQUAL: return "=";
-        case LITTOK_EQUAL_EQUAL: return "==";
-        case LITTOK_GREATER: return ">";
-        case LITTOK_GREATER_EQUAL: return ">=";
-        case LITTOK_GREATER_GREATER: return ">>";
-        case LITTOK_LESS: return "<";
-        case LITTOK_LESS_EQUAL: return "<=";
-        case LITTOK_LESS_LESS: return "<<";
-        case LITTOK_PLUS: return "+";
-        case LITTOK_PLUS_EQUAL: return "+=";
-        case LITTOK_PLUS_PLUS: return "++";
-        case LITTOK_MINUS: return "-";
-        case LITTOK_MINUS_EQUAL: return "-=";
-        case LITTOK_MINUS_MINUS: return "--";
-        case LITTOK_STAR: return "*";
-        case LITTOK_STAR_EQUAL: return "*=";
-        case LITTOK_STAR_STAR: return "**";
-        case LITTOK_SLASH: return "/";
-        case LITTOK_SLASH_EQUAL: return "/=";
-        case LITTOK_QUESTION: return "?";
-        case LITTOK_QUESTION_QUESTION: return "??";
-        case LITTOK_PERCENT: return "%";
-        case LITTOK_PERCENT_EQUAL: return "%=";
-        case LITTOK_ARROW: return "=>";
-        case LITTOK_SMALL_ARROW: return "->";
-        case LITTOK_TILDE: return "~";
-        case LITTOK_CARET: return "^";
-        case LITTOK_CARET_EQUAL: return "^=";
-        case LITTOK_DOT: return ".";
-        case LITTOK_DOT_DOT: return "..";
-        case LITTOK_DOT_DOT_DOT: return "...";
-        case LITTOK_SHARP: return "#";
-        case LITTOK_SHARP_EQUAL: return "#=";
-        case LITTOK_IDENTIFIER: return "IDENTIFIER";
-        case LITTOK_STRING: return "STRING";
-        case LITTOK_INTERPOLATION: return "INTERPOLATION";
-        case LITTOK_NUMBER: return "NUMBER";
-        case LITTOK_CLASS: return "CLASS";
-        case LITTOK_ELSE: return "ELSE";
-        case LITTOK_FALSE: return "FALSE";
-        case LITTOK_FOR: return "FOR";
-        case LITTOK_FUNCTION: return "FUNCTION";
-        case LITTOK_IF: return "IF";
-        case LITTOK_NULL: return "NULL";
-        case LITTOK_RETURN: return "RETURN";
-        case LITTOK_SUPER: return "SUPER";
-        case LITTOK_THIS: return "THIS";
-        case LITTOK_TRUE: return "TRUE";
-        case LITTOK_VAR: return "VAR";
-        case LITTOK_WHILE: return "WHILE";
-        case LITTOK_CONTINUE: return "CONTINUE";
-        case LITTOK_BREAK: return "BREAK";
-        case LITTOK_NEW: return "NEW";
-        case LITTOK_EXPORT: return "EXPORT";
-        case LITTOK_IS: return "IS";
-        case LITTOK_STATIC: return "STATIC";
-        case LITTOK_OPERATOR: return "OPERATOR";
-        case LITTOK_GET: return "GET";
-        case LITTOK_SET: return "SET";
-        case LITTOK_IN: return "IN";
-        case LITTOK_CONST: return "CONST";
-        case LITTOK_REF: return "REF";
-        case LITTOK_ERROR: return "ERROR";
-        case LITTOK_EOF: return "EOF";
+        case TINTOK_NEW_LINE: return "NEW_LINE";
+        case TINTOK_LEFT_PAREN: return "(";
+        case TINTOK_RIGHT_PAREN: return ")";
+        case TINTOK_LEFT_BRACE: return "{";
+        case TINTOK_RIGHT_BRACE: return "}";
+        case TINTOK_LEFT_BRACKET: return "[";
+        case TINTOK_RIGHT_BRACKET: return "]";
+        case TINTOK_COMMA: return ",";
+        case TINTOK_SEMICOLON: return ";";
+        case TINTOK_COLON: return ":";
+        case TINTOK_BAR_EQUAL: return "|=";
+        case TINTOK_BAR: return "|";
+        case TINTOK_BAR_BAR: return "||";
+        case TINTOK_AMPERSAND_EQUAL: return "&=";
+        case TINTOK_AMPERSAND: return "&";
+        case TINTOK_AMPERSAND_AMPERSAND: return "&&";
+        case TINTOK_BANG: return "!";
+        case TINTOK_BANG_EQUAL: return "!=";
+        case TINTOK_EQUAL: return "=";
+        case TINTOK_EQUAL_EQUAL: return "==";
+        case TINTOK_GREATER: return ">";
+        case TINTOK_GREATER_EQUAL: return ">=";
+        case TINTOK_GREATER_GREATER: return ">>";
+        case TINTOK_LESS: return "<";
+        case TINTOK_LESS_EQUAL: return "<=";
+        case TINTOK_LESS_LESS: return "<<";
+        case TINTOK_PLUS: return "+";
+        case TINTOK_PLUS_EQUAL: return "+=";
+        case TINTOK_PLUS_PLUS: return "++";
+        case TINTOK_MINUS: return "-";
+        case TINTOK_MINUS_EQUAL: return "-=";
+        case TINTOK_MINUS_MINUS: return "--";
+        case TINTOK_STAR: return "*";
+        case TINTOK_STAR_EQUAL: return "*=";
+        case TINTOK_STAR_STAR: return "**";
+        case TINTOK_SLASH: return "/";
+        case TINTOK_SLASH_EQUAL: return "/=";
+        case TINTOK_QUESTION: return "?";
+        case TINTOK_QUESTION_QUESTION: return "??";
+        case TINTOK_PERCENT: return "%";
+        case TINTOK_PERCENT_EQUAL: return "%=";
+        case TINTOK_ARROW: return "=>";
+        case TINTOK_SMALL_ARROW: return "->";
+        case TINTOK_TILDE: return "~";
+        case TINTOK_CARET: return "^";
+        case TINTOK_CARET_EQUAL: return "^=";
+        case TINTOK_DOT: return ".";
+        case TINTOK_DOT_DOT: return "..";
+        case TINTOK_DOT_DOT_DOT: return "...";
+        case TINTOK_SHARP: return "#";
+        case TINTOK_SHARP_EQUAL: return "#=";
+        case TINTOK_IDENTIFIER: return "IDENTIFIER";
+        case TINTOK_STRING: return "STRING";
+        case TINTOK_INTERPOLATION: return "INTERPOLATION";
+        case TINTOK_NUMBER: return "NUMBER";
+        case TINTOK_CLASS: return "CLASS";
+        case TINTOK_ELSE: return "ELSE";
+        case TINTOK_FALSE: return "FALSE";
+        case TINTOK_FOR: return "FOR";
+        case TINTOK_FUNCTION: return "FUNCTION";
+        case TINTOK_IF: return "IF";
+        case TINTOK_NULL: return "NULL";
+        case TINTOK_RETURN: return "RETURN";
+        case TINTOK_SUPER: return "SUPER";
+        case TINTOK_THIS: return "THIS";
+        case TINTOK_TRUE: return "TRUE";
+        case TINTOK_VAR: return "VAR";
+        case TINTOK_WHILE: return "WHILE";
+        case TINTOK_CONTINUE: return "CONTINUE";
+        case TINTOK_BREAK: return "BREAK";
+        case TINTOK_NEW: return "NEW";
+        case TINTOK_EXPORT: return "EXPORT";
+        case TINTOK_IS: return "IS";
+        case TINTOK_STATIC: return "STATIC";
+        case TINTOK_OPERATOR: return "OPERATOR";
+        case TINTOK_GET: return "GET";
+        case TINTOK_SET: return "SET";
+        case TINTOK_IN: return "IN";
+        case TINTOK_CONST: return "CONST";
+        case TINTOK_REF: return "REF";
+        case TINTOK_ERROR: return "ERROR";
+        case TINTOK_EOF: return "EOF";
         default:
             break;
     }
@@ -634,352 +634,431 @@ const char* lit_tostring_optok(LitAstTokType t)
 #define as_type(varname, fromname, tname) \
     tname* varname = (tname*)fromname
 
-void lit_towriter_expr(LitState* state, LitWriter* wr, LitAstExpression* expr)
+typedef struct TinAstWriterState TinAstWriterState;
+
+struct TinAstWriterState
+{
+    int indent;
+    TinState* state;
+    TinWriter* writer;
+};
+
+void tin_astwriter_expr(TinAstWriterState* aw, TinAstExpression* expr);
+
+void tin_astwriter_init(TinState* state, TinAstWriterState* aw, TinWriter* wr)
+{
+    aw->indent = 0;
+    aw->state = state;
+    aw->writer = wr;
+}
+
+void tin_astwriter_putindent(TinAstWriterState* aw)
+{
+    int i;
+    for(i=0; i<aw->indent; i++)
+    {
+        tin_writer_writestring(aw->writer, "    ");
+    }
+}
+
+void tin_astwriter_funcdecl(TinAstWriterState* aw, TinAstExpression* expr, bool islambda)
 {
     size_t i;
+    TinWriter* wr;
+    wr = aw->writer;
+    as_type(exfun, expr, TinAstFunctionExpr);
+    if(islambda)
+    {
+        tin_writer_writestring(wr, "function");
+    }
+    else
+    {
+        tin_writer_writeformat(wr, "function %.*s", exfun->length, exfun->name);
+    }
+    tin_writer_writeformat(wr, "(");
+    for(i=0; i<exfun->parameters.count; i++)
+    {
+        tin_writer_writeformat(wr, "%.*s", exfun->parameters.values[i].length, exfun->parameters.values[i].name);
+        if(exfun->parameters.values[i].defaultexpr)
+        {
+            tin_writer_writestring(wr, "=");
+            tin_astwriter_expr(aw, exfun->parameters.values[i].defaultexpr);
+        }
+        if((i+1) < exfun->parameters.count)
+        {
+            tin_writer_writestring(wr, ", ");
+        }
+    }
+    tin_writer_writeformat(wr, ")");
+    tin_astwriter_expr(aw, exfun->body);
+}
+
+void tin_astwriter_expr(TinAstWriterState* aw, TinAstExpression* expr)
+{
+    size_t i;
+    TinAstExpression* uex;
+    TinWriter* wr;
+    TinState* state;
     if(expr == NULL)
     {
         return;
     }
-    //fprintf(stderr, "dumping expression type %d %s:", expr->type, lit_tostring_exprtype(expr->type));
-    
+    state = aw->state;
+    wr = aw->writer;
     switch(expr->type)
     {
-        case LITEXPR_LITERAL:
+        case TINEXPR_LITERAL:
             {
-                as_type(exlit, expr, LitAstLiteralExpr);
-                lit_towriter_value(state, wr, exlit->value, true);
+                as_type(exlit, expr, TinAstLiteralExpr);
+                tin_towriter_value(state, wr, exlit->value, true);
             }
             break;
-        case LITEXPR_BINARY:
+        case TINEXPR_BINARY:
             {
-                as_type(exbin, expr, LitAstBinaryExpr);
-                if(exbin->ignore_left)
+                as_type(exbin, expr, TinAstBinaryExpr);
+                if(!exbin->ignore_left)
                 {
-                    lit_towriter_expr(state, wr, exbin->left);
+                    tin_astwriter_expr(aw, exbin->left);
                 }
-                lit_writer_writestring(wr, lit_tostring_optok(exbin->op));
-                lit_towriter_expr(state, wr, exbin->right);
+                tin_writer_writestring(wr, tin_tostring_optok(exbin->op));
+                tin_astwriter_expr(aw, exbin->right);
             }
             break;
-        case LITEXPR_UNARY:
+        case TINEXPR_UNARY:
             {
-                as_type(exun, expr, LitAstUnaryExpr);
-                lit_writer_writestring(wr, lit_tostring_optok(exun->op));
-                lit_towriter_expr(state, wr, exun->right);
+                as_type(exun, expr, TinAstUnaryExpr);
+                tin_writer_writestring(wr, tin_tostring_optok(exun->op));
+                tin_astwriter_expr(aw, exun->right);
                 /*
-                if(exun->op == LITTOK_SLASH_SLASH)
+                if(exun->op == TINTOK_SLASH_SLASH)
                 {
-                    lit_writer_writestring(wr, "\n");
+                    tin_writer_writestring(wr, "\n");
                 }
                 */
             }
             break;
-        case LITEXPR_VAREXPR:
+        case TINEXPR_VAREXPR:
             {
-                as_type(exvarex, expr, LitAstVarExpr);
-                lit_writer_writeformat(wr, "%.*s", exvarex->length, exvarex->name);
+                as_type(exvarex, expr, TinAstVarExpr);
+                tin_writer_writeformat(wr, "%.*s", exvarex->length, exvarex->name);
             }
             break;
-        case LITEXPR_ASSIGN:
+        case TINEXPR_ASSIGN:
             {
-                as_type(exassign, expr, LitAstAssignExpr);
-                lit_towriter_expr(state, wr, exassign->to);
-                lit_writer_writestring(wr, " = ");
-                lit_towriter_expr(state, wr, exassign->value);
-                lit_writer_writestring(wr, "\n");
+                as_type(exassign, expr, TinAstAssignExpr);
+                tin_astwriter_expr(aw, exassign->to);
+                tin_writer_writestring(wr, " = ");
+                tin_astwriter_expr(aw, exassign->value);
             }
             break;
-        case LITEXPR_CALL:
+        case TINEXPR_CALL:
             {
-                as_type(excall, expr, LitAstCallExpr);
-                lit_towriter_expr(state, wr, excall->callee);
-                lit_writer_writestring(wr, "(");
+                as_type(excall, expr, TinAstCallExpr);
+                tin_astwriter_expr(aw, excall->callee);
+                tin_writer_writestring(wr, "(");
                 for(i=0; i<excall->args.count; i++)
                 {
-                    lit_towriter_expr(state, wr, excall->args.values[i]);
+                    tin_astwriter_expr(aw, excall->args.values[i]);
                     if((i+1) < excall->args.count)
                     {
-                        lit_writer_writestring(wr, ", ");
+                        tin_writer_writestring(wr, ", ");
                     }
                 }
-                lit_writer_writestring(wr, ")");
+                tin_writer_writestring(wr, ")");
             }
             break;
-        case LITEXPR_SET:
+        case TINEXPR_SET:
             {
-                as_type(exset, expr, LitAstSetExpr);
-                lit_towriter_expr(state, wr, exset->where);
-                lit_writer_writeformat(wr, ".%.*s = ", exset->length, exset->name);
-                lit_towriter_expr(state, wr, exset->value);
+                as_type(exset, expr, TinAstSetExpr);
+                tin_astwriter_expr(aw, exset->where);
+                tin_writer_writeformat(wr, ".%.*s = ", exset->length, exset->name);
+                tin_astwriter_expr(aw, exset->value);
             }
             break;
-        case LITEXPR_GET:
+        case TINEXPR_GET:
             {
-                as_type(exget, expr, LitAstGetExpr);
-                lit_towriter_expr(state, wr, exget->where);
-                lit_writer_writeformat(wr, ".%.*s", exget->length, exget->name);
+                as_type(exget, expr, TinAstGetExpr);
+                tin_astwriter_expr(aw, exget->where);
+                tin_writer_writeformat(wr, ".%.*s", exget->length, exget->name);
             }
             break;
-        case LITEXPR_LAMBDA:
+        case TINEXPR_LAMBDA:
             {
-                as_type(exlam, expr, LitAstFunctionExpr);
-                lit_writer_writeformat(wr, "(");
-                for(i=0; i<exlam->parameters.count; i++)
-                {
-                    lit_writer_writeformat(wr, "%.*s", exlam->parameters.values[i].length, exlam->parameters.values[i].name);
-                    if(exlam->parameters.values[i].default_value != NULL)
-                    {
-                        lit_towriter_expr(state, wr, exlam->parameters.values[i].default_value);
-                    }
-                    if((i+1) < exlam->parameters.count)
-                    {
-                        lit_writer_writeformat(wr, ", ");
-                    }
-                }
-                lit_writer_writeformat(wr, ")");
-                lit_towriter_expr(state, wr, exlam->body);
-
+                tin_astwriter_funcdecl(aw, expr, true);
             }
             break;
-        case LITEXPR_ARRAY:
+        case TINEXPR_ARRAY:
             {
-                as_type(exarr, expr, LitAstArrayExpr);
-                lit_writer_writeformat(wr, "[");
+                as_type(exarr, expr, TinAstArrayExpr);
+                tin_writer_writeformat(wr, "[");
                 for(i=0; i<exarr->values.count; i++)
                 {
-                    lit_towriter_expr(state, wr, exarr->values.values[i]);
+                    tin_astwriter_expr(aw, exarr->values.values[i]);
                     if((i+1) < exarr->values.count)
                     {
-                        lit_writer_writeformat(wr, ", ");
+                        tin_writer_writeformat(wr, ", ");
                     }
                 }
-                lit_writer_writeformat(wr, "]");
+                tin_writer_writeformat(wr, "]");
             }
             break;
-        case LITEXPR_OBJECT:
+        case TINEXPR_OBJECT:
             {
-                as_type(exobj, expr, LitAstObjectExpr);
-                lit_writer_writeformat(wr, "{");
-                for(i=0; i<lit_vallist_count(&exobj->keys); i++)
+                as_type(exobj, expr, TinAstObjectExpr);
+                tin_writer_writeformat(wr, "{");
+                for(i=0; i<tin_vallist_count(&exobj->keys); i++)
                 {
-                    lit_towriter_value(state, wr, lit_vallist_get(&exobj->keys, i), true);
-                    lit_writer_writeformat(wr, ": ");
-                    lit_towriter_expr(state, wr, exobj->values.values[i]);
-                    if((i+1) < lit_vallist_count(&exobj->keys))
+                    tin_towriter_value(state, wr, tin_vallist_get(&exobj->keys, i), true);
+                    tin_writer_writeformat(wr, ": ");
+                    tin_astwriter_expr(aw, exobj->values.values[i]);
+                    if((i+1) < tin_vallist_count(&exobj->keys))
                     {
-                        lit_writer_writeformat(wr, ", ");
+                        tin_writer_writeformat(wr, ", ");
                     }
                 }
-                lit_writer_writeformat(wr, "}");
+                tin_writer_writeformat(wr, "}");
             }
             break;
-        case LITEXPR_SUBSCRIPT:
+        case TINEXPR_SUBSCRIPT:
             {
-                as_type(exsub, expr, LitAstIndexExpr);
-                lit_towriter_expr(state, wr, exsub->array);
-                lit_writer_writestring(wr, "[");
-                lit_towriter_expr(state, wr, exsub->index);
-                lit_writer_writestring(wr, "]");
+                as_type(exsub, expr, TinAstIndexExpr);
+                tin_astwriter_expr(aw, exsub->array);
+                tin_writer_writestring(wr, "[");
+                tin_astwriter_expr(aw, exsub->index);
+                tin_writer_writestring(wr, "]");
             }
             break;
-        case LITEXPR_THIS:
+        case TINEXPR_THIS:
             {
-                lit_writer_writestring(wr, "this");
+                tin_writer_writestring(wr, "this");
             }
             break;
-        case LITEXPR_SUPER:
+        case TINEXPR_SUPER:
             {
-                as_type(exsuper, expr, LitAstSuperExpr);
-                lit_writer_writeformat(wr, "super(%.*s)", lit_string_getlength(exsuper->method), exsuper->method->chars);
+                as_type(exsuper, expr, TinAstSuperExpr);
+                tin_writer_writeformat(wr, "super(%.*s)", tin_string_getlength(exsuper->method), exsuper->method->chars);
             }
             break;
-        case LITEXPR_RANGE:
+        case TINEXPR_RANGE:
             {
-                as_type(exrange, expr, LitAstRangeExpr);
-                lit_writer_writestring(wr, "[");
-                lit_towriter_expr(state, wr, exrange->from);
-                lit_writer_writestring(wr, " .. ");
-                lit_towriter_expr(state, wr, exrange->to);
-                lit_writer_writestring(wr, "]");
+                as_type(exrange, expr, TinAstRangeExpr);
+                tin_writer_writestring(wr, "[");
+                tin_astwriter_expr(aw, exrange->from);
+                tin_writer_writestring(wr, " .. ");
+                tin_astwriter_expr(aw, exrange->to);
+                tin_writer_writestring(wr, "]");
             }
             break;
-        case LITEXPR_TERNARY:
+        case TINEXPR_TERNARY:
             {
-                as_type(exif, expr, LitAstTernaryExpr);
-                lit_writer_writestring(wr, "if(");
-                lit_towriter_expr(state, wr, exif->condition);
-                lit_writer_writestring(wr, ")");
-                lit_towriter_expr(state, wr, exif->if_branch);
-                if(exif->else_branch != NULL)
+                as_type(exif, expr, TinAstTernaryExpr);
+                tin_writer_writestring(wr, "(");
+                tin_astwriter_expr(aw, exif->condition);
+                tin_writer_writestring(wr, ") ? (");
+                tin_astwriter_expr(aw, exif->ifbranch);
+                tin_writer_writestring(wr, ")");
+                if(exif->elsebranch != NULL)
                 {
-                    lit_writer_writestring(wr, "else ");
-                    lit_towriter_expr(state, wr, exif->else_branch);
+                    tin_writer_writestring(wr, " : (");
+                    tin_astwriter_expr(aw, exif->elsebranch);
+                    tin_writer_writestring(wr, ")");
                 }
             }
             break;
-        case LITEXPR_INTERPOLATION:
+        case TINEXPR_INTERPOLATION:
             {
-                as_type(exint, expr, LitAstStrInterExpr);
-                lit_writer_writestring(wr, "\"\"+");
+                as_type(exint, expr, TinAstStrInterExpr);
+                tin_writer_writestring(wr, "\"\"+");
                 for(i=0; i<exint->expressions.count; i++)
                 {
-                    lit_writer_writestring(wr, "(");
-                    lit_towriter_expr(state, wr, exint->expressions.values[i]);
-                    lit_writer_writestring(wr, ")");
+                    tin_writer_writestring(wr, "(");
+                    tin_astwriter_expr(aw, exint->expressions.values[i]);
+                    tin_writer_writestring(wr, ")");
                     if((i+1) < exint->expressions.count)
                     {
-                        lit_writer_writestring(wr, "+");
+                        tin_writer_writestring(wr, "+");
                     }
                 }
-                lit_writer_writestring(wr, "+\"\"");
+                tin_writer_writestring(wr, "+\"\"");
             }
             break;
-        case LITEXPR_REFERENCE:
+        case TINEXPR_REFERENCE:
             {
             
             }
             break;
-        case LITEXPR_EXPRESSION:
+        case TINEXPR_EXPRESSION:
             {
-                as_type(exexpr, expr, LitAstExprExpr);
-                lit_towriter_expr(state, wr, exexpr->expression);
+                as_type(exexpr, expr, TinAstExprExpr);
+                tin_astwriter_expr(aw, exexpr->expression);
             }
             break;
-        case LITEXPR_BLOCK:
+        case TINEXPR_BLOCK:
             {
-                as_type(exblock, expr, LitAstBlockExpr);
-                lit_writer_writestring(wr, "{");
+                as_type(exblock, expr, TinAstBlockExpr);
+                tin_astwriter_putindent(aw);
+                tin_writer_writestring(wr, "{\n");
+                aw->indent++;
                 for(i=0; i<exblock->statements.count; i++)
                 {
-                    lit_towriter_expr(state, wr, exblock->statements.values[i]);
+                    uex = exblock->statements.values[i];
+                    if(uex != NULL)
+                    {
+                        //fprintf(stderr, "in block: expression type: %d %s\n", uex->type, tin_tostring_exprtype(uex->type));
+                        tin_astwriter_putindent(aw);
+                        tin_astwriter_expr(aw, uex);
+                        tin_writer_writestring(wr, ";\n");
+                    }
                 }
-                lit_writer_writestring(wr, "}");
+                aw->indent--;
+                tin_astwriter_putindent(aw);
+                tin_writer_writestring(wr, "}");
             }
             break;
-        case LITEXPR_IFSTMT:
+        case TINEXPR_IFSTMT:
             {
-            
+                as_type(exif, expr, TinAstIfExpr);
+                tin_writer_writestring(wr, "if(");
+                tin_astwriter_expr(aw, exif->condition);
+                tin_writer_writestring(wr, ")\n");
+                tin_astwriter_expr(aw, exif->ifbranch);
+                if(exif->elseifconds && exif->elseifbranches)
+                {
+                    for(i=0; i<exif->elseifconds->count; i++)
+                    {
+                        tin_writer_writestring(wr, "else if(");
+                        tin_astwriter_expr(aw, exif->elseifconds->values[i]);
+                        tin_writer_writestring(wr, ")\n");
+                        tin_astwriter_expr(aw, exif->elseifbranches->values[i]);
+                    }
+                }
+                if(exif->elsebranch)
+                {
+                    tin_writer_writestring(wr, "else\n");
+                    tin_astwriter_expr(aw, exif->elsebranch);
+                }
             }
             break;
-        case LITEXPR_WHILE:
+        case TINEXPR_WHILE:
             {
-                as_type(exwhile, expr, LitAstWhileExpr);
-                lit_writer_writeformat(wr, "while(");
-                lit_towriter_expr(state, wr, exwhile->condition);
-                lit_writer_writeformat(wr, ")");
-                lit_towriter_expr(state, wr, exwhile->body);
+                as_type(exwhile, expr, TinAstWhileExpr);
+                tin_writer_writeformat(wr, "while(");
+                tin_astwriter_expr(aw, exwhile->condition);
+                tin_writer_writeformat(wr, ")\n");
+                tin_astwriter_expr(aw, exwhile->body);
             }
             break;
-        case LITEXPR_FOR:
+        case TINEXPR_FOR:
             {
-                as_type(exfor, expr, LitAstForExpr);
-                lit_writer_writeformat(wr, "for(");
-                if(exfor->c_style)
+                as_type(exfor, expr, TinAstForExpr);
+                tin_writer_writeformat(wr, "for(");
+                if(exfor->cstyle)
                 {
                     if(exfor->init)
                     {
                         if(exfor->var)
                         {
-                            lit_writer_writeformat(wr, "var ");
-                            lit_towriter_expr(state, wr, exfor->var);
+                            tin_writer_writeformat(wr, "var ");
+                            tin_astwriter_expr(aw, exfor->var);
                         }
-                        lit_towriter_expr(state, wr, exfor->init);
+                        tin_astwriter_expr(aw, exfor->init);
                     }
-                    lit_writer_writeformat(wr, ";");
+                    tin_writer_writeformat(wr, ";");
                     if(exfor->condition)
                     {
-                        lit_towriter_expr(state, wr, exfor->condition);
+                        tin_astwriter_expr(aw, exfor->condition);
                     }
-                    lit_writer_writeformat(wr, ";");
+                    tin_writer_writeformat(wr, ";");
                     if(exfor->increment)
                     {
-                        lit_towriter_expr(state, wr, exfor->increment);
+                        tin_astwriter_expr(aw, exfor->increment);
                     }
                 }
                 else
                 {
                     
                 }
-                lit_writer_writeformat(wr, ")");
-                lit_towriter_expr(state, wr, exfor->body);
+                tin_writer_writeformat(wr, ")\n");
+                tin_astwriter_expr(aw, exfor->body);
 
             }
             break;
-        case LITEXPR_VARSTMT:
+        case TINEXPR_VARSTMT:
             {
-                as_type(exvdec, expr, LitAstAssignVarExpr);
+                as_type(exvdec, expr, TinAstAssignVarExpr);
                 if(exvdec->constant)
                 {
-                    lit_writer_writeformat(wr, "const");
+                    tin_writer_writeformat(wr, "const");
                 }
                 else
                 {
-                    lit_writer_writeformat(wr, "var");
+                    tin_writer_writeformat(wr, "var");
                 }
-                lit_writer_writeformat(wr, " %.*s", exvdec->length, exvdec->name);
+                tin_writer_writeformat(wr, " %.*s", exvdec->length, exvdec->name);
                 if(exvdec->init)
                 {
-                    lit_writer_writeformat(wr, " = ");
-                    lit_towriter_expr(state, wr, exvdec->init);
+                    tin_writer_writeformat(wr, " = ");
+                    tin_astwriter_expr(aw, exvdec->init);
                 }
-                lit_writer_writeformat(wr, ";\n");
             }
             break;
-        case LITEXPR_CONTINUE:
+        case TINEXPR_CONTINUE:
             {
-                lit_writer_writeformat(wr, "continue;");
+                tin_writer_writeformat(wr, "continue");
             }
             break;
-        case LITEXPR_BREAK:
+        case TINEXPR_BREAK:
             {
-                lit_writer_writeformat(wr, "break;");
+                tin_writer_writeformat(wr, "break");
             }
             break;
-        case LITEXPR_FUNCTION:
+        case TINEXPR_FUNCTION:
             {
-                as_type(exfun, expr, LitAstFunctionExpr);
-                lit_writer_writeformat(wr, "function %.*s", exfun->length, exfun->name);
-                lit_writer_writeformat(wr, "(");
-                lit_writer_writeformat(wr, ")");
-                lit_towriter_expr(state, wr, exfun->body);
+                tin_astwriter_funcdecl(aw, expr, false);
             }
             break;
-        case LITEXPR_RETURN:
+        case TINEXPR_RETURN:
             {
-            
+                as_type(exret, expr, TinAstReturnExpr);
+                tin_writer_writestring(wr, "return ");
+                tin_astwriter_expr(aw, exret->expression);
+
             }
             break;
-        case LITEXPR_METHOD:
+        /*case TINEXPR_METHOD:
             {
             
             }
             break;
-        case LITEXPR_CLASS:
+        case TINEXPR_CLASS:
             {
             
             }
             break;
-        case LITEXPR_FIELD:
+        case TINEXPR_FIELD:
             {
             
             }
             break;
+            */
         default:
             {
-                lit_writer_writeformat(wr, "(unhandled expression type %d %s)", expr->type, lit_tostring_exprtype(expr->type));
+                tin_writer_writeformat(wr, "(unhandled expression type %d %s)", expr->type, tin_tostring_exprtype(expr->type));
             }
             break;
     }
 }
 
-void lit_towriter_ast(LitState* state, LitWriter* wr, LitAstExprList* exlist)
+void tin_towriter_ast(TinState* state, TinWriter* wr, TinAstExprList* exlist)
 {
     size_t i;
-    lit_writer_writeformat(wr, "begin AST dump (list of %d expressions):\n", exlist->count);
+    TinAstWriterState aw;
+    tin_astwriter_init(state, &aw, wr);
+    tin_writer_writeformat(wr, "/* begin AST dump (list of %d expressions): */\n", exlist->count);
     for(i=0; i<exlist->count; i++)
     {
-        lit_towriter_expr(state, wr, exlist->values[i]);
+        tin_astwriter_expr(&aw, exlist->values[i]);
     }
-    lit_writer_writeformat(wr, "\nend AST dump\n");
+    tin_writer_writeformat(wr, "\n/* end AST dump */\n");
 }
+

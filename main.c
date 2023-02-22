@@ -13,16 +13,16 @@
     #if __has_include(<readline/readline.h>)
         #include <readline/readline.h>
         #include <readline/history.h>
-        #define LIT_HAVE_READLINE
+        #define TIN_HAVE_READLINE
     #endif
 #endif
 
-#include "lit.h"
+#include "tin.h"
 
-#define LIT_EXIT_CODE_ARGUMENT_ERROR 1
-#define LIT_EXIT_CODE_MEM_LEAK 2
-#define LIT_EXIT_CODE_RUNTIME_ERROR 70
-#define LIT_EXIT_CODE_COMPILE_ERROR 65
+#define TIN_EXIT_CODE_ARGUMENT_ERROR 1
+#define TIN_EXIT_CODE_MEM_LEAK 2
+#define TIN_EXIT_CODE_RUNTIME_ERROR 70
+#define TIN_EXIT_CODE_COMPILE_ERROR 65
 
 enum
 {
@@ -51,7 +51,7 @@ struct FlagContext_t
 typedef struct Options_t Options_t;
 
 // Used for clean up on Ctrl+C / Ctrl+Z
-static LitState* replstate;
+static TinState* replstate;
 
 static bool populate_flags(int argc, int begin, char** argv, const char* expectvalue, FlagContext_t* fx)
 {
@@ -132,7 +132,7 @@ static void show_optimization_help()
 {
     int i;
     printf(
-        "Lit has a lot of optimzations.\n"
+        "Tin has a lot of optimzations.\n"
         "You can turn each one on or off or use a predefined optimization level to set them to a default value.\n"
         "The more optimizations are enabled, the longer it takes to compile, but the program should run better.\n"
         "So I recommend using low optimization for development and high optimization for release.\n"
@@ -142,43 +142,38 @@ static void show_optimization_help()
         "Using flag -Oall will disable all optimizations.\n"
     );
     printf("Here is a list of all supported optimizations:\n\n");
-    for(i = 0; i < LITOPTSTATE_TOTAL; i++)
+    for(i = 0; i < TINOPTSTATE_TOTAL; i++)
     {
-        printf(" %s  %s\n", lit_astopt_getoptname((LitAstOptType)i),
-               lit_astopt_getoptdescr((LitAstOptType)i));
+        printf(" %s  %s\n", tin_astopt_getoptname((TinAstOptType)i),
+               tin_astopt_getoptdescr((TinAstOptType)i));
     }
     printf("\nIf you want to use a predefined optimization level (recommended), run lit with argument -O[optimization level], for example -O1.\n\n");
-    for(i = 0; i < LITOPTLEVEL_TOTAL; i++)
+    for(i = 0; i < TINOPTLEVEL_TOTAL; i++)
     {
-        printf("\t-O%i\t\t%s\n", i, lit_astopt_getoptleveldescr((LitAstOptLevel)i));
+        printf("\t-O%i\t\t%s\n", i, tin_astopt_getoptleveldescr((TinAstOptLevel)i));
     }
 }
 
-static bool match_arg(const char* arg, const char* a, const char* b)
-{
-    return strcmp(arg, a) == 0 || strcmp(arg, b) == 0;
-}
-
-int exitstate(LitState* state, LitResult result)
+int exitstate(TinState* state, TinResult result)
 {
     int64_t amount;
-    amount = lit_destroy_state(state);
-    if((result != LITRESULT_COMPILE_ERROR) && amount != 0)
+    amount = tin_destroy_state(state);
+    if((result != TINRESULT_COMPILE_ERROR) && amount != 0)
     {
         fprintf(stderr, "gc: freed residual %i bytes\n", (int)amount);
-        //return LIT_EXIT_CODE_MEM_LEAK;
+        //return TIN_EXIT_CODE_MEM_LEAK;
         return 0;
     }
-    if(result != LITRESULT_OK)
+    if(result != TINRESULT_OK)
     {
         /*
-        if(result == LITRESULT_RUNTIME_ERROR)
+        if(result == TINRESULT_RUNTIME_ERROR)
         {
-            return LIT_EXIT_CODE_RUNTIME_ERROR;
+            return TIN_EXIT_CODE_RUNTIME_ERROR;
         }
         else
         {
-            return LIT_EXIT_CODE_COMPILE_ERROR;
+            return TIN_EXIT_CODE_COMPILE_ERROR;
         }
         */
         return 1;
@@ -238,38 +233,40 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
 void interupt_handler(int signalid)
 {
     (void)signalid;
-    lit_destroy_state(replstate);
+    tin_destroy_state(replstate);
     printf("\nExiting.\n");
     exit(0);
 }
 
-#if defined(LIT_HAVE_READLINE)
-static int run_repl(LitState* state)
+static int run_repl(TinState* state)
 {
-    fprintf(stderr, "in repl...\n");
-    char* line;
-    replstate = state;
-    signal(SIGINT, interupt_handler);
-    //signal(SIGTSTP, interupt_handler);
-    lit_astopt_setoptlevel(LITOPTLEVEL_REPL);
-    printf("lit v%s, developed by @egordorichev\n", LIT_VERSION_STRING);
-    while(true)
-    {
-        line = readline("> ");
-        if(line == NULL)
+    #if defined(TIN_HAVE_READLINE)
+        fprintf(stderr, "in repl...\n");
+        char* line;
+        replstate = state;
+        signal(SIGINT, interupt_handler);
+        //signal(SIGTSTP, interupt_handler);
+        tin_astopt_setoptlevel(TINOPTLEVEL_REPL);
+        printf("lit v%s, developed by @egordorichev\n", TIN_VERSION_STRING);
+        while(true)
         {
-            return 0;
+            line = readline("> ");
+            if(line == NULL)
+            {
+                return 0;
+            }
+            add_history(line);
+            TinInterpretResult result = tin_state_execsource(state, "repl", line, strlen(line));
+            if(result.type == TINRESULT_OK && !tin_value_isnull(result.result))
+            {
+                printf("%s%s%s\n", COLOR_GREEN, tin_string_getdata(tin_value_tostring(state, result.result)), COLOR_RESET);
+            }
         }
-        add_history(line);
-        LitInterpretResult result = lit_state_execsource(state, "repl", line, strlen(line));
-        if(result.type == LITRESULT_OK && !lit_value_isnull(result.result))
-        {
-            printf("%s%s%s\n", COLOR_GREEN, lit_string_getdata(lit_value_tostring(state, result.result)), COLOR_RESET);
-        }
-    }
+    #else
+        fprintf(stderr, "no repl compiled in. sorry\n");
+    #endif
     return 0;
 }
-#endif
 
 int main(int argc, char* argv[])
 {
@@ -277,16 +274,16 @@ int main(int argc, char* argv[])
     bool cmdfailed;
     const char* dm;
     const char* filename;
-    LitArray* argarray;
-    LitState* state;
+    TinArray* argarray;
+    TinState* state;
     FlagContext_t fx;
     Options_t opts;
-    LitResult result;
+    TinResult result;
     cmdfailed = false;
-    result = LITRESULT_OK;
+    result = TINRESULT_OK;
     populate_flags(argc, 1, argv, "ed", &fx);
-    state = lit_make_state();
-    lit_open_libraries(state);
+    state = tin_make_state();
+    tin_open_libraries(state);
 
     if(!parse_options(&opts, fx.flags, fx.fcnt))
     {
@@ -316,25 +313,25 @@ int main(int argc, char* argv[])
     {
         if((fx.poscnt > 0) || (opts.codeline != NULL))
         {
-            argarray = lit_create_array(state);
+            argarray = tin_create_array(state);
             for(i=0; i<fx.poscnt; i++)
             {
-                lit_vallist_push(state, &argarray->list, lit_value_makestring(state, fx.positional[i]));
+                tin_vallist_push(state, &argarray->list, tin_value_makestring(state, fx.positional[i]));
             }
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(argarray));
+            tin_state_setglobal(state, tin_string_copyconst(state, "args"), tin_value_fromobject(argarray));
             if(opts.codeline)
             {
-                result = lit_state_execsource(state, "<-e>", opts.codeline, strlen(opts.codeline)).type;
+                result = tin_state_execsource(state, "<-e>", opts.codeline, strlen(opts.codeline)).type;
             }
             else
             {
                 filename = fx.positional[0];
-                result = lit_state_execfile(state, filename).type;
+                result = tin_state_execfile(state, filename).type;
             }
         }
         else
         {
-            #if defined(LIT_HAVE_READLINE)
+            #if defined(TIN_HAVE_READLINE)
                 run_repl(state);
             #else
                 fprintf(stderr, "no repl support compiled in\n");
@@ -344,252 +341,3 @@ int main(int argc, char* argv[])
     return exitstate(state, result);
 }
 
-int oldmain(int argc, const char* argv[])
-{
-    int i;
-    int argsleft;
-    int numfilestorun;
-    char c;
-    bool found;
-    bool dump;
-    bool showrepl;
-    bool evaled;
-    bool showedhelp;
-    bool enable_optimization;
-    size_t j;
-    size_t length;
-    char* file;
-    char* bytecodefile;
-    char* source;
-    char* optimization_name;
-    const char* argstring;
-    const char* string;
-    const char* arg;
-    const char* module_name;
-    char* filestorun[128];
-    LitState* state;
-    LitModule* module;
-    LitResult result;
-    LitArray* argarray;
-    state = lit_make_state();
-    lit_open_libraries(state);
-    numfilestorun = 0;
-    result = LITRESULT_OK;
-    dump = false;
-    for(i = 1; i < argc; i++)
-    {
-        arg = argv[i];
-        if(arg[0] == '-')
-        {
-            if(match_arg(arg, "-e", "--eval") || match_arg(arg, "-o", "--output"))
-            {
-                // It takes an extra argument, count it or we will use it as the file name to run :P
-                i++;
-            }
-            else if(match_arg(arg, "-p", "--pass"))
-            {
-                // The rest of the args go to the script, go home pls
-                break;
-            }
-            else if(match_arg(arg, "-d", "--dump"))
-            {
-                dump = true;
-            }
-            continue;
-        }
-        filestorun[numfilestorun++] = (char*)arg;
-        fprintf(stderr, "numfilestorun=%d, (argc+1)=%d\n", numfilestorun, argc+1);
-    }
-    argarray = NULL;
-    showrepl = false;
-    evaled = false;
-    showedhelp = false;
-    bytecodefile = NULL;
-    for(i = 1; i < argc; i++)
-    {
-        argsleft = argc - i - 1;
-        arg = argv[i];
-        if(arg[0] == '-' && arg[1] == 'O')
-        {
-            enable_optimization = true;
-
-            // -Ono-whatever
-            if(memcmp((char*)(arg + 2), "no-", 3) == 0)
-            {
-                enable_optimization = false;
-                optimization_name = (char*)(arg + 5);
-            }
-            else
-            {
-                optimization_name = (char*)(arg + 2);
-            }
-
-            if(strlen(optimization_name) == 1)
-            {
-                c = optimization_name[0];
-
-                if(c >= '0' && c <= '4')
-                {
-                    lit_astopt_setoptlevel((LitAstOptLevel)(c - '0'));
-                    continue;
-                }
-            }
-
-            if(enable_optimization && strcmp(optimization_name, "help") == 0)
-            {
-                show_optimization_help();
-                showedhelp = true;
-            }
-            else if(strcmp(optimization_name, "all") == 0)
-            {
-                lit_astopt_setalloptenabled(enable_optimization);
-            }
-            else
-            {
-                found = false;
-                // Yes I know, this is not the fastest way, and what now?
-                for(j = 0; j < LITOPTSTATE_TOTAL; j++)
-                {
-                    if(strcmp(lit_astopt_getoptname((LitAstOptType)j), optimization_name) == 0)
-                    {
-                        found = true;
-                        lit_astopt_setoptenabled((LitAstOptType)j, enable_optimization);
-
-                        break;
-                    }
-                }
-                if(!found)
-                {
-                    fprintf(stderr, "Unknown optimization '%s'. Run with -Ohelp for a list of all optimizations.\n", optimization_name);
-                    return 1;
-                }
-            }
-        }
-        else if(match_arg(arg, "-e", "--eval"))
-        {
-            evaled = true;
-            if(argsleft == 0)
-            {
-                fprintf(stderr, "Expected code to run for the eval argument.\n");
-                return exitstate(state, result);
-            }
-            string = argv[++i];
-            length = strlen(string) + 1;
-            source = (char*)malloc(length + 1);
-            memcpy(source, string, length);
-            module_name = numfilestorun == 0 ? "repl" : filestorun[0];
-            if(dump)
-            {
-                module = lit_state_compilemodule(state, lit_string_copyconst(state, module_name), source, length);
-                if(module == NULL)
-                {
-                    break;
-                }
-                lit_disassemble_module(state, module, source);
-                free(source);
-            }
-            else
-            {
-                result = lit_state_execsource(state, module_name, source, length).type;
-                free(source);
-                if(result != LITRESULT_OK)
-                {
-                    break;
-                }
-            }
-        }
-        else if(match_arg(arg, "-h", "--help"))
-        {
-            show_help();
-            showedhelp = true;
-        }
-        else if(match_arg(arg, "-t", "--time"))
-        {
-            lit_enable_compilation_time_measurement();
-        }
-        else if(match_arg(arg, "-i", "--interactive"))
-        {
-            showrepl = true;
-        }
-        else if(match_arg(arg, "-d", "--dump"))
-        {
-            dump = true;
-        }
-        else if(match_arg(arg, "-o", "--output"))
-        {
-            if(argsleft == 0)
-            {
-                fprintf(stderr, "Expected file name where to save the bytecode.\n");
-                //return LIT_EXIT_CODE_ARGUMENT_ERROR;
-                return exitstate(state, result);
-            }
-
-            bytecodefile = (char*)argv[++i];
-            lit_astopt_setoptlevel(LITOPTLEVEL_EXTREME);
-        }
-        else if(match_arg(arg, "-p", "--pass"))
-        {
-            argarray = lit_create_array(state);
-
-            for(j = 0; j < (size_t)argsleft; j++)
-            {
-                argstring = argv[i + j + 1];
-                lit_vallist_push(state, &argarray->list, lit_value_makestring(state, argstring));
-            }
-
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(argarray));
-            break;
-        }
-        else if(arg[0] == '-')
-        {
-            fprintf(stderr, "Unknown argument '%s', run 'lit --help' for help.\n", arg);
-            //return LIT_EXIT_CODE_ARGUMENT_ERROR;
-            return exitstate(state, result);
-        }
-    }
-
-    if(numfilestorun > 0)
-    {
-        if(bytecodefile != NULL)
-        {
-            if(!lit_state_compileandsave(state, filestorun, numfilestorun, bytecodefile))
-            {
-                result = LITRESULT_COMPILE_ERROR;
-            }
-        }
-        else
-        {
-            if(argarray == NULL)
-            {
-                argarray = lit_create_array(state);
-            }
-            lit_state_setglobal(state, lit_string_copyconst(state, "args"), lit_value_fromobject(argarray));
-            for(i = 0; i < numfilestorun; i++)
-            {
-                file = filestorun[i];
-                result = LITRESULT_OK;
-                if(dump)
-                {
-                    result = lit_state_dumpfile(state, file).type;
-                }
-                else
-                {
-                    result = lit_state_execfile(state, file).type;
-                }
-                if(result != LITRESULT_OK)
-                {
-                    return exitstate(state, result);
-                }
-            }
-        }
-    }
-    if(showrepl)
-    {
-        run_repl(state);
-    }
-    else if((showedhelp == false) && (evaled == false) && (numfilestorun == 0))
-    {
-        run_repl(state);
-    }
-    return exitstate(state, result);
-}

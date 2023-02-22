@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
-#ifdef LIT_OS_WINDOWS
+#ifdef TIN_OS_WINDOWS
     #include <windows.h>
     #define stat _stat
 #endif
@@ -19,17 +19,17 @@
     #define	S_ISREG(m)	(((m)&S_IFMT) == S_IFREG)	/* file */
 #endif
 
-typedef struct LitFileData LitFileData;
-typedef struct LitStdioHandle LitStdioHandle;
+typedef struct TinFileData TinFileData;
+typedef struct TinStdioHandle TinStdioHandle;
 
-struct LitFileData
+struct TinFileData
 {
     char* path;
     FILE* handle;
     bool isopen;
 };
 
-struct LitStdioHandle
+struct TinStdioHandle
 {
     FILE* handle;
     const char* name;
@@ -37,32 +37,32 @@ struct LitStdioHandle
     bool canwrite;
 };
 
-typedef void(*CleanupFunc)(LitState*, LitUserdata*, bool);
+typedef void(*CleanupFunc)(TinState*, TinUserdata*, bool);
 
 static uint8_t g_tmpbyte;
 static uint16_t g_tmpshort;
 static uint32_t g_tmpint;
 static double g_tmpdouble;
 
-static void* lit_util_instancedataset(LitVM* vm, LitValue instance, size_t typsz, CleanupFunc cleanup)
+static void* tin_util_instancedataset(TinVM* vm, TinValue instance, size_t typsz, CleanupFunc cleanup)
 {
-    LitUserdata* userdata = lit_object_makeuserdata(vm->state, typsz, false);
+    TinUserdata* userdata = tin_object_makeuserdata(vm->state, typsz, false);
     userdata->cleanup_fn = cleanup;
-    lit_table_set(vm->state, &lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), lit_value_fromobject(userdata));
+    tin_table_set(vm->state, &tin_value_asinstance(instance)->fields, tin_string_copyconst(vm->state, "_data"), tin_value_fromobject(userdata));
     return userdata->data;
 }
 
-static void* lit_util_instancedataget(LitVM* vm, LitValue instance)
+static void* tin_util_instancedataget(TinVM* vm, TinValue instance)
 {
-    LitValue _d;
-    if(!lit_table_get(&lit_value_asinstance(instance)->fields, lit_string_copyconst(vm->state, "_data"), &_d))
+    TinValue _d;
+    if(!tin_table_get(&tin_value_asinstance(instance)->fields, tin_string_copyconst(vm->state, "_data"), &_d))
     {
-        lit_vm_raiseexitingerror(vm, "failed to extract userdata");
+        tin_vm_raiseexitingerror(vm, "failed to extract userdata");
     }
-    return lit_value_asuserdata(_d)->data;
+    return tin_value_asuserdata(_d)->data;
 }
 
-char* lit_util_readfile(const char* path, size_t* dlen)
+char* tin_util_readfile(const char* path, size_t* dlen)
 {
     size_t fileSize;
     char* buffer;
@@ -84,7 +84,7 @@ char* lit_util_readfile(const char* path, size_t* dlen)
     return buffer;
 }
 
-bool lit_fs_fileexists(const char* path)
+bool tin_fs_fileexists(const char* path)
 {
     struct stat buffer;
     if(stat(path, &buffer) != -1)
@@ -94,7 +94,7 @@ bool lit_fs_fileexists(const char* path)
     return false;
 }
 
-bool lit_fs_direxists(const char* path)
+bool tin_fs_direxists(const char* path)
 {
     struct stat buffer;
     if(stat(path, &buffer) != -1)
@@ -104,41 +104,41 @@ bool lit_fs_direxists(const char* path)
     return false;
 }
 
-size_t lit_ioutil_writeuint8(FILE* file, uint8_t byte)
+size_t tin_ioutil_writeuint8(FILE* file, uint8_t byte)
 {
     return fwrite(&byte, sizeof(uint8_t), 1, file);
 }
 
-size_t lit_ioutil_writeuint16(FILE* file, uint16_t byte)
+size_t tin_ioutil_writeuint16(FILE* file, uint16_t byte)
 {
     return fwrite(&byte, sizeof(uint16_t), 1, file);
 }
 
-size_t lit_ioutil_writeuint32(FILE* file, uint32_t byte)
+size_t tin_ioutil_writeuint32(FILE* file, uint32_t byte)
 {
     return fwrite(&byte, sizeof(uint32_t), 1, file);
 }
 
-size_t lit_ioutil_writedouble(FILE* file, double byte)
+size_t tin_ioutil_writedouble(FILE* file, double byte)
 {
     return fwrite(&byte, sizeof(double), 1, file);
 }
 
-size_t lit_ioutil_writestring(FILE* file, LitString* string)
+size_t tin_ioutil_writestring(FILE* file, TinString* string)
 {
     uint16_t i;
     uint16_t c;
     size_t rt;
-    c = lit_string_getlength(string);
+    c = tin_string_getlength(string);
     rt = fwrite(&c, 2, 1, file);
     for(i = 0; i < c; i++)
     {
-        lit_ioutil_writeuint8(file, (uint8_t)string->chars[i] ^ LIT_STRING_KEY);
+        tin_ioutil_writeuint8(file, (uint8_t)string->chars[i] ^ TIN_STRING_KEY);
     }
     return (rt + i);
 }
 
-uint8_t lit_ioutil_readuint8(FILE* file)
+uint8_t tin_ioutil_readuint8(FILE* file)
 {
     size_t rt;
     (void)rt;
@@ -146,7 +146,7 @@ uint8_t lit_ioutil_readuint8(FILE* file)
     return g_tmpbyte;
 }
 
-uint16_t lit_ioutil_readuint16(FILE* file)
+uint16_t tin_ioutil_readuint16(FILE* file)
 {
     size_t rt;
     (void)rt;
@@ -154,7 +154,7 @@ uint16_t lit_ioutil_readuint16(FILE* file)
     return g_tmpshort;
 }
 
-uint32_t lit_ioutil_readuint32(FILE* file)
+uint32_t tin_ioutil_readuint32(FILE* file)
 {
     size_t rt;
     (void)rt;
@@ -162,7 +162,7 @@ uint32_t lit_ioutil_readuint32(FILE* file)
     return g_tmpint;
 }
 
-double lit_ioutil_readdouble(FILE* file)
+double tin_ioutil_readdouble(FILE* file)
 {
     size_t rt;
     (void)rt;
@@ -170,7 +170,7 @@ double lit_ioutil_readdouble(FILE* file)
     return g_tmpdouble;
 }
 
-LitString* lit_ioutil_readstring(LitState* state, FILE* file)
+TinString* tin_ioutil_readstring(TinState* state, FILE* file)
 {
     size_t rt;
     uint16_t i;
@@ -185,57 +185,57 @@ LitString* lit_ioutil_readstring(LitState* state, FILE* file)
     line = (char*)malloc(length + 1);
     for(i = 0; i < length; i++)
     {
-        line[i] = (char)lit_ioutil_readuint8(file) ^ LIT_STRING_KEY;
+        line[i] = (char)tin_ioutil_readuint8(file) ^ TIN_STRING_KEY;
     }
-    return lit_string_take(state, line, length, false);
+    return tin_string_take(state, line, length, false);
 }
 
-void lit_emufile_init(LitEmulatedFile* file, const char* source, size_t len)
+void tin_emufile_init(TinEmulatedFile* file, const char* source, size_t len)
 {
     file->source = source;
     file->length = len;
     file->position = 0;
 }
 
-uint8_t lit_emufile_readuint8(LitEmulatedFile* file)
+uint8_t tin_emufile_readuint8(TinEmulatedFile* file)
 {
     return (uint8_t)file->source[file->position++];
 }
 
-uint16_t lit_emufile_readuint16(LitEmulatedFile* file)
+uint16_t tin_emufile_readuint16(TinEmulatedFile* file)
 {
-    return (uint16_t)(lit_emufile_readuint8(file) | (lit_emufile_readuint8(file) << 8u));
+    return (uint16_t)(tin_emufile_readuint8(file) | (tin_emufile_readuint8(file) << 8u));
 }
 
-uint32_t lit_emufile_readuint32(LitEmulatedFile* file)
+uint32_t tin_emufile_readuint32(TinEmulatedFile* file)
 {
     return (uint32_t)(
-        lit_emufile_readuint8(file) |
-        (lit_emufile_readuint8(file) << 8u) |
-        (lit_emufile_readuint8(file) << 16u) |
-        (lit_emufile_readuint8(file) << 24u)
+        tin_emufile_readuint8(file) |
+        (tin_emufile_readuint8(file) << 8u) |
+        (tin_emufile_readuint8(file) << 16u) |
+        (tin_emufile_readuint8(file) << 24u)
     );
 }
 
-double lit_emufile_readdouble(LitEmulatedFile* file)
+double tin_emufile_readdouble(TinEmulatedFile* file)
 {
     size_t i;
     double result;
     uint8_t values[8];
     for(i = 0; i < 8; i++)
     {
-        values[i] = lit_emufile_readuint8(file);
+        values[i] = tin_emufile_readuint8(file);
     }
     memcpy(&result, values, 8);
     return result;
 }
 
-LitString* lit_emufile_readstring(LitState* state, LitEmulatedFile* file)
+TinString* tin_emufile_readstring(TinState* state, TinEmulatedFile* file)
 {
     uint16_t i;
     uint16_t length;
     char* line;
-    length = lit_emufile_readuint16(file);
+    length = tin_emufile_readuint16(file);
     if(length < 1)
     {
         return NULL;
@@ -243,79 +243,79 @@ LitString* lit_emufile_readstring(LitState* state, LitEmulatedFile* file)
     line = (char*)malloc(length + 1);
     for(i = 0; i < length; i++)
     {
-        line[i] = (char)lit_emufile_readuint8(file) ^ LIT_STRING_KEY;
+        line[i] = (char)tin_emufile_readuint8(file) ^ TIN_STRING_KEY;
     }
-    return lit_string_take(state, line, length, false);
+    return tin_string_take(state, line, length, false);
 }
 
-static void lit_ioutil_writechunk(FILE* file, LitChunk* chunk);
-static void lit_ioutil_readchunk(LitState* state, LitEmulatedFile* file, LitModule* module, LitChunk* chunk);
+static void tin_ioutil_writechunk(FILE* file, TinChunk* chunk);
+static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModule* module, TinChunk* chunk);
 
-static void lit_ioutil_writefunction(FILE* file, LitFunction* function)
+static void tin_ioutil_writefunction(FILE* file, TinFunction* function)
 {
-    lit_ioutil_writechunk(file, &function->chunk);
-    lit_ioutil_writestring(file, function->name);
-    lit_ioutil_writeuint8(file, function->arg_count);
-    lit_ioutil_writeuint16(file, function->upvalue_count);
-    lit_ioutil_writeuint8(file, (uint8_t)function->vararg);
-    lit_ioutil_writeuint16(file, (uint16_t)function->max_slots);
+    tin_ioutil_writechunk(file, &function->chunk);
+    tin_ioutil_writestring(file, function->name);
+    tin_ioutil_writeuint8(file, function->arg_count);
+    tin_ioutil_writeuint16(file, function->upvalue_count);
+    tin_ioutil_writeuint8(file, (uint8_t)function->vararg);
+    tin_ioutil_writeuint16(file, (uint16_t)function->maxslots);
 }
 
-static LitFunction* lit_ioutil_readfunction(LitState* state, LitEmulatedFile* file, LitModule* module)
+static TinFunction* tin_ioutil_readfunction(TinState* state, TinEmulatedFile* file, TinModule* module)
 {
-    LitFunction* function;
-    function = lit_object_makefunction(state, module);
-    lit_ioutil_readchunk(state, file, module, &function->chunk);
-    function->name = lit_emufile_readstring(state, file);
-    function->arg_count = lit_emufile_readuint8(file);
-    function->upvalue_count = lit_emufile_readuint16(file);
-    function->vararg = (bool)lit_emufile_readuint8(file);
-    function->max_slots = lit_emufile_readuint16(file);
+    TinFunction* function;
+    function = tin_object_makefunction(state, module);
+    tin_ioutil_readchunk(state, file, module, &function->chunk);
+    function->name = tin_emufile_readstring(state, file);
+    function->arg_count = tin_emufile_readuint8(file);
+    function->upvalue_count = tin_emufile_readuint16(file);
+    function->vararg = (bool)tin_emufile_readuint8(file);
+    function->maxslots = tin_emufile_readuint16(file);
     return function;
 }
 
-static void lit_ioutil_writechunk(FILE* file, LitChunk* chunk)
+static void tin_ioutil_writechunk(FILE* file, TinChunk* chunk)
 {
     size_t i;
     size_t c;
-    LitObjType type;
-    LitValue constant;
-    lit_ioutil_writeuint32(file, chunk->count);
+    TinObjType type;
+    TinValue constant;
+    tin_ioutil_writeuint32(file, chunk->count);
     for(i = 0; i < chunk->count; i++)
     {
-        lit_ioutil_writeuint8(file, chunk->code[i]);
+        tin_ioutil_writeuint8(file, chunk->code[i]);
     }
     if(chunk->has_line_info)
     {
         c = chunk->line_count * 2 + 2;
-        lit_ioutil_writeuint32(file, c);
+        tin_ioutil_writeuint32(file, c);
         for(i = 0; i < c; i++)
         {
-            lit_ioutil_writeuint16(file, chunk->lines[i]);
+            tin_ioutil_writeuint16(file, chunk->lines[i]);
         }
     }
     else
     {
-        lit_ioutil_writeuint32(file, 0);
+        tin_ioutil_writeuint32(file, 0);
     }
-    lit_ioutil_writeuint32(file, lit_vallist_count(&chunk->constants));
-    for(i = 0; i < lit_vallist_count(&chunk->constants); i++)
+    tin_ioutil_writeuint32(file, tin_vallist_count(&chunk->constants));
+    for(i = 0; i < tin_vallist_count(&chunk->constants); i++)
     {
-        constant = lit_vallist_get(&chunk->constants, i);
-        if(lit_value_isobject(constant))
+        constant = tin_vallist_get(&chunk->constants, i);
+        if(tin_value_isobject(constant))
         {
-            type = lit_value_asobject(constant)->type;
-            lit_ioutil_writeuint8(file, (uint8_t)(type + 1));
+            type = tin_value_asobject(constant)->type;
+            tin_ioutil_writeuint8(file, (uint8_t)(type + 1));
             switch(type)
             {
-                case LITTYPE_STRING:
+                case TINTYPE_STRING:
                     {
-                        lit_ioutil_writestring(file, lit_value_asstring(constant));
+                        tin_ioutil_writestring(file, tin_value_asstring(constant));
                     }
                     break;
-                case LITTYPE_FUNCTION:
+                case TINTYPE_FUNCTION:
                     {
-                        lit_ioutil_writefunction(file, lit_value_asfunction(constant));
+                        tin_ioutil_writefunction(file, tin_value_asfunction(constant));
                     }
                     break;
                 default:
@@ -327,72 +327,72 @@ static void lit_ioutil_writechunk(FILE* file, LitChunk* chunk)
         }
         else
         {
-            lit_ioutil_writeuint8(file, 0);
-            lit_ioutil_writedouble(file, lit_value_asnumber(constant));
+            tin_ioutil_writeuint8(file, 0);
+            tin_ioutil_writedouble(file, tin_value_asnumber(constant));
         }
     }
 }
 
-static void lit_ioutil_readchunk(LitState* state, LitEmulatedFile* file, LitModule* module, LitChunk* chunk)
+static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModule* module, TinChunk* chunk)
 {
     size_t i;
     size_t count;
     uint8_t type;
-    lit_chunk_init(chunk);
-    count = lit_emufile_readuint32(file);
-    chunk->code = (uint8_t*)lit_gcmem_memrealloc(state, NULL, 0, sizeof(uint8_t) * count);
+    tin_chunk_init(chunk);
+    count = tin_emufile_readuint32(file);
+    chunk->code = (uint8_t*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(uint8_t) * count);
     chunk->count = count;
     chunk->capacity = count;
     for(i = 0; i < count; i++)
     {
-        chunk->code[i] = lit_emufile_readuint8(file);
+        chunk->code[i] = tin_emufile_readuint8(file);
     }
-    count = lit_emufile_readuint32(file);
+    count = tin_emufile_readuint32(file);
     if(count > 0)
     {
-        chunk->lines = (uint16_t*)lit_gcmem_memrealloc(state, NULL, 0, sizeof(uint16_t) * count);
+        chunk->lines = (uint16_t*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(uint16_t) * count);
         chunk->line_count = count;
         chunk->line_capacity = count;
         for(i = 0; i < count; i++)
         {
-            chunk->lines[i] = lit_emufile_readuint16(file);
+            chunk->lines[i] = tin_emufile_readuint16(file);
         }
     }
     else
     {
         chunk->has_line_info = false;
     }
-    count = lit_emufile_readuint32(file);
+    count = tin_emufile_readuint32(file);
     /*
-    chunk->constants.values = (LitValue*)lit_gcmem_memrealloc(state, NULL, 0, sizeof(LitValue) * count);
+    chunk->constants.values = (TinValue*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(TinValue) * count);
     chunk->constants.count = count;
     chunk->constants.capacity = count;
     */
-    lit_vallist_init(&chunk->constants);
-    lit_vallist_ensuresize(state, &chunk->constants, count);
+    tin_vallist_init(&chunk->constants);
+    tin_vallist_ensuresize(state, &chunk->constants, count);
     for(i = 0; i < count; i++)
     {
-        type = lit_emufile_readuint8(file);
+        type = tin_emufile_readuint8(file);
         if(type == 0)
         {
-            //chunk->constants.values[i] = lit_value_makenumber(vm->state, lit_emufile_readdouble(file));
-            lit_vallist_set(&chunk->constants, i, lit_value_makenumber(state, lit_emufile_readdouble(file)));
+            //chunk->constants.values[i] = tin_value_makenumber(vm->state, tin_emufile_readdouble(file));
+            tin_vallist_set(&chunk->constants, i, tin_value_makefloatnumber(state, tin_emufile_readdouble(file)));
         }
         else
         {
-            switch((LitObjType)(type - 1))
+            switch((TinObjType)(type - 1))
             {
-                case LITTYPE_STRING:
+                case TINTYPE_STRING:
                     {
-                        //chunk->constants.values[i] = lit_value_fromobject(lit_emufile_readstring(state, file));
-                        lit_vallist_set(&chunk->constants, i, lit_value_fromobject(lit_emufile_readstring(state, file)));
+                        //chunk->constants.values[i] = tin_value_fromobject(tin_emufile_readstring(state, file));
+                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_emufile_readstring(state, file)));
 
                     }
                     break;
-                case LITTYPE_FUNCTION:
+                case TINTYPE_FUNCTION:
                     {
-                        //chunk->constants.values[i] = lit_value_fromobject(lit_ioutil_readfunction(state, file, module));
-                        lit_vallist_set(&chunk->constants, i, lit_value_fromobject(lit_ioutil_readfunction(state, file, module)));
+                        //chunk->constants.values[i] = tin_value_fromobject(tin_ioutil_readfunction(state, file, module));
+                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_ioutil_readfunction(state, file, module)));
                     }
                     break;
                 default:
@@ -405,15 +405,15 @@ static void lit_ioutil_readchunk(LitState* state, LitEmulatedFile* file, LitModu
     }
 }
 
-void lit_ioutil_writemodule(LitModule* module, FILE* file)
+void tin_ioutil_writemodule(TinModule* module, FILE* file)
 {
     size_t i;
     bool disabled;
-    LitTable* privates;
-    disabled = lit_astopt_isoptenabled(LITOPTSTATE_PRIVATE_NAMES);
-    lit_ioutil_writestring(file, module->name);
-    lit_ioutil_writeuint16(file, module->private_count);
-    lit_ioutil_writeuint8(file, (uint8_t)disabled);
+    TinTable* privates;
+    disabled = tin_astopt_isoptenabled(TINOPTSTATE_PRIVATE_NAMES);
+    tin_ioutil_writestring(file, module->name);
+    tin_ioutil_writeuint16(file, module->private_count);
+    tin_ioutil_writeuint8(file, (uint8_t)disabled);
     if(!disabled)
     {
         privates = &module->private_names->values;
@@ -421,15 +421,15 @@ void lit_ioutil_writemodule(LitModule* module, FILE* file)
         {
             if(privates->entries[i].key != NULL)
             {
-                lit_ioutil_writestring(file, privates->entries[i].key);
-                lit_ioutil_writeuint16(file, (uint16_t)lit_value_asnumber(privates->entries[i].value));
+                tin_ioutil_writestring(file, privates->entries[i].key);
+                tin_ioutil_writeuint16(file, (uint16_t)tin_value_asnumber(privates->entries[i].value));
             }
         }
     }
-    lit_ioutil_writefunction(file, module->main_function);
+    tin_ioutil_writefunction(file, module->main_function);
 }
 
-LitModule* lit_ioutil_readmodule(LitState* state, const char* input, size_t len)
+TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
 {
     bool enabled;
     uint16_t i;
@@ -437,51 +437,51 @@ LitModule* lit_ioutil_readmodule(LitState* state, const char* input, size_t len)
     uint16_t modulecount;
     uint16_t privatescount;
     uint8_t bytecodeversion;
-    LitString* name;
-    LitTable* privates;
-    LitModule* module;
-    LitEmulatedFile file;
-    lit_emufile_init(&file, input, len);
-    if(lit_emufile_readuint16(&file) != LIT_BYTECODE_MAGIC_NUMBER)
+    TinString* name;
+    TinTable* privates;
+    TinModule* module;
+    TinEmulatedFile file;
+    tin_emufile_init(&file, input, len);
+    if(tin_emufile_readuint16(&file) != TIN_BYTECODE_MAGIC_NUMBER)
     {
-        lit_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown magic number");
+        tin_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown magic number");
         return NULL;
     }
-    bytecodeversion = lit_emufile_readuint8(&file);
-    if(bytecodeversion > LIT_BYTECODE_VERSION)
+    bytecodeversion = tin_emufile_readuint8(&file);
+    if(bytecodeversion > TIN_BYTECODE_VERSION)
     {
-        lit_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown bytecode version '%i'", (int)bytecodeversion);
+        tin_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown bytecode version '%i'", (int)bytecodeversion);
         return NULL;
     }
-    modulecount = lit_emufile_readuint16(&file);
-    LitModule* first = NULL;
+    modulecount = tin_emufile_readuint16(&file);
+    TinModule* first = NULL;
     for(j = 0; j < modulecount; j++)
     {
-        module = lit_object_makemodule(state, lit_emufile_readstring(state, &file));
+        module = tin_object_makemodule(state, tin_emufile_readstring(state, &file));
         privates = &module->private_names->values;
-        privatescount = lit_emufile_readuint16(&file);
-        enabled = !((bool)lit_emufile_readuint8(&file));
-        module->privates = LIT_ALLOCATE(state, sizeof(LitValue), privatescount);
+        privatescount = tin_emufile_readuint16(&file);
+        enabled = !((bool)tin_emufile_readuint8(&file));
+        module->privates = TIN_ALLOCATE(state, sizeof(TinValue), privatescount);
         module->private_count = privatescount;
         for(i = 0; i < privatescount; i++)
         {
             module->privates[i] = NULL_VALUE;
             if(enabled)
             {
-                name = lit_emufile_readstring(state, &file);
-                lit_table_set(state, privates, name, lit_value_makenumber(state, lit_emufile_readuint16(&file)));
+                name = tin_emufile_readstring(state, &file);
+                tin_table_set(state, privates, name, tin_value_makefixednumber(state, tin_emufile_readuint16(&file)));
             }
         }
-        module->main_function = lit_ioutil_readfunction(state, &file, module);
-        lit_table_set(state, &state->vm->modules->values, module->name, lit_value_fromobject(module));
+        module->main_function = tin_ioutil_readfunction(state, &file, module);
+        tin_table_set(state, &state->vm->modules->values, module->name, tin_value_fromobject(module));
         if(j == 0)
         {
             first = module;
         }
     }
-    if(lit_emufile_readuint16(&file) != LIT_BYTECODE_END_NUMBER)
+    if(tin_emufile_readuint16(&file) != TIN_BYTECODE_END_NUMBER)
     {
-        lit_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown end number");
+        tin_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown end number");
         return NULL;
     }
     return first;
@@ -491,17 +491,17 @@ LitModule* lit_ioutil_readmodule(LitState* state, const char* input, size_t len)
 /*
  * File
  */
-void lit_userfile_cleanup(LitState* state, LitUserdata* data, bool mark)
+void tin_userfile_cleanup(TinState* state, TinUserdata* data, bool mark)
 {
     (void)state;
-    LitFileData* fd;
+    TinFileData* fd;
     if(mark)
     {
         return;
     }
     if(data != NULL)
     {
-        fd = ((LitFileData*)data->data);
+        fd = ((TinFileData*)data->data);
         if(fd != NULL)
         {
             if((fd->handle != NULL) && (fd->isopen == true))
@@ -514,37 +514,37 @@ void lit_userfile_cleanup(LitState* state, LitUserdata* data, bool mark)
     }
 }
 
-static LitValue objmethod_file_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
     const char* path;
     const char* mode;
     FILE* hnd;
-    LitFileData* data;
-    LitStdioHandle* hstd;    
+    TinFileData* data;
+    TinStdioHandle* hstd;    
     if(argc > 1)
     {
-        if(lit_value_isuserdata(argv[0]))
+        if(tin_value_isuserdata(argv[0]))
         {
-            hstd = (LitStdioHandle*)(lit_value_asuserdata(argv[0])->data);
+            hstd = (TinStdioHandle*)(tin_value_asuserdata(argv[0])->data);
             hnd = hstd->handle;
             fprintf(stderr, "FILE: hnd=%p name=%s\n", hstd->handle, hstd->name);
-            data = (LitFileData*)lit_util_instancedataset(vm, instance, sizeof(LitFileData), NULL);
+            data = (TinFileData*)tin_util_instancedataset(vm, instance, sizeof(TinFileData), NULL);
             data->path = NULL;
             data->handle = hnd;
             data->isopen = true;
         }
         else
         {
-            path = lit_value_checkstring(vm, argv, argc, 0);
-            mode = lit_value_getstring(vm, argv, argc, 1, "r");
+            path = tin_value_checkstring(vm, argv, argc, 0);
+            mode = tin_value_getstring(vm, argv, argc, 1, "r");
             hnd = fopen(path, mode);
             if(hnd == NULL)
             {
-                lit_vm_raiseexitingerror(vm, "Failed to open file %s with mode %s (C error: %s)", path, mode, strerror(errno));
+                tin_vm_raiseexitingerror(vm, "Failed to open file %s with mode %s (C error: %s)", path, mode, strerror(errno));
             }
-            data = (LitFileData*)lit_util_instancedataset(vm, instance, sizeof(LitFileData), lit_userfile_cleanup);
+            data = (TinFileData*)tin_util_instancedataset(vm, instance, sizeof(TinFileData), tin_userfile_cleanup);
             data->path = (char*)path;
             data->handle = hnd;
             data->isopen = true;
@@ -552,39 +552,39 @@ static LitValue objmethod_file_constructor(LitVM* vm, LitValue instance, size_t 
     }
     else
     {
-        lit_vm_raiseexitingerror(vm, "File() expects either string|string, or userdata|string");
+        tin_vm_raiseexitingerror(vm, "File() expects either string|string, or userdata|string");
         return NULL_VALUE;
     }
     return instance;
 }
 
 
-static LitValue objmethod_file_close(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_close(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    LitFileData* data;
-    data = (LitFileData*)lit_util_instancedataget(vm, instance);
+    TinFileData* data;
+    data = (TinFileData*)tin_util_instancedataget(vm, instance);
     fclose(data->handle);
     data->handle = NULL;
     data->isopen = false;
     return NULL_VALUE;
 }
 
-static LitValue objmethod_file_exists(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_exists(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    char* file_name;
-    file_name = NULL;
-    if(lit_value_isinstance(instance))
+    char* filename;
+    filename = NULL;
+    if(tin_value_isinstance(instance))
     {
-        file_name = ((LitFileData*)lit_util_instancedataget(vm, instance))->path;
+        filename = ((TinFileData*)tin_util_instancedataget(vm, instance))->path;
     }
     else
     {
-        file_name = (char*)lit_value_checkstring(vm, argv, argc, 0);
+        filename = (char*)tin_value_checkstring(vm, argv, argc, 0);
     }
-    return lit_value_makebool(vm->state, lit_fs_fileexists(file_name));
+    return tin_value_makebool(vm->state, tin_fs_fileexists(filename));
 }
 
 /*
@@ -592,63 +592,63 @@ static LitValue objmethod_file_exists(LitVM* vm, LitValue instance, size_t argc,
  * File writing
  */
 
-static LitValue objmethod_file_write(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_write(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LIT_ENSURE_ARGS(vm->state, 1)
+    TIN_ENSURE_ARGS(vm->state, 1)
     size_t rt;
-    LitString* value;
-    value = lit_value_tostring(vm->state, argv[0]);
-    rt = fwrite(value->chars, lit_string_getlength(value), 1, ((LitFileData*)lit_util_instancedataget(vm, instance))->handle);
-    return lit_value_makenumber(vm->state, rt);
+    TinString* value;
+    value = tin_value_tostring(vm->state, argv[0]);
+    rt = fwrite(value->chars, tin_string_getlength(value), 1, ((TinFileData*)tin_util_instancedataget(vm, instance))->handle);
+    return tin_value_makefixednumber(vm->state, rt);
 }
 
-static LitValue objmethod_file_writebyte(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_writebyte(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     uint8_t rt;
     uint8_t byte;
-    byte = (uint8_t)lit_value_checknumber(vm, argv, argc, 0);
-    rt = lit_ioutil_writeuint8(((LitFileData*)lit_util_instancedataget(vm, instance))->handle, byte);
-    return lit_value_makenumber(vm->state, rt);
+    byte = (uint8_t)tin_value_checknumber(vm, argv, argc, 0);
+    rt = tin_ioutil_writeuint8(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, byte);
+    return tin_value_makefixednumber(vm->state, rt);
 }
 
-static LitValue objmethod_file_writeshort(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_writeshort(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     uint16_t rt;
     uint16_t shrt;
-    shrt = (uint16_t)lit_value_checknumber(vm, argv, argc, 0);
-    rt = lit_ioutil_writeuint16(((LitFileData*)lit_util_instancedataget(vm, instance))->handle, shrt);
-    return lit_value_makenumber(vm->state, rt);
+    shrt = (uint16_t)tin_value_checknumber(vm, argv, argc, 0);
+    rt = tin_ioutil_writeuint16(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, shrt);
+    return tin_value_makefixednumber(vm->state, rt);
 }
 
-static LitValue objmethod_file_writenumber(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_writenumber(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     uint32_t rt;
     float num;
-    num = (float)lit_value_checknumber(vm, argv, argc, 0);
-    rt = lit_ioutil_writeuint32(((LitFileData*)lit_util_instancedataget(vm, instance))->handle, num);
-    return lit_value_makenumber(vm->state, rt);
+    num = (float)tin_value_checknumber(vm, argv, argc, 0);
+    rt = tin_ioutil_writeuint32(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, num);
+    return tin_value_makefixednumber(vm->state, rt);
 }
 
-static LitValue objmethod_file_writebool(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_writebool(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     bool value;
     uint8_t rt;
-    value = lit_value_checkbool(vm, argv, argc, 0);
-    rt = lit_ioutil_writeuint8(((LitFileData*)lit_util_instancedataget(vm, instance))->handle, (uint8_t)value ? '1' : '0');
-    return lit_value_makenumber(vm->state, rt);
+    value = tin_value_checkbool(vm, argv, argc, 0);
+    rt = tin_ioutil_writeuint8(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, (uint8_t)value ? '1' : '0');
+    return tin_value_makefixednumber(vm->state, rt);
 }
 
-static LitValue objmethod_file_writestring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_writestring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitString* string;
-    LitFileData* data;
-    if(lit_value_checkstring(vm, argv, argc, 0) == NULL)
+    TinString* string;
+    TinFileData* data;
+    if(tin_value_checkstring(vm, argv, argc, 0) == NULL)
     {
         return NULL_VALUE;
     }
-    string = lit_value_asstring(argv[0]);
-    data = (LitFileData*)lit_util_instancedataget(vm, instance);
-    lit_ioutil_writestring(data->handle, string);
+    string = tin_value_asstring(argv[0]);
+    data = (TinFileData*)tin_util_instancedataget(vm, instance);
+    tin_ioutil_writestring(data->handle, string);
     return NULL_VALUE;
 }
 
@@ -657,7 +657,7 @@ static LitValue objmethod_file_writestring(LitVM* vm, LitValue instance, size_t 
  * File reading
  */
 
-static LitValue objmethod_file_readall(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
     (void)argc;
@@ -665,15 +665,15 @@ static LitValue objmethod_file_readall(LitVM* vm, LitValue instance, size_t argc
     char c;
     long length;
     long actuallength;
-    LitFileData* data;
-    LitString* result;
-    data = (LitFileData*)lit_util_instancedataget(vm, instance);
+    TinFileData* data;
+    TinString* result;
+    data = (TinFileData*)tin_util_instancedataget(vm, instance);
     if(fseek(data->handle, 0, SEEK_END) == -1)
     {
         /*
         * cannot seek, must read each byte.
         */
-        result = lit_string_makeempty(vm->state, 0, false);
+        result = tin_string_makeempty(vm->state, 0, false);
         actuallength = 0;
         while((c = fgetc(data->handle)) != EOF)
         {
@@ -685,7 +685,7 @@ static LitValue objmethod_file_readall(LitVM* vm, LitValue instance, size_t argc
     {
         length = ftell(data->handle);
         fseek(data->handle, 0, SEEK_SET);
-        result = lit_string_makeempty(vm->state, length, false);
+        result = tin_string_makeempty(vm->state, length, false);
         actuallength = fread(result->chars, sizeof(char), length, data->handle);
         /*
         * after reading, THIS actually sets the correct length.
@@ -693,12 +693,12 @@ static LitValue objmethod_file_readall(LitVM* vm, LitValue instance, size_t argc
         */
         sdsIncrLen(result->chars, actuallength);
     }
-    result->hash = lit_util_hashstring(result->chars, actuallength);
-    lit_state_regstring(vm->state, result);
-    return lit_value_fromobject(result);
+    result->hash = tin_util_hashstring(result->chars, actuallength);
+    tin_state_regstring(vm->state, result);
+    return tin_value_fromobject(result);
 }
 
-static LitValue objmethod_file_readline(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_readline(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)instance;
@@ -706,90 +706,90 @@ static LitValue objmethod_file_readline(LitVM* vm, LitValue instance, size_t arg
     (void)argv;
     size_t maxlength;
     char* line;
-    LitFileData* data;
-    maxlength = (size_t)lit_value_getnumber(vm, argv, argc, 0, 128);
-    data = (LitFileData*)lit_util_instancedataget(vm, instance);
-    line = LIT_ALLOCATE(vm->state, sizeof(char), maxlength + 1);
+    TinFileData* data;
+    maxlength = (size_t)tin_value_getnumber(vm, argv, argc, 0, 128);
+    data = (TinFileData*)tin_util_instancedataget(vm, instance);
+    line = TIN_ALLOCATE(vm->state, sizeof(char), maxlength + 1);
     if(!fgets(line, maxlength, data->handle))
     {
-        LIT_FREE(vm->state, sizeof(char), line);
+        TIN_FREE(vm->state, sizeof(char), line);
         return NULL_VALUE;
     }
-    return lit_value_fromobject(lit_string_take(vm->state, line, strlen(line) - 1, false));
+    return tin_value_fromobject(tin_string_take(vm->state, line, strlen(line) - 1, false));
 }
 
-static LitValue objmethod_file_readbyte(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_readbyte(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makenumber(vm->state, lit_ioutil_readuint8(((LitFileData*)lit_util_instancedataget(vm, instance))->handle));
+    return tin_value_makefixednumber(vm->state, tin_ioutil_readuint8(((TinFileData*)tin_util_instancedataget(vm, instance))->handle));
 }
 
-static LitValue objmethod_file_readshort(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_readshort(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makenumber(vm->state, lit_ioutil_readuint16(((LitFileData*)lit_util_instancedataget(vm, instance))->handle));
+    return tin_value_makefixednumber(vm->state, tin_ioutil_readuint16(((TinFileData*)tin_util_instancedataget(vm, instance))->handle));
 }
 
-static LitValue objmethod_file_readnumber(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_readnumber(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makenumber(vm->state, lit_ioutil_readuint32(((LitFileData*)lit_util_instancedataget(vm, instance))->handle));
+    return tin_value_makefixednumber(vm->state, tin_ioutil_readuint32(((TinFileData*)tin_util_instancedataget(vm, instance))->handle));
 }
 
-static LitValue objmethod_file_readbool(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_readbool(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makebool(vm->state, (char)lit_ioutil_readuint8(((LitFileData*)lit_util_instancedataget(vm, instance))->handle) == '1');
+    return tin_value_makebool(vm->state, (char)tin_ioutil_readuint8(((TinFileData*)tin_util_instancedataget(vm, instance))->handle) == '1');
 }
 
-static LitValue objmethod_file_readstring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_readstring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    LitFileData* data = (LitFileData*)lit_util_instancedataget(vm, instance);
-    LitString* string = lit_ioutil_readstring(vm->state, data->handle);
+    TinFileData* data = (TinFileData*)tin_util_instancedataget(vm, instance);
+    TinString* string = tin_ioutil_readstring(vm->state, data->handle);
 
-    return string == NULL ? NULL_VALUE : lit_value_fromobject(string);
+    return string == NULL ? NULL_VALUE : tin_value_fromobject(string);
 }
 
-static LitValue objmethod_file_getlastmodified(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objmethod_file_getlastmodified(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     struct stat buffer;
-    char* file_name = NULL;
+    char* filename = NULL;
     (void)vm;
     (void)argc;
     (void)argv;
-    if(lit_value_isinstance(instance))
+    if(tin_value_isinstance(instance))
     {
-        file_name = ((LitFileData*)lit_util_instancedataget(vm, instance))->path;
+        filename = ((TinFileData*)tin_util_instancedataget(vm, instance))->path;
     }
     else
     {
-        file_name = (char*)lit_value_checkstring(vm, argv, argc, 0);
+        filename = (char*)tin_value_checkstring(vm, argv, argc, 0);
     }
 
-    if(stat(file_name, &buffer) != 0)
+    if(stat(filename, &buffer) != 0)
     {
-        return lit_value_makenumber(vm->state, 0);
+        return tin_value_makefixednumber(vm->state, 0);
     }
     #if defined(__unix__) || defined(__linux__)
-        return lit_value_makenumber(vm->state, buffer.st_mtim.tv_sec);
+        return tin_value_makefixednumber(vm->state, buffer.st_mtim.tv_sec);
     #else
-        return lit_value_makenumber(vm->state, 0);
+        return tin_value_makefixednumber(vm->state, 0);
     #endif
 }
 
@@ -798,64 +798,64 @@ static LitValue objmethod_file_getlastmodified(LitVM* vm, LitValue instance, siz
 * Directory
 */
 
-static LitValue objfunction_directory_exists(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfunction_directory_exists(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    const char* directoryname = lit_value_checkstring(vm, argv, argc, 0);
+    const char* directoryname = tin_value_checkstring(vm, argv, argc, 0);
     struct stat buffer;
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_makebool(vm->state, stat(directoryname, &buffer) == 0 && S_ISDIR(buffer.st_mode));
+    return tin_value_makebool(vm->state, stat(directoryname, &buffer) == 0 && S_ISDIR(buffer.st_mode));
 }
 
-static LitValue objfunction_directory_listfiles(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfunction_directory_listfiles(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitState* state;
-    LitArray* array;
+    TinState* state;
+    TinArray* array;
     (void)instance;
     state = vm->state;
-    array = lit_create_array(state);
+    array = tin_create_array(state);
     #if defined(__unix__) || defined(__linux__)
     {
         struct dirent* ep;
-        DIR* dir = opendir(lit_value_checkstring(vm, argv, argc, 0));
+        DIR* dir = opendir(tin_value_checkstring(vm, argv, argc, 0));
         if(dir == NULL)
         {
-            return lit_value_fromobject(array);
+            return tin_value_fromobject(array);
         }
         while((ep = readdir(dir)))
         {
             if(ep->d_type == DT_REG)
             {
-                lit_vallist_push(state, &array->list, lit_value_makestring(state, ep->d_name));
+                tin_vallist_push(state, &array->list, tin_value_makestring(state, ep->d_name));
             }
         }
         closedir(dir);
     }
     #endif
-    return lit_value_fromobject(array);
+    return tin_value_fromobject(array);
 }
 
-static LitValue objfunction_directory_listdirs(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfunction_directory_listdirs(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitArray* array;
-    LitState* state;
-    LitDirReader rd;
-    LitDirItem ent;
+    TinArray* array;
+    TinState* state;
+    TinDirReader rd;
+    TinDirItem ent;
     (void)instance;
     state = vm->state;
-    array = lit_create_array(state);
+    array = tin_create_array(state);
 
-    if(lit_fs_diropen(&rd, lit_value_checkstring(vm, argv, argc, 0)))
+    if(tin_fs_diropen(&rd, tin_value_checkstring(vm, argv, argc, 0)))
     {
         while(true)
         {
-            if(lit_fs_dirread(&rd, &ent))
+            if(tin_fs_dirread(&rd, &ent))
             {
                 if(ent.isdir && ((strcmp(ent.name, ".") != 0) || (strcmp(ent.name, "..") != 0)))
                 {
-                    lit_vallist_push(state, &array->list, lit_value_makestring(state, ent.name));
+                    tin_vallist_push(state, &array->list, tin_value_makestring(state, ent.name));
                 }
             }
             else
@@ -863,109 +863,109 @@ static LitValue objfunction_directory_listdirs(LitVM* vm, LitValue instance, siz
                 break;
             }
         }
-        lit_fs_dirclose(&rd);
+        tin_fs_dirclose(&rd);
     }
-    return lit_value_fromobject(array);
+    return tin_value_fromobject(array);
 }
 
-static void lit_userfile_destroyhandle(LitState* state, LitUserdata* userdata, bool mark)
+static void tin_userfile_destroyhandle(TinState* state, TinUserdata* userdata, bool mark)
 {
-    LitStdioHandle* hstd;
+    TinStdioHandle* hstd;
     (void)mark;
-    hstd = (LitStdioHandle*)(userdata->data);
-    LIT_FREE(state, sizeof(LitStdioHandle), hstd);
+    hstd = (TinStdioHandle*)(userdata->data);
+    TIN_FREE(state, sizeof(TinStdioHandle), hstd);
 }
 
-static void lit_userfile_makehandle(LitState* state, LitValue fileval, const char* name, FILE* hnd, bool canread, bool canwrite)
+static void tin_userfile_makehandle(TinState* state, TinValue fileval, const char* name, FILE* hnd, bool canread, bool canwrite)
 {
-    LitUserdata* userhnd;
-    LitValue args[5];
-    LitString* varname;
-    LitString* descname;
-    LitInterpretResult res;
-    LitFiber* oldfiber;
-    LitStdioHandle* hstd;
+    TinUserdata* userhnd;
+    TinValue args[5];
+    TinString* varname;
+    TinString* descname;
+    TinInterpretResult res;
+    TinFiber* oldfiber;
+    TinStdioHandle* hstd;
     oldfiber = state->vm->fiber;
-    state->vm->fiber = lit_create_fiber(state, state->last_module, NULL);
+    state->vm->fiber = tin_create_fiber(state, state->last_module, NULL);
     {
-        hstd = LIT_ALLOCATE(state, sizeof(LitStdioHandle), 1);
+        hstd = TIN_ALLOCATE(state, sizeof(TinStdioHandle), 1);
         hstd->handle = hnd;
         hstd->name = name;
         hstd->canread = canread;
         hstd->canwrite = canwrite; 
-        userhnd = lit_object_makeuserdata(state, sizeof(LitStdioHandle), true);
+        userhnd = tin_object_makeuserdata(state, sizeof(TinStdioHandle), true);
         userhnd->data = hstd;
         userhnd->canfree = false;
-        userhnd->cleanup_fn = lit_userfile_destroyhandle;
-        varname = lit_string_copyconst(state, name);
-        descname = lit_string_copyconst(state, name);
-        args[0] = lit_value_fromobject(userhnd);
-        args[1] = lit_value_fromobject(descname);
-        res = lit_state_callvalue(state, fileval, args, 2, false);
-        //fprintf(stderr, "lit_userfile_makehandle(%s, hnd=%p): res.type=%d, res.result=%s\n", name, hnd, res.type, lit_tostring_typename(res.result));
-        lit_state_setglobal(state, varname, res.result);
+        userhnd->cleanup_fn = tin_userfile_destroyhandle;
+        varname = tin_string_copyconst(state, name);
+        descname = tin_string_copyconst(state, name);
+        args[0] = tin_value_fromobject(userhnd);
+        args[1] = tin_value_fromobject(descname);
+        res = tin_state_callvalue(state, fileval, args, 2, false);
+        //fprintf(stderr, "tin_userfile_makehandle(%s, hnd=%p): res.type=%d, res.result=%s\n", name, hnd, res.type, tin_tostring_typename(res.result));
+        tin_state_setglobal(state, varname, res.result);
     }
     state->vm->fiber = oldfiber;
 }
 
-static void lit_userfile_makestdhandles(LitState* state)
+static void tin_userfile_makestdhandles(TinState* state)
 {
-    LitValue fileval;
-    fileval = lit_state_getglobalvalue(state, lit_string_copyconst(state, "File"));
-    fprintf(stderr, "fileval=%s\n", lit_tostring_typename(fileval));
+    TinValue fileval;
+    fileval = tin_state_getglobalvalue(state, tin_string_copyconst(state, "File"));
+    fprintf(stderr, "fileval=%s\n", tin_tostring_typename(fileval));
     {
-        lit_userfile_makehandle(state, fileval, "STDIN", stdin, true, false);
-        lit_userfile_makehandle(state, fileval, "STDOUT", stdout, false, true);
-        lit_userfile_makehandle(state, fileval, "STDERR", stderr, false, true);
+        tin_userfile_makehandle(state, fileval, "STDIN", stdin, true, false);
+        tin_userfile_makehandle(state, fileval, "STDOUT", stdout, false, true);
+        tin_userfile_makehandle(state, fileval, "STDERR", stderr, false, true);
     }
 }
 
-void lit_open_file_library(LitState* state)
+void tin_open_file_library(TinState* state)
 {
-    LitClass* klass;
+    TinClass* klass;
     {
-        klass = lit_create_classobject(state, "File");
+        klass = tin_create_classobject(state, "File");
         {
-            lit_class_bindstaticmethod(state, klass, "exists", objmethod_file_exists);
-            lit_class_bindstaticmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
-            lit_class_bindconstructor(state, klass, objmethod_file_constructor);
-            lit_class_bindmethod(state, klass, "close", objmethod_file_close);
-            lit_class_bindmethod(state, klass, "write", objmethod_file_write);
-            lit_class_bindmethod(state, klass, "writeByte", objmethod_file_writebyte);
-            lit_class_bindmethod(state, klass, "writeShort", objmethod_file_writeshort);
-            lit_class_bindmethod(state, klass, "writeNumber", objmethod_file_writenumber);
-            lit_class_bindmethod(state, klass, "writeBool", objmethod_file_writebool);
-            lit_class_bindmethod(state, klass, "writeString", objmethod_file_writestring);
-            lit_class_bindmethod(state, klass, "readAll", objmethod_file_readall);
-            lit_class_bindmethod(state, klass, "readLine", objmethod_file_readline);
-            lit_class_bindmethod(state, klass, "readByte", objmethod_file_readbyte);
-            lit_class_bindmethod(state, klass, "readShort", objmethod_file_readshort);
-            lit_class_bindmethod(state, klass, "readNumber", objmethod_file_readnumber);
-            lit_class_bindmethod(state, klass, "readBool", objmethod_file_readbool);
-            lit_class_bindmethod(state, klass, "readString", objmethod_file_readstring);
-            lit_class_bindmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
-            lit_class_bindgetset(state, klass, "exists", objmethod_file_exists, NULL, false);
+            tin_class_bindstaticmethod(state, klass, "exists", objmethod_file_exists);
+            tin_class_bindstaticmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
+            tin_class_bindconstructor(state, klass, objmethod_file_constructor);
+            tin_class_bindmethod(state, klass, "close", objmethod_file_close);
+            tin_class_bindmethod(state, klass, "write", objmethod_file_write);
+            tin_class_bindmethod(state, klass, "writeByte", objmethod_file_writebyte);
+            tin_class_bindmethod(state, klass, "writeShort", objmethod_file_writeshort);
+            tin_class_bindmethod(state, klass, "writeNumber", objmethod_file_writenumber);
+            tin_class_bindmethod(state, klass, "writeBool", objmethod_file_writebool);
+            tin_class_bindmethod(state, klass, "writeString", objmethod_file_writestring);
+            tin_class_bindmethod(state, klass, "readAll", objmethod_file_readall);
+            tin_class_bindmethod(state, klass, "readLine", objmethod_file_readline);
+            tin_class_bindmethod(state, klass, "readByte", objmethod_file_readbyte);
+            tin_class_bindmethod(state, klass, "readShort", objmethod_file_readshort);
+            tin_class_bindmethod(state, klass, "readNumber", objmethod_file_readnumber);
+            tin_class_bindmethod(state, klass, "readBool", objmethod_file_readbool);
+            tin_class_bindmethod(state, klass, "readString", objmethod_file_readstring);
+            tin_class_bindmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
+            tin_class_bindgetset(state, klass, "exists", objmethod_file_exists, NULL, false);
         }
-        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
         if(klass->super == NULL)
         {
-            lit_class_inheritfrom(state, klass, state->objectvalue_class);
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
         };
     }
     {
-        klass = lit_create_classobject(state, "Directory");
+        klass = tin_create_classobject(state, "Directory");
         {
-            lit_class_bindstaticmethod(state, klass, "exists", objfunction_directory_exists);
-            lit_class_bindstaticmethod(state, klass, "listFiles", objfunction_directory_listfiles);
-            lit_class_bindstaticmethod(state, klass, "listDirectories", objfunction_directory_listdirs);
+            tin_class_bindstaticmethod(state, klass, "exists", objfunction_directory_exists);
+            tin_class_bindstaticmethod(state, klass, "listFiles", objfunction_directory_listfiles);
+            tin_class_bindstaticmethod(state, klass, "listDirectories", objfunction_directory_listdirs);
         }
-        lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
         if(klass->super == NULL)
         {
-            lit_class_inheritfrom(state, klass, state->objectvalue_class);
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
         };
     }
-    lit_userfile_makestdhandles(state);
+    tin_userfile_makestdhandles(state);
 }
 
 

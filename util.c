@@ -107,17 +107,17 @@ long double unpack754(uint64_t i, unsigned bits, unsigned expbits)
 }
 
 /* this used to be done via type punning, which may not be portable */
-double lit_util_uinttofloat(unsigned int val)
+double tin_util_uinttofloat(unsigned int val)
 {
     return unpack754_64(val);
 }
 
-unsigned int lit_util_floattouint(double val)
+unsigned int tin_util_floattouint(double val)
 {
     return pack754_64(val);
 }
 
-int lit_util_doubletoint(double n)
+int tin_util_doubletoint(double n)
 {
     if(n == 0)
     {
@@ -146,7 +146,7 @@ int lit_util_doubletoint(double n)
     return (int)n;
 }
 
-int lit_util_numbertoint32(double n)
+int tin_util_numbertoint32(double n)
 {
     /* magic. no idea. */
     bool isf;
@@ -173,14 +173,14 @@ int lit_util_numbertoint32(double n)
     return n;
 }
 
-unsigned int lit_util_numbertouint32(double n)
+unsigned int tin_util_numbertouint32(double n)
 {
-    return (unsigned int)lit_util_numbertoint32(n);
+    return (unsigned int)tin_util_numbertoint32(n);
 }
 
 
 // http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2Float
-int lit_util_closestpowof2(int n)
+int tin_util_closestpowof2(int n)
 {
     n--;
     n |= n >> 1;
@@ -193,36 +193,36 @@ int lit_util_closestpowof2(int n)
 }
 
 
-char* lit_util_patchfilename(char* file_name)
+char* tin_util_patchfilename(char* filename)
 {
     int i;
     int namelength;
     char c;
-    namelength = strlen(file_name);
-    // Check, if our file_name ends with .lit or lbc, and remove it
-    if(namelength > 4 && (memcmp(file_name + namelength - 4, ".lit", 4) == 0 || memcmp(file_name + namelength - 4, ".lbc", 4) == 0))
+    namelength = strlen(filename);
+    // Check, if our filename ends with .lit or lbc, and remove it
+    if(namelength > 4 && (memcmp(filename + namelength - 4, ".lit", 4) == 0 || memcmp(filename + namelength - 4, ".lbc", 4) == 0))
     {
-        file_name[namelength - 4] = '\0';
+        filename[namelength - 4] = '\0';
         namelength -= 4;
     }
-    // Check, if our file_name starts with ./ and remove it (useless, and makes the module name be ..main)
-    if(namelength > 2 && memcmp(file_name, "./", 2) == 0)
+    // Check, if our filename starts with ./ and remove it (useless, and makes the module name be ..main)
+    if(namelength > 2 && memcmp(filename, "./", 2) == 0)
     {
-        file_name += 2;
+        filename += 2;
         namelength -= 2;
     }
     for(i = 0; i < namelength; i++)
     {
-        c = file_name[i];
+        c = filename[i];
         if(c == '/' || c == '\\')
         {
-            file_name[i] = '.';
+            filename[i] = '.';
         }
     }
-    return file_name;
+    return filename;
 }
 
-char* lit_util_copystring(const char* string)
+char* tin_util_copystring(const char* string)
 {
     size_t length;
     char* newstring;

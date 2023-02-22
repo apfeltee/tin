@@ -7,11 +7,11 @@
 static bool measurecompilationtime;
 static double lastsourcetime = 0;
 
-LitString* lit_vformat_error(LitState* state, size_t line, const char* fmt, va_list args)
+TinString* tin_vformat_error(TinState* state, size_t line, const char* fmt, va_list args)
 {
     size_t buffersize;
     char* buffer;
-    LitString* rt;
+    TinString* rt;
     va_list argscopy;
     va_copy(argscopy, args);
     buffersize = vsnprintf(NULL, 0, fmt, argscopy) + 1;
@@ -21,32 +21,32 @@ LitString* lit_vformat_error(LitState* state, size_t line, const char* fmt, va_l
     buffer[buffersize - 1] = '\0';
     if(line != 0)
     {
-        rt = lit_value_asstring(lit_string_format(state, "[line #]: $", (double)line, (const char*)buffer));
+        rt = tin_value_asstring(tin_string_format(state, "[line #]: $", (double)line, (const char*)buffer));
     }
     else
     {
-        rt = lit_value_asstring(lit_string_format(state, "$", (const char*)buffer));
+        rt = tin_value_asstring(tin_string_format(state, "$", (const char*)buffer));
     }
     free(buffer);
     return rt;
 }
 
-LitString* lit_format_error(LitState* state, size_t line, const char* fmt, ...)
+TinString* tin_format_error(TinState* state, size_t line, const char* fmt, ...)
 {
     va_list args;
-    LitString* result;
+    TinString* result;
     va_start(args, fmt);
-    result = lit_vformat_error(state, line, fmt, args);
+    result = tin_vformat_error(state, line, fmt, args);
     va_end(args);
     return result;
 }
 
-void lit_enable_compilation_time_measurement()
+void tin_enable_compilation_time_measurement()
 {
     measurecompilationtime = true;
 }
 
-static void lit_util_default_error(LitState* state, const char* message)
+static void tin_util_default_error(TinState* state, const char* message)
 {
     (void)state;
     fflush(stdout);
@@ -54,16 +54,16 @@ static void lit_util_default_error(LitState* state, const char* message)
     fflush(stderr);
 }
 
-static void lit_util_default_printf(LitState* state, const char* message)
+static void tin_util_default_printf(TinState* state, const char* message)
 {
     (void)state;
     printf("%s", message);
 }
 
-LitState* lit_make_state()
+TinState* tin_make_state()
 {
-    LitState* state;
-    state = (LitState*)malloc(sizeof(LitState));
+    TinState* state;
+    state = (TinState*)malloc(sizeof(TinState));
 
     {
         state->config.dumpbytecode = false;
@@ -71,258 +71,260 @@ LitState* lit_make_state()
         state->config.runafterdump = true;
     }
     {
-        state->classvalue_class = NULL;
-        state->objectvalue_class = NULL;
-        state->numbervalue_class = NULL;
-        state->stringvalue_class = NULL;
-        state->boolvalue_class = NULL;
-        state->functionvalue_class = NULL;
-        state->fibervalue_class = NULL;
-        state->modulevalue_class = NULL;
-        state->arrayvalue_class = NULL;
-        state->mapvalue_class = NULL;
-        state->rangevalue_class = NULL;
+        state->primclassclass = NULL;
+        state->primobjectclass = NULL;
+        state->primnumberclass = NULL;
+        state->primstringclass = NULL;
+        state->primboolclass = NULL;
+        state->primfunctionclass = NULL;
+        state->primfiberclass = NULL;
+        state->primmoduleclass = NULL;
+        state->primarrayclass = NULL;
+        state->primmapclass = NULL;
+        state->primrangeclass = NULL;
     }
-    state->bytes_allocated = 0;
-    state->next_gc = 256 * 1024;
-    state->allow_gc = false;
+    state->gcbytescount = 0;
+    state->gcnext = 256 * 1024;
+    state->gcallow = false;
     /* io stuff */
     {
-        state->error_fn = lit_util_default_error;
-        state->print_fn = lit_util_default_printf;
-        lit_writer_init_file(state, &state->stdoutwriter, stdout, true);
+        state->errorfn = tin_util_default_error;
+        state->printfn = tin_util_default_printf;
+        tin_writer_init_file(state, &state->stdoutwriter, stdout, true);
     }
-    lit_vallist_init(&state->lightobjects);
-    state->had_error = false;
-    state->roots = NULL;
-    state->root_count = 0;
-    state->root_capacity = 0;
+    tin_vallist_init(&state->gclightobjects);
+    state->haderror = false;
+    state->gcroots = NULL;
+    state->gcrootcount = 0;
+    state->gcrootcapacity = 0;
     state->last_module = NULL;
-    lit_writer_init_file(state, &state->debugwriter, stdout, true);
-    state->scanner = (LitAstScanner*)malloc(sizeof(LitAstScanner));
-    state->parser = (LitAstParser*)malloc(sizeof(LitAstParser));
-    lit_astparser_init(state, (LitAstParser*)state->parser);
-    state->emitter = (LitAstEmitter*)malloc(sizeof(LitAstEmitter));
-    lit_astemit_init(state, state->emitter);
-    state->optimizer = (LitAstOptimizer*)malloc(sizeof(LitAstOptimizer));
-    lit_astopt_init(state, state->optimizer);
-    state->vm = (LitVM*)malloc(sizeof(LitVM));
-    lit_vm_init(state, state->vm);
-    lit_api_init(state);
-    lit_open_core_library(state);
+    tin_writer_init_file(state, &state->debugwriter, stdout, true);
+    state->scanner = (TinAstScanner*)malloc(sizeof(TinAstScanner));
+    state->parser = (TinAstParser*)malloc(sizeof(TinAstParser));
+    tin_astparser_init(state, (TinAstParser*)state->parser);
+    state->emitter = (TinAstEmitter*)malloc(sizeof(TinAstEmitter));
+    tin_astemit_init(state, state->emitter);
+    state->optimizer = (TinAstOptimizer*)malloc(sizeof(TinAstOptimizer));
+    tin_astopt_init(state, state->optimizer);
+    state->vm = (TinVM*)malloc(sizeof(TinVM));
+    tin_vm_init(state, state->vm);
+    tin_api_init(state);
+    tin_open_core_library(state);
     return state;
 }
 
-int64_t lit_destroy_state(LitState* state)
+int64_t tin_destroy_state(TinState* state)
 {
     int64_t amount;
-    if(state->roots != NULL)
+    if(state->gcroots != NULL)
     {
-        free(state->roots);
-        state->roots = NULL;
+        free(state->gcroots);
+        state->gcroots = NULL;
     }
-    lit_api_destroy(state);
+    tin_api_destroy(state);
     free(state->scanner);
-    lit_astparser_destroy(state->parser);
+    tin_astparser_destroy(state->parser);
     free(state->parser);
-    lit_astemit_destroy(state->emitter);
+    tin_astemit_destroy(state->emitter);
     free(state->emitter);
     free(state->optimizer);
-    lit_vm_destroy(state->vm);
+    tin_vm_destroy(state->vm);
     free(state->vm);
-    amount = state->bytes_allocated;
+    amount = state->gcbytescount;
     free(state);
     return amount;
 }
 
-void lit_api_init(LitState* state)
+void tin_api_init(TinState* state)
 {
-    state->api_name = lit_string_copy(state, "c", 1);
-    state->api_function = NULL;
-    state->api_fiber = NULL;
+    const char* apiname;
+    apiname = "__native__";
+    state->capiname = tin_string_copy(state, apiname, strlen(apiname));
+    state->capifunction = NULL;
+    state->capifiber = NULL;
 }
 
-void lit_api_destroy(LitState* state)
+void tin_api_destroy(TinState* state)
 {
-    state->api_name = NULL;
-    state->api_function = NULL;
-    state->api_fiber = NULL;
+    state->capiname = NULL;
+    state->capifunction = NULL;
+    state->capifiber = NULL;
 }
 
-LitValue lit_state_getglobalvalue(LitState* state, LitString* name)
+TinValue tin_state_getglobalvalue(TinState* state, TinString* name)
 {
-    LitValue global;
-    if(!lit_table_get(&state->vm->globals->values, name, &global))
+    TinValue global;
+    if(!tin_table_get(&state->vm->globals->values, name, &global))
     {
-        return lit_value_makenull(state);
+        return tin_value_makenull(state);
     }
     return global;
 }
 
-LitFunction* lit_state_getglobalfunction(LitState* state, LitString* name)
+TinFunction* tin_state_getglobalfunction(TinState* state, TinString* name)
 {
-    LitValue function = lit_state_getglobalvalue(state, name);
-    if(lit_value_isfunction(function))
+    TinValue function = tin_state_getglobalvalue(state, name);
+    if(tin_value_isfunction(function))
     {
-        return lit_value_asfunction(function);
+        return tin_value_asfunction(function);
     }
     return NULL;
 }
 
-void lit_state_setglobal(LitState* state, LitString* name, LitValue value)
+void tin_state_setglobal(TinState* state, TinString* name, TinValue value)
 {
-    lit_state_pushroot(state, (LitObject*)name);
-    lit_state_pushvalueroot(state, value);
-    lit_table_set(state, &state->vm->globals->values, name, value);
-    lit_state_poproots(state, 2);
+    tin_state_pushroot(state, (TinObject*)name);
+    tin_state_pushvalueroot(state, value);
+    tin_table_set(state, &state->vm->globals->values, name, value);
+    tin_state_poproots(state, 2);
 }
 
-bool lit_state_hasglobal(LitState* state, LitString* name)
+bool tin_state_hasglobal(TinState* state, TinString* name)
 {
-    LitValue global;
-    return lit_table_get(&state->vm->globals->values, name, &global);
+    TinValue global;
+    return tin_table_get(&state->vm->globals->values, name, &global);
 }
 
-void lit_state_defnativefunc(LitState* state, const char* name, LitNativeFunctionFn native)
+void tin_state_defnativefunc(TinState* state, const char* name, TinNativeFunctionFn native)
 {
-    lit_state_pushroot(state, (LitObject*)lit_string_copyconst(state, name));
-    lit_state_pushroot(state, (LitObject*)lit_object_makenativefunction(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
-    lit_table_set(state, &state->vm->globals->values, lit_value_asstring(lit_state_peekroot(state, 1)), lit_state_peekroot(state, 0));
-    lit_state_poproots(state, 2);
+    tin_state_pushroot(state, (TinObject*)tin_string_copyconst(state, name));
+    tin_state_pushroot(state, (TinObject*)tin_object_makenativefunction(state, native, tin_value_asstring(tin_state_peekroot(state, 0))));
+    tin_table_set(state, &state->vm->globals->values, tin_value_asstring(tin_state_peekroot(state, 1)), tin_state_peekroot(state, 0));
+    tin_state_poproots(state, 2);
 }
 
-void lit_state_defnativeprimitive(LitState* state, const char* name, LitNativePrimitiveFn native)
+void tin_state_defnativeprimitive(TinState* state, const char* name, TinNativePrimitiveFn native)
 {
-    lit_state_pushroot(state, (LitObject*)lit_string_copyconst(state, name));
-    lit_state_pushroot(state, (LitObject*)lit_object_makenativeprimitive(state, native, lit_value_asstring(lit_state_peekroot(state, 0))));
-    lit_table_set(state, &state->vm->globals->values, lit_value_asstring(lit_state_peekroot(state, 1)), lit_state_peekroot(state, 0));
-    lit_state_poproots(state, 2);
+    tin_state_pushroot(state, (TinObject*)tin_string_copyconst(state, name));
+    tin_state_pushroot(state, (TinObject*)tin_object_makenativeprimitive(state, native, tin_value_asstring(tin_state_peekroot(state, 0))));
+    tin_table_set(state, &state->vm->globals->values, tin_value_asstring(tin_state_peekroot(state, 1)), tin_state_peekroot(state, 0));
+    tin_state_poproots(state, 2);
 }
 
-LitValue lit_state_getinstancemethod(LitState* state, LitValue callee, LitString* mthname)
+TinValue tin_state_getinstancemethod(TinState* state, TinValue callee, TinString* mthname)
 {
-    LitValue mthval;
-    LitClass* klass;
-    klass = lit_state_getclassfor(state, callee);
-    if((lit_value_isinstance(callee) && lit_table_get(&lit_value_asinstance(callee)->fields, mthname, &mthval)) || lit_table_get(&klass->methods, mthname, &mthval))
+    TinValue mthval;
+    TinClass* klass;
+    klass = tin_state_getclassfor(state, callee);
+    if((tin_value_isinstance(callee) && tin_table_get(&tin_value_asinstance(callee)->fields, mthname, &mthval)) || tin_table_get(&klass->methods, mthname, &mthval))
     {
         return mthval;
     }
-    return lit_value_makenull(state);
+    return tin_value_makenull(state);
 }
 
-LitInterpretResult lit_state_callinstancemethod(LitState* state, LitValue callee, LitString* mthname, LitValue* argv, size_t argc)
+TinInterpretResult tin_state_callinstancemethod(TinState* state, TinValue callee, TinString* mthname, TinValue* argv, size_t argc)
 {
-    LitValue mthval;
-    mthval = lit_state_getinstancemethod(state, callee, mthname);
-    if(!lit_value_isnull(mthval))
+    TinValue mthval;
+    mthval = tin_state_getinstancemethod(state, callee, mthname);
+    if(!tin_value_isnull(mthval))
     {
-        return lit_state_callvalue(state, mthval, argv, argc, false);
+        return tin_state_callvalue(state, mthval, argv, argc, false);
     }
     return INTERPRET_RUNTIME_FAIL;    
 }
 
 
-LitValue lit_state_getfield(LitState* state, LitTable* table, const char* name)
+TinValue tin_state_getfield(TinState* state, TinTable* table, const char* name)
 {
-    LitValue value;
+    TinValue value;
 
-    if(!lit_table_get(table, lit_string_copyconst(state, name), &value))
+    if(!tin_table_get(table, tin_string_copyconst(state, name), &value))
     {
-        value = lit_value_makenull(state);
+        value = tin_value_makenull(state);
     }
 
     return value;
 }
 
-LitValue lit_state_getmapfield(LitState* state, LitMap* map, const char* name)
+TinValue tin_state_getmapfield(TinState* state, TinMap* map, const char* name)
 {
-    LitValue value;
+    TinValue value;
 
-    if(!lit_table_get(&map->values, lit_string_copyconst(state, name), &value))
+    if(!tin_table_get(&map->values, tin_string_copyconst(state, name), &value))
     {
-        value = lit_value_makenull(state);
+        value = tin_value_makenull(state);
     }
 
     return value;
 }
 
-void lit_state_setfield(LitState* state, LitTable* table, const char* name, LitValue value)
+void tin_state_setfield(TinState* state, TinTable* table, const char* name, TinValue value)
 {
-    lit_table_set(state, table, lit_string_copyconst(state, name), value);
+    tin_table_set(state, table, tin_string_copyconst(state, name), value);
 }
 
-void lit_state_setmapfield(LitState* state, LitMap* map, const char* name, LitValue value)
+void tin_state_setmapfield(TinState* state, TinMap* map, const char* name, TinValue value)
 {
-    lit_table_set(state, &map->values, lit_string_copyconst(state, name), value);
+    tin_table_set(state, &map->values, tin_string_copyconst(state, name), value);
 }
 
-bool lit_state_ensurefiber(LitVM* vm, LitFiber* fiber)
+bool tin_state_ensurefiber(TinVM* vm, TinFiber* fiber)
 {
     size_t newcapacity;
     size_t osize;
     size_t newsize;
     if(fiber == NULL)
     {
-        lit_vm_raiseerror(vm, "no fiber to run on");
+        tin_vm_raiseerror(vm, "no fiber to run on");
         return true;
     }
-    if(fiber->frame_count == LIT_CALL_FRAMES_MAX)
+    if(fiber->frame_count == TIN_CALL_FRAMES_MAX)
     {
-        lit_vm_raiseerror(vm, "fiber frame overflow");
+        tin_vm_raiseerror(vm, "fiber frame overflow");
         return true;
     }
     if(fiber->frame_count + 1 > fiber->frame_capacity)
     {
-        //newcapacity = fmin(LIT_CALL_FRAMES_MAX, fiber->frame_capacity * 2);
+        //newcapacity = fmin(TIN_CALL_FRAMES_MAX, fiber->frame_capacity * 2);
         newcapacity = (fiber->frame_capacity * 2) + 1;
-        osize = (sizeof(LitCallFrame) * fiber->frame_capacity);
-        newsize = (sizeof(LitCallFrame) * newcapacity);
-        fiber->frames = (LitCallFrame*)lit_gcmem_memrealloc(vm->state, fiber->frames, osize, newsize);
+        osize = (sizeof(TinCallFrame) * fiber->frame_capacity);
+        newsize = (sizeof(TinCallFrame) * newcapacity);
+        fiber->frames = (TinCallFrame*)tin_gcmem_memrealloc(vm->state, fiber->frames, osize, newsize);
         fiber->frame_capacity = newcapacity;
     }
 
     return false;
 }
 
-static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, LitValue* argv, uint8_t argc, bool ignfiber)
+static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, TinValue* argv, uint8_t argc, bool ignfiber)
 {
     bool vararg;
     int amount;
     size_t i;
     size_t varargc;
     size_t functionargcount;
-    LitVM* vm;
-    LitFiber* fiber;
-    LitCallFrame* frame;
-    LitArray* array;
+    TinVM* vm;
+    TinFiber* fiber;
+    TinCallFrame* frame;
+    TinArray* array;
     (void)argc;
     (void)varargc;
     vm = state->vm;
     fiber = vm->fiber;
     if(callee == NULL)
     {
-        lit_vm_raiseerror(vm, "attempt to lit_vm_callcallable a null value");
+        tin_vm_raiseerror(vm, "attempt to tin_vm_callcallable a null value");
         return NULL;
     }
     if(ignfiber)
     {
         if(fiber == NULL)
         {
-            fiber = state->api_fiber;
+            fiber = state->capifiber;
         }
     }
     if(!ignfiber)
     {
-        if(lit_state_ensurefiber(vm, fiber))
+        if(tin_state_ensurefiber(vm, fiber))
         {
             return NULL;
         }        
     }
-    lit_ensure_fiber_stack(state, fiber, callee->max_slots + (int)(fiber->stack_top - fiber->stack));
+    tin_ensure_fiber_stack(state, fiber, callee->maxslots + (int)(fiber->stack_top - fiber->stack));
     frame = &fiber->frames[fiber->frame_count++];
     frame->slots = fiber->stack_top;
-    PUSH(lit_value_fromobject(callee));
+    PUSH(tin_value_fromobject(callee));
     for(i = 0; i < argc; i++)
     {
         PUSH(argv[i]);
@@ -336,25 +338,25 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
             amount = (int)functionargcount - argc - (vararg ? 1 : 0);
             for(i = 0; i < (size_t)amount; i++)
             {
-                PUSH(lit_value_makenull(state));
+                PUSH(tin_value_makenull(state));
             }
             if(vararg)
             {
-                PUSH(lit_value_fromobject(lit_create_array(vm->state)));
+                PUSH(tin_value_fromobject(tin_create_array(vm->state)));
             }
         }
         else if(callee->vararg)
         {
-            array = lit_create_array(vm->state);
+            array = tin_create_array(vm->state);
             varargc = argc - functionargcount + 1;
-            lit_vallist_ensuresize(vm->state, &array->list, varargc);
+            tin_vallist_ensuresize(vm->state, &array->list, varargc);
             for(i = 0; i < varargc; i++)
             {
-                lit_vallist_set(&array->list, i, fiber->stack_top[(int)i - (int)varargc]);
+                tin_vallist_set(&array->list, i, fiber->stack_top[(int)i - (int)varargc]);
             }
 
             fiber->stack_top -= varargc;
-            lit_vm_push(vm, lit_value_fromobject(array));
+            tin_vm_push(vm, tin_value_fromobject(array));
         }
         else
         {
@@ -363,10 +365,10 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
     }
     else if(callee->vararg)
     {
-        array = lit_create_array(vm->state);
+        array = tin_create_array(vm->state);
         varargc = argc - functionargcount + 1;
-        lit_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
-        *(fiber->stack_top - 1) = lit_value_fromobject(array);
+        tin_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
+        *(fiber->stack_top - 1) = tin_value_fromobject(array);
     }
     frame->ip = callee->chunk.code;
     frame->closure = NULL;
@@ -376,31 +378,31 @@ static inline LitCallFrame* setup_call(LitState* state, LitFunction* callee, Lit
     return frame;
 }
 
-static inline LitInterpretResult execute_call(LitState* state, LitCallFrame* frame)
+static inline TinInterpretResult execute_call(TinState* state, TinCallFrame* frame)
 {
-    LitFiber* fiber;
-    LitInterpretResult result;
+    TinFiber* fiber;
+    TinInterpretResult result;
     if(frame == NULL)
     {
         RETURN_RUNTIME_ERROR();
     }
     fiber = state->vm->fiber;
-    result = lit_vm_execfiber(state, fiber);
-    if(!lit_value_isnull(fiber->errorval))
+    result = tin_vm_execfiber(state, fiber);
+    if(!tin_value_isnull(fiber->errorval))
     {
         result.result = fiber->errorval;
     }
     return result;
 }
 
-LitInterpretResult lit_state_callfunction(LitState* state, LitFunction* callee, LitValue* argv, uint8_t argc, bool ignfiber)
+TinInterpretResult tin_state_callfunction(TinState* state, TinFunction* callee, TinValue* argv, uint8_t argc, bool ignfiber)
 {
     return execute_call(state, setup_call(state, callee, argv, argc, ignfiber));
 }
 
-LitInterpretResult lit_state_callclosure(LitState* state, LitClosure* callee, LitValue* argv, uint8_t argc, bool ignfiber)
+TinInterpretResult tin_state_callclosure(TinState* state, TinClosure* callee, TinValue* argv, uint8_t argc, bool ignfiber)
 {
-    LitCallFrame* frame;
+    TinCallFrame* frame;
     frame = setup_call(state, callee->function, argv, argc, ignfiber);
     if(frame == NULL)
     {
@@ -410,57 +412,57 @@ LitInterpretResult lit_state_callclosure(LitState* state, LitClosure* callee, Li
     return execute_call(state, frame);
 }
 
-LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitValue callee, LitValue* argv, uint8_t argc, bool ignfiber)
+TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinValue callee, TinValue* argv, uint8_t argc, bool ignfiber)
 {
     uint8_t i;
-    LitVM* vm;
-    LitInterpretResult lir;
-    LitObjType type;
-    LitClass* klass;
-    LitFiber* fiber;
-    LitValue* slot;
-    LitNativeMethod* natmethod;
-    LitBoundMethod* boundmethod;
-    LitValue mthval;
-    LitValue result;
-    lir.result = lit_value_makenull(state);
-    lir.type = LITRESULT_OK;
+    TinVM* vm;
+    TinInterpretResult lir;
+    TinObjType type;
+    TinClass* klass;
+    TinFiber* fiber;
+    TinValue* slot;
+    TinNativeMethod* natmethod;
+    TinBoundMethod* boundmethod;
+    TinValue mthval;
+    TinValue result;
+    lir.result = tin_value_makenull(state);
+    lir.type = TINRESULT_OK;
     vm = state->vm;
-    if(lit_value_isobject(callee))
+    if(tin_value_isobject(callee))
     {
-        if(lit_vmutil_setexitjump())
+        if(tin_vmutil_setexitjump())
         {
             RETURN_RUNTIME_ERROR();
         }
-        type = lit_value_type(callee);
+        type = tin_value_type(callee);
 
-        if(type == LITTYPE_FUNCTION)
+        if(type == TINTYPE_FUNCTION)
         {
-            return lit_state_callfunction(state, lit_value_asfunction(callee), argv, argc, ignfiber);
+            return tin_state_callfunction(state, tin_value_asfunction(callee), argv, argc, ignfiber);
         }
-        else if(type == LITTYPE_CLOSURE)
+        else if(type == TINTYPE_CLOSURE)
         {
-            return lit_state_callclosure(state, lit_value_asclosure(callee), argv, argc, ignfiber);
+            return tin_state_callclosure(state, tin_value_asclosure(callee), argv, argc, ignfiber);
         }
         fiber = vm->fiber;
         if(ignfiber)
         {
             if(fiber == NULL)
             {
-                fiber = state->api_fiber;
+                fiber = state->capifiber;
             }
         }
         if(!ignfiber)
         {
-            if(lit_state_ensurefiber(vm, fiber))
+            if(tin_state_ensurefiber(vm, fiber))
             {
                 RETURN_RUNTIME_ERROR();
             }
         }
-        lit_ensure_fiber_stack(state, fiber, 3 + argc + (int)(fiber->stack_top - fiber->stack));
+        tin_ensure_fiber_stack(state, fiber, 3 + argc + (int)(fiber->stack_top - fiber->stack));
         slot = fiber->stack_top;
         PUSH(instance);
-        if(type != LITTYPE_CLASS)
+        if(type != TINTYPE_CLASS)
         {
             for(i = 0; i < argc; i++)
             {
@@ -469,35 +471,35 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
         }
         switch(type)
         {
-            case LITTYPE_NATIVE_FUNCTION:
+            case TINTYPE_NATIVE_FUNCTION:
                 {
-                    result = lit_value_asnativefunction(callee)->function(vm, argc, fiber->stack_top - argc);
+                    result = tin_value_asnativefunction(callee)->function(vm, argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
                     RETURN_OK(result);
                 }
                 break;
-            case LITTYPE_NATIVE_PRIMITIVE:
+            case TINTYPE_NATIVE_PRIMITIVE:
                 {
-                    lit_value_asnativeprimitive(callee)->function(vm, argc, fiber->stack_top - argc);
+                    tin_value_asnativeprimitive(callee)->function(vm, argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
-                    RETURN_OK(lit_value_makenull(state));
+                    RETURN_OK(tin_value_makenull(state));
                 }
                 break;
-            case LITTYPE_NATIVE_METHOD:
+            case TINTYPE_NATIVE_METHOD:
                 {
-                    natmethod = lit_value_asnativemethod(callee);
+                    natmethod = tin_value_asnativemethod(callee);
                     result = natmethod->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
                     RETURN_OK(result);
                 }
                 break;
-            case LITTYPE_CLASS:
+            case TINTYPE_CLASS:
                 {
-                    klass = lit_value_asclass(callee);
-                    *slot = lit_value_fromobject(lit_create_instance(vm->state, klass));
+                    klass = tin_value_asclass(callee);
+                    *slot = tin_value_fromobject(tin_create_instance(vm->state, klass));
                     if(klass->init_method != NULL)
                     {
-                        lir = lit_state_callmethod(state, *slot, lit_value_fromobject(klass->init_method), argv, argc, ignfiber);
+                        lir = tin_state_callmethod(state, *slot, tin_value_fromobject(klass->init_method), argv, argc, ignfiber);
                     }
                     // TODO: when should this return *slot instead of lir?
                     fiber->stack_top = slot;
@@ -505,36 +507,36 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
                     return lir;
                 }
                 break;
-            case LITTYPE_BOUND_METHOD:
+            case TINTYPE_BOUND_METHOD:
                 {
-                    boundmethod = lit_value_asboundmethod(callee);
+                    boundmethod = tin_value_asboundmethod(callee);
                     mthval = boundmethod->method;
                     *slot = boundmethod->receiver;
-                    if(lit_value_isnatmethod(mthval))
+                    if(tin_value_isnatmethod(mthval))
                     {
-                        result = lit_value_asnativemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
+                        result = tin_value_asnativemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
                         fiber->stack_top = slot;
                         RETURN_OK(result);
                     }
-                    else if(lit_value_isprimmethod(mthval))
+                    else if(tin_value_isprimmethod(mthval))
                     {
-                        lit_value_asprimitivemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
+                        tin_value_asprimitivemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
 
                         fiber->stack_top = slot;
-                        RETURN_OK(lit_value_makenull(state));
+                        RETURN_OK(tin_value_makenull(state));
                     }
                     else
                     {
                         fiber->stack_top = slot;
-                        return lit_state_callfunction(state, lit_value_asfunction(mthval), argv, argc, ignfiber);
+                        return tin_state_callfunction(state, tin_value_asfunction(mthval), argv, argc, ignfiber);
                     }
                 }
                 break;
-            case LITTYPE_PRIMITIVE_METHOD:
+            case TINTYPE_PRIMITIVE_METHOD:
                 {
-                    lit_value_asprimitivemethod(callee)->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
+                    tin_value_asprimitivemethod(callee)->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
-                    RETURN_OK(lit_value_makenull(state));
+                    RETURN_OK(tin_value_makenull(state));
                 }
                 break;
             default:
@@ -543,167 +545,167 @@ LitInterpretResult lit_state_callmethod(LitState* state, LitValue instance, LitV
                 break;
         }
     }
-    if(lit_value_isnull(callee))
+    if(tin_value_isnull(callee))
     {
-        lit_vm_raiseerror(vm, "attempt to lit_vm_callcallable a null value");
+        tin_vm_raiseerror(vm, "attempt to tin_vm_callcallable a null value");
     }
     else
     {
-        lit_vm_raiseerror(vm, "can only lit_vm_callcallable functions and classes");
+        tin_vm_raiseerror(vm, "can only tin_vm_callcallable functions and classes");
     }
 
     RETURN_RUNTIME_ERROR();
 }
 
-LitInterpretResult lit_state_callvalue(LitState* state, LitValue callee, LitValue* argv, uint8_t argc, bool ignfiber)
+TinInterpretResult tin_state_callvalue(TinState* state, TinValue callee, TinValue* argv, uint8_t argc, bool ignfiber)
 {
-    return lit_state_callmethod(state, callee, callee, argv, argc, ignfiber);
+    return tin_state_callmethod(state, callee, callee, argv, argc, ignfiber);
 }
 
-LitInterpretResult lit_state_findandcallmethod(LitState* state, LitValue callee, LitString* mthname, LitValue* argv, uint8_t argc, bool ignfiber)
+TinInterpretResult tin_state_findandcallmethod(TinState* state, TinValue callee, TinString* mthname, TinValue* argv, uint8_t argc, bool ignfiber)
 {
-    LitClass* klass;
-    LitVM* vm;
-    LitFiber* fiber;
-    LitValue mthval;
+    TinClass* klass;
+    TinVM* vm;
+    TinFiber* fiber;
+    TinValue mthval;
     vm = state->vm;
     fiber = vm->fiber;
     if(fiber == NULL)
     {
         if(!ignfiber)
         {
-            lit_vm_raiseerror(vm, "no fiber to run on");
+            tin_vm_raiseerror(vm, "no fiber to run on");
             RETURN_RUNTIME_ERROR();
         }
     }
-    klass = lit_state_getclassfor(state, callee);
-    if((lit_value_isinstance(callee) && lit_table_get(&lit_value_asinstance(callee)->fields, mthname, &mthval)) || lit_table_get(&klass->methods, mthname, &mthval))
+    klass = tin_state_getclassfor(state, callee);
+    if((tin_value_isinstance(callee) && tin_table_get(&tin_value_asinstance(callee)->fields, mthname, &mthval)) || tin_table_get(&klass->methods, mthname, &mthval))
     {
-        return lit_state_callmethod(state, callee, mthval, argv, argc, ignfiber);
+        return tin_state_callmethod(state, callee, mthval, argv, argc, ignfiber);
     }
-    return (LitInterpretResult){ LITRESULT_INVALID, lit_value_makenull(state) };
+    return (TinInterpretResult){ TINRESULT_INVALID, tin_value_makenull(state) };
 }
 
-void lit_state_pushroot(LitState* state, LitObject* object)
+void tin_state_pushroot(TinState* state, TinObject* object)
 {
-    lit_state_pushvalueroot(state, lit_value_fromobject(object));
+    tin_state_pushvalueroot(state, tin_value_fromobject(object));
 }
 
-void lit_state_pushvalueroot(LitState* state, LitValue value)
+void tin_state_pushvalueroot(TinState* state, TinValue value)
 {
-    if(state->root_count + 1 >= state->root_capacity)
+    if(state->gcrootcount + 1 >= state->gcrootcapacity)
     {
-        state->root_capacity = LIT_GROW_CAPACITY(state->root_capacity);
-        state->roots = (LitValue*)realloc(state->roots, state->root_capacity * sizeof(LitValue));
+        state->gcrootcapacity = TIN_GROW_CAPACITY(state->gcrootcapacity);
+        state->gcroots = (TinValue*)realloc(state->gcroots, state->gcrootcapacity * sizeof(TinValue));
     }
-    state->roots[state->root_count++] = value;
+    state->gcroots[state->gcrootcount++] = value;
 }
 
-LitValue lit_state_peekroot(LitState* state, uint8_t distance)
+TinValue tin_state_peekroot(TinState* state, uint8_t distance)
 {
-    assert(state->root_count - distance + 1 > 0);
-    return state->roots[state->root_count - distance - 1];
+    assert(state->gcrootcount - distance + 1 > 0);
+    return state->gcroots[state->gcrootcount - distance - 1];
 }
 
-void lit_state_poproot(LitState* state)
+void tin_state_poproot(TinState* state)
 {
-    state->root_count--;
+    state->gcrootcount--;
 }
 
-void lit_state_poproots(LitState* state, uint8_t amount)
+void tin_state_poproots(TinState* state, uint8_t amount)
 {
-    state->root_count -= amount;
+    state->gcrootcount -= amount;
 }
 
-LitClass* lit_state_getclassfor(LitState* state, LitValue value)
+TinClass* tin_state_getclassfor(TinState* state, TinValue value)
 {
-    LitValue* slot;
-    LitUpvalue* upvalue;
-    if(lit_value_isobject(value))
+    TinValue* slot;
+    TinUpvalue* upvalue;
+    if(tin_value_isobject(value))
     {
-        switch(lit_value_type(value))
+        switch(tin_value_type(value))
         {
-            case LITTYPE_NUMBER:
+            case TINTYPE_NUMBER:
                 {
-                    return state->numbervalue_class;
+                    return state->primnumberclass;
                 }
                 break;
-            case LITTYPE_STRING:
+            case TINTYPE_STRING:
                 {
-                    return state->stringvalue_class;
+                    return state->primstringclass;
                 }
                 break;
-            case LITTYPE_USERDATA:
+            case TINTYPE_USERDATA:
                 {
-                    return state->objectvalue_class;
+                    return state->primobjectclass;
                 }
                 break;
-            case LITTYPE_FIELD:
-            case LITTYPE_FUNCTION:
-            case LITTYPE_CLOSURE:
-            case LITTYPE_NATIVE_FUNCTION:
-            case LITTYPE_NATIVE_PRIMITIVE:
-            case LITTYPE_BOUND_METHOD:
-            case LITTYPE_PRIMITIVE_METHOD:
-            case LITTYPE_NATIVE_METHOD:
+            case TINTYPE_FIELD:
+            case TINTYPE_FUNCTION:
+            case TINTYPE_CLOSURE:
+            case TINTYPE_NATIVE_FUNCTION:
+            case TINTYPE_NATIVE_PRIMITIVE:
+            case TINTYPE_BOUND_METHOD:
+            case TINTYPE_PRIMITIVE_METHOD:
+            case TINTYPE_NATIVE_METHOD:
                 {
-                    return state->functionvalue_class;
+                    return state->primfunctionclass;
                 }
                 break;
-            case LITTYPE_FIBER:
+            case TINTYPE_FIBER:
                 {
                     //fprintf(stderr, "should return fiber class ....\n");
-                    return state->fibervalue_class;
+                    return state->primfiberclass;
                 }
                 break;
-            case LITTYPE_MODULE:
+            case TINTYPE_MODULE:
                 {
-                    return state->modulevalue_class;
+                    return state->primmoduleclass;
                 }
                 break;
-            case LITTYPE_UPVALUE:
+            case TINTYPE_UPVALUE:
                 {
-                    upvalue = lit_value_asupvalue(value);
+                    upvalue = tin_value_asupvalue(value);
                     if(upvalue->location == NULL)
                     {
-                        return lit_state_getclassfor(state, upvalue->closed);
+                        return tin_state_getclassfor(state, upvalue->closed);
                     }
-                    return lit_state_getclassfor(state, *upvalue->location);
+                    return tin_state_getclassfor(state, *upvalue->location);
                 }
                 break;
-            case LITTYPE_INSTANCE:
+            case TINTYPE_INSTANCE:
                 {
-                    return lit_value_asinstance(value)->klass;
+                    return tin_value_asinstance(value)->klass;
                 }
                 break;
-            case LITTYPE_CLASS:
+            case TINTYPE_CLASS:
                 {
-                    return state->classvalue_class;
+                    return state->primclassclass;
                 }
                 break;
-            case LITTYPE_ARRAY:
+            case TINTYPE_ARRAY:
                 {
-                    return state->arrayvalue_class;
+                    return state->primarrayclass;
                 }
                 break;
-            case LITTYPE_MAP:
+            case TINTYPE_MAP:
                 {
-                    return state->mapvalue_class;
+                    return state->primmapclass;
                 }
                 break;
-            case LITTYPE_RANGE:
+            case TINTYPE_RANGE:
                 {
-                    return state->rangevalue_class;
+                    return state->primrangeclass;
                 }
                 break;
-            case LITTYPE_REFERENCE:
+            case TINTYPE_REFERENCE:
                 {
-                    slot = lit_value_asreference(value)->slot;
+                    slot = tin_value_asreference(value)->slot;
                     if(slot != NULL)
                     {
-                        return lit_state_getclassfor(state, *slot);
+                        return tin_state_getclassfor(state, *slot);
                     }
-                    return state->objectvalue_class;
+                    return state->primobjectclass;
                 }
                 break;
             default:
@@ -712,44 +714,44 @@ LitClass* lit_state_getclassfor(LitState* state, LitValue value)
                 break;
         }
     }
-    else if(lit_value_isnumber(value))
+    else if(tin_value_isnumber(value))
     {
-        return state->numbervalue_class;
+        return state->primnumberclass;
     }
-    else if(lit_value_isbool(value))
+    else if(tin_value_isbool(value))
     {
-        return state->boolvalue_class;
+        return state->primboolclass;
     }
     //fprintf(stderr, "failed to find class object!\n");
     return NULL;
 }
 
-static void free_statements(LitState* state, LitAstExprList* statements)
+static void free_statements(TinState* state, TinAstExprList* statements)
 {
     size_t i;
     for(i = 0; i < statements->count; i++)
     {
-        lit_ast_destroyexpression(state, statements->values[i]);
+        tin_ast_destroyexpression(state, statements->values[i]);
     }
-    lit_exprlist_destroy(state, statements);
+    tin_exprlist_destroy(state, statements);
 }
 
 
-LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, const char* code, size_t len)
+TinModule* tin_state_compilemodule(TinState* state, TinString* module_name, const char* code, size_t len)
 {
     clock_t t;
     clock_t total_t;
     bool allowedgc;
-    LitModule* module;
-    LitAstExprList statements;
-    allowedgc = state->allow_gc;
-    state->allow_gc = false;
-    state->had_error = false;
+    TinModule* module;
+    TinAstExprList statements;
+    allowedgc = state->gcallow;
+    state->gcallow = false;
+    state->haderror = false;
     module = NULL;
     // This is a lbc format
-    if((code[1] << 8 | code[0]) == LIT_BYTECODE_MAGIC_NUMBER)
+    if((code[1] << 8 | code[0]) == TIN_BYTECODE_MAGIC_NUMBER)
     {
-        module = lit_ioutil_readmodule(state, code, len);
+        module = tin_ioutil_readmodule(state, code, len);
     }
     else
     {
@@ -759,28 +761,28 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
         {
             total_t = t = clock();
         }
-        lit_exprlist_init(&statements);
-        if(lit_astparser_parsesource(state->parser, module_name->chars, code, &statements))
+        tin_exprlist_init(&statements);
+        if(tin_astparser_parsesource(state->parser, module_name->chars, code, &statements))
         {
             free_statements(state, &statements);
             return NULL;
         }
         if(state->config.dumpast)
         {
-            lit_towriter_ast(state, &state->stdoutwriter, &statements);
+            tin_towriter_ast(state, &state->stdoutwriter, &statements);
         }
         if(measurecompilationtime)
         {
             printf("Parsing:        %gms\n", (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
             t = clock();
         }
-        lit_astopt_optast(state->optimizer, &statements);
+        tin_astopt_optast(state->optimizer, &statements);
         if(measurecompilationtime)
         {
             printf("Optimization:   %gms\n", (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
             t = clock();
         }
-        module = lit_astemit_modemit(state->emitter, &statements, module_name);
+        module = tin_astemit_modemit(state->emitter, &statements, module_name);
         free_statements(state, &statements);
         if(measurecompilationtime)
         {
@@ -789,82 +791,82 @@ LitModule* lit_state_compilemodule(LitState* state, LitString* module_name, cons
                    (double)(clock() - total_t) / CLOCKS_PER_SEC * 1000 + lastsourcetime);
         }
     }
-    state->allow_gc = allowedgc;
-    return state->had_error ? NULL : module;
+    state->gcallow = allowedgc;
+    return state->haderror ? NULL : module;
 }
 
-LitModule* lit_state_getmodule(LitState* state, const char* name)
+TinModule* tin_state_getmodule(TinState* state, const char* name)
 {
-    LitValue value;
-    if(lit_table_get(&state->vm->modules->values, lit_string_copyconst(state, name), &value))
+    TinValue value;
+    if(tin_table_get(&state->vm->modules->values, tin_string_copyconst(state, name), &value))
     {
-        return lit_value_asmodule(value);
+        return tin_value_asmodule(value);
     }
     return NULL;
 }
 
-LitInterpretResult lit_state_execsource(LitState* state, const char* module_name, const char* code, size_t len)
+TinInterpretResult tin_state_execsource(TinState* state, const char* module_name, const char* code, size_t len)
 {
-    return lit_state_internexecsource(state, lit_string_copy(state, module_name, strlen(module_name)), code, len);
+    return tin_state_internexecsource(state, tin_string_copy(state, module_name, strlen(module_name)), code, len);
 }
 
 
-LitInterpretResult lit_state_internexecsource(LitState* state, LitString* module_name, const char* code, size_t len)
+TinInterpretResult tin_state_internexecsource(TinState* state, TinString* module_name, const char* code, size_t len)
 {
     intptr_t istack;
     intptr_t itop;
     intptr_t idif;
-    LitModule* module;
-    LitFiber* fiber;
-    LitInterpretResult result;
-    module = lit_state_compilemodule(state, module_name, code, len);
+    TinModule* module;
+    TinFiber* fiber;
+    TinInterpretResult result;
+    module = tin_state_compilemodule(state, module_name, code, len);
     if(module == NULL)
     {
-        return (LitInterpretResult){ LITRESULT_COMPILE_ERROR, lit_value_makenull(state) };
+        return (TinInterpretResult){ TINRESULT_COMPILE_ERROR, tin_value_makenull(state) };
     }
     
-    result = lit_vm_execmodule(state, module);
+    result = tin_vm_execmodule(state, module);
     fiber = module->main_fiber;
-    if(!state->had_error && !fiber->abort && fiber->stack_top != fiber->stack)
+    if(!state->haderror && !fiber->abort && fiber->stack_top != fiber->stack)
     {
         istack = (intptr_t)(fiber->stack);
         itop = (intptr_t)(fiber->stack_top);
         idif = (intptr_t)(fiber->stack - fiber->stack_top);
         /* me fail english. how do i put this better? */
-        lit_state_raiseerror(state, RUNTIME_ERROR, "stack should be same as stack top", idif, istack, istack, itop, itop);
+        tin_state_raiseerror(state, RUNTIME_ERROR, "stack should be same as stack top", idif, istack, istack, itop, itop);
     }
     state->last_module = module;
     return result;
 }
 
 
-bool lit_state_compileandsave(LitState* state, char* files[], size_t numfiles, const char* outputfile)
+bool tin_state_compileandsave(TinState* state, char* files[], size_t numfiles, const char* outputfile)
 {
     size_t i;
     size_t len;
-    char* file_name;
+    char* filename;
     char* source;
     FILE* file;
-    LitString* module_name;
-    LitModule* module;
-    LitModule** compiledmodules;
-    compiledmodules = LIT_ALLOCATE(state, sizeof(LitModule*), numfiles+1);
-    lit_astopt_setoptlevel(LITOPTLEVEL_EXTREME);
+    TinString* module_name;
+    TinModule* module;
+    TinModule** compiledmodules;
+    compiledmodules = TIN_ALLOCATE(state, sizeof(TinModule*), numfiles+1);
+    tin_astopt_setoptlevel(TINOPTLEVEL_EXTREME);
     for(i = 0; i < numfiles; i++)
     {
-        file_name = lit_util_copystring(files[i]);
-        source = lit_util_readfile(file_name, &len);
+        filename = tin_util_copystring(files[i]);
+        source = tin_util_readfile(filename, &len);
         if(source == NULL)
         {
-            lit_state_raiseerror(state, COMPILE_ERROR, "failed to open file '%s' for reading", file_name);
+            tin_state_raiseerror(state, COMPILE_ERROR, "failed to open file '%s' for reading", filename);
             return false;
         }
-        file_name = lit_util_patchfilename(file_name);
-        module_name = lit_string_copy(state, file_name, strlen(file_name));
-        module = lit_state_compilemodule(state, module_name, source, len);
+        filename = tin_util_patchfilename(filename);
+        module_name = tin_string_copy(state, filename, strlen(filename));
+        module = tin_state_compilemodule(state, module_name, source, len);
         compiledmodules[i] = module;
         free((void*)source);
-        free((void*)file_name);
+        free((void*)filename);
         if(module == NULL)
         {
             return false;
@@ -873,96 +875,96 @@ bool lit_state_compileandsave(LitState* state, char* files[], size_t numfiles, c
     file = fopen(outputfile, "w+b");
     if(file == NULL)
     {
-        lit_state_raiseerror(state, COMPILE_ERROR, "failed to open file '%s' for writing", outputfile);
+        tin_state_raiseerror(state, COMPILE_ERROR, "failed to open file '%s' for writing", outputfile);
         return false;
     }
-    lit_ioutil_writeuint16(file, LIT_BYTECODE_MAGIC_NUMBER);
-    lit_ioutil_writeuint8(file, LIT_BYTECODE_VERSION);
-    lit_ioutil_writeuint16(file, numfiles);
+    tin_ioutil_writeuint16(file, TIN_BYTECODE_MAGIC_NUMBER);
+    tin_ioutil_writeuint8(file, TIN_BYTECODE_VERSION);
+    tin_ioutil_writeuint16(file, numfiles);
     for(i = 0; i < numfiles; i++)
     {
-        lit_ioutil_writemodule(compiledmodules[i], file);
+        tin_ioutil_writemodule(compiledmodules[i], file);
     }
-    lit_ioutil_writeuint16(file, LIT_BYTECODE_END_NUMBER);
-    LIT_FREE(state, sizeof(LitModule), compiledmodules);
+    tin_ioutil_writeuint16(file, TIN_BYTECODE_END_NUMBER);
+    TIN_FREE(state, sizeof(TinModule), compiledmodules);
     fclose(file);
     return true;
 }
 
-static char* lit_util_readsource(LitState* state, const char* file, char** patchedfilename, size_t* dlen)
+static char* tin_util_readsource(TinState* state, const char* file, char** patchedfilename, size_t* dlen)
 {
     clock_t t;
     size_t len;
-    char* file_name;
+    char* filename;
     char* source;
     t = 0;
     if(measurecompilationtime)
     {
         t = clock();
     }
-    file_name = lit_util_copystring(file);
-    source = lit_util_readfile(file_name, &len);
+    filename = tin_util_copystring(file);
+    source = tin_util_readfile(filename, &len);
     if(source == NULL)
     {
-        lit_state_raiseerror(state, RUNTIME_ERROR, "failed to open file '%s' for reading", file_name);
+        tin_state_raiseerror(state, RUNTIME_ERROR, "failed to open file '%s' for reading", filename);
     }
     *dlen = len;
-    file_name = lit_util_patchfilename(file_name);
+    filename = tin_util_patchfilename(filename);
     if(measurecompilationtime)
     {
         printf("reading source: %gms\n", lastsourcetime = (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
     }
-    *patchedfilename = file_name;
+    *patchedfilename = filename;
     return source;
 }
 
-LitInterpretResult lit_state_execfile(LitState* state, const char* file)
+TinInterpretResult tin_state_execfile(TinState* state, const char* file)
 {
     size_t len;
     char* source;
     char* patchedfilename;
-    LitInterpretResult result;
-    source = lit_util_readsource(state, file, &patchedfilename, &len);
+    TinInterpretResult result;
+    source = tin_util_readsource(state, file, &patchedfilename, &len);
     if(source == NULL)
     {
         return INTERPRET_RUNTIME_FAIL;
     }
-    result = lit_state_execsource(state, patchedfilename, source, len);
+    result = tin_state_execsource(state, patchedfilename, source, len);
     free((void*)source);
     free(patchedfilename);
     return result;
 }
 
-LitInterpretResult lit_state_dumpfile(LitState* state, const char* file)
+TinInterpretResult tin_state_dumpfile(TinState* state, const char* file)
 {
     size_t len;
     char* patchedfilename;
     char* source;
-    LitInterpretResult result;
-    LitString* module_name;
-    LitModule* module;
-    source = lit_util_readsource(state, file, &patchedfilename, &len);
+    TinInterpretResult result;
+    TinString* module_name;
+    TinModule* module;
+    source = tin_util_readsource(state, file, &patchedfilename, &len);
     if(source == NULL)
     {
         return INTERPRET_RUNTIME_FAIL;
     }
-    module_name = lit_string_copy(state, patchedfilename, strlen(patchedfilename));
-    module = lit_state_compilemodule(state, module_name, source, len);
+    module_name = tin_string_copy(state, patchedfilename, strlen(patchedfilename));
+    module = tin_state_compilemodule(state, module_name, source, len);
     if(module == NULL)
     {
         result = INTERPRET_RUNTIME_FAIL;
     }
     else
     {
-        lit_disassemble_module(state, module, source);
-        result = (LitInterpretResult){ LITRESULT_OK, lit_value_makenull(state) };
+        tin_disassemble_module(state, module, source);
+        result = (TinInterpretResult){ TINRESULT_OK, tin_value_makenull(state) };
     }
     free((void*)source);
     free((void*)patchedfilename);
     return result;
 }
 
-void lit_state_raiseerror(LitState* state, LitErrType type, const char* message, ...)
+void tin_state_raiseerror(TinState* state, TinErrType type, const char* message, ...)
 {
     size_t buffersize;
     char* buffer;
@@ -976,13 +978,13 @@ void lit_state_raiseerror(LitState* state, LitErrType type, const char* message,
     buffer = (char*)malloc(buffersize+1);
     vsnprintf(buffer, buffersize, message, args);
     va_end(args);
-    state->error_fn(state, buffer);
-    state->had_error = true;
+    state->errorfn(state, buffer);
+    state->haderror = true;
     /* TODO: is this safe? */
     free(buffer);
 }
 
-void lit_state_printf(LitState* state, const char* message, ...)
+void tin_state_printf(TinState* state, const char* message, ...)
 {
     size_t buffersize;
     char* buffer;
@@ -995,6 +997,6 @@ void lit_state_printf(LitState* state, const char* message, ...)
     buffer = (char*)malloc(buffersize+1);
     vsnprintf(buffer, buffersize, message, args);
     va_end(args);
-    state->print_fn(state, buffer);
+    state->printfn(state, buffer);
     free(buffer);
 }

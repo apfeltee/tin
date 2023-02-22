@@ -1,68 +1,68 @@
 
 #include "priv.h"
 
-void lit_exprlist_init(LitAstExprList* array)
+void tin_exprlist_init(TinAstExprList* array)
 {
     array->values = NULL;
     array->capacity = 0;
     array->count = 0;
 }
 
-void lit_exprlist_destroy(LitState* state, LitAstExprList* array)
+void tin_exprlist_destroy(TinState* state, TinAstExprList* array)
 {
-    LIT_FREE_ARRAY(state, sizeof(LitAstExpression*), array->values, array->capacity);
-    lit_exprlist_init(array);
+    TIN_FREE_ARRAY(state, sizeof(TinAstExpression*), array->values, array->capacity);
+    tin_exprlist_init(array);
 }
 
-void lit_exprlist_push(LitState* state, LitAstExprList* array, LitAstExpression* value)
+void tin_exprlist_push(TinState* state, TinAstExprList* array, TinAstExpression* value)
 {
     size_t oldcapacity;
     if(array->capacity < array->count + 1)
     {
         oldcapacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstExpression*), oldcapacity, array->capacity);
+        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinAstExpression*), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
 }
 
-void lit_paramlist_init(LitAstParamList* array)
+void tin_paramlist_init(TinAstParamList* array)
 {
     array->values = NULL;
     array->capacity = 0;
     array->count = 0;
 }
 
-void lit_paramlist_destroy(LitState* state, LitAstParamList* array)
+void tin_paramlist_destroy(TinState* state, TinAstParamList* array)
 {
-    LIT_FREE_ARRAY(state, sizeof(LitAstParameter), array->values, array->capacity);
-    lit_paramlist_init(array);
+    TIN_FREE_ARRAY(state, sizeof(TinAstParameter), array->values, array->capacity);
+    tin_paramlist_init(array);
 }
 
-void lit_paramlist_push(LitState* state, LitAstParamList* array, LitAstParameter value)
+void tin_paramlist_push(TinState* state, TinAstParamList* array, TinAstParameter value)
 {
     if(array->capacity < array->count + 1)
     {
         size_t oldcapacity = array->capacity;
-        array->capacity = LIT_GROW_CAPACITY(oldcapacity);
-        array->values = LIT_GROW_ARRAY(state, array->values, sizeof(LitAstParameter), oldcapacity, array->capacity);
+        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinAstParameter), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
 }
 
-void lit_paramlist_destroyvalues(LitState* state, LitAstParamList* parameters)
+void tin_paramlist_destroyvalues(TinState* state, TinAstParamList* parameters)
 {
     size_t i;
     for(i = 0; i < parameters->count; i++)
     {
-        lit_ast_destroyexpression(state, parameters->values[i].default_value);
+        tin_ast_destroyexpression(state, parameters->values[i].defaultexpr);
     }
-    lit_paramlist_destroy(state, parameters);
+    tin_paramlist_destroy(state, parameters);
 }
 
-void lit_ast_destroyexprlist(LitState* state, LitAstExprList* expressions)
+void tin_ast_destroyexprlist(TinState* state, TinAstExprList* expressions)
 {
     size_t i;
     if(expressions == NULL)
@@ -71,12 +71,12 @@ void lit_ast_destroyexprlist(LitState* state, LitAstExprList* expressions)
     }
     for(i = 0; i < expressions->count; i++)
     {
-        lit_ast_destroyexpression(state, expressions->values[i]);
+        tin_ast_destroyexpression(state, expressions->values[i]);
     }
-    lit_exprlist_destroy(state, expressions);
+    tin_exprlist_destroy(state, expressions);
 }
 
-void lit_ast_destroystmtlist(LitState* state, LitAstExprList* statements)
+void tin_ast_destroystmtlist(TinState* state, TinAstExprList* statements)
 {
     size_t i;
     if(statements == NULL)
@@ -85,12 +85,12 @@ void lit_ast_destroystmtlist(LitState* state, LitAstExprList* statements)
     }
     for(i = 0; i < statements->count; i++)
     {
-        lit_ast_destroyexpression(state, statements->values[i]);
+        tin_ast_destroyexpression(state, statements->values[i]);
     }
-    lit_exprlist_destroy(state, statements);
+    tin_exprlist_destroy(state, statements);
 }
 
-void lit_ast_destroyexpression(LitState* state, LitAstExpression* expression)
+void tin_ast_destroyexpression(TinState* state, TinAstExpression* expression)
 {
     if(expression == NULL)
     {
@@ -98,263 +98,263 @@ void lit_ast_destroyexpression(LitState* state, LitAstExpression* expression)
     }
     switch(expression->type)
     {
-        case LITEXPR_LITERAL:
+        case TINEXPR_LITERAL:
             {
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstLiteralExpr), 0);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstLiteralExpr), 0);
             }
             break;
-        case LITEXPR_BINARY:
+        case TINEXPR_BINARY:
             {
-                LitAstBinaryExpr* expr = (LitAstBinaryExpr*)expression;
+                TinAstBinaryExpr* expr = (TinAstBinaryExpr*)expression;
                 if(!expr->ignore_left)
                 {
-                    lit_ast_destroyexpression(state, expr->left);
+                    tin_ast_destroyexpression(state, expr->left);
                 }
-                lit_ast_destroyexpression(state, expr->right);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstBinaryExpr), 0);
+                tin_ast_destroyexpression(state, expr->right);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstBinaryExpr), 0);
             }
             break;
 
-        case LITEXPR_UNARY:
+        case TINEXPR_UNARY:
             {
-                lit_ast_destroyexpression(state, ((LitAstUnaryExpr*)expression)->right);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstUnaryExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstUnaryExpr*)expression)->right);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstUnaryExpr), 0);
             }
             break;
-        case LITEXPR_VAREXPR:
+        case TINEXPR_VAREXPR:
             {
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstVarExpr), 0);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstVarExpr), 0);
             }
             break;
-        case LITEXPR_ASSIGN:
+        case TINEXPR_ASSIGN:
             {
-                LitAstAssignExpr* expr = (LitAstAssignExpr*)expression;
-                lit_ast_destroyexpression(state, expr->to);
-                lit_ast_destroyexpression(state, expr->value);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstAssignExpr), 0);
+                TinAstAssignExpr* expr = (TinAstAssignExpr*)expression;
+                tin_ast_destroyexpression(state, expr->to);
+                tin_ast_destroyexpression(state, expr->value);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstAssignExpr), 0);
             }
             break;
-        case LITEXPR_CALL:
+        case TINEXPR_CALL:
             {
-                LitAstCallExpr* expr = (LitAstCallExpr*)expression;
-                lit_ast_destroyexpression(state, expr->callee);
-                lit_ast_destroyexpression(state, expr->init);
-                lit_ast_destroyexprlist(state, &expr->args);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstCallExpr), 0);
+                TinAstCallExpr* expr = (TinAstCallExpr*)expression;
+                tin_ast_destroyexpression(state, expr->callee);
+                tin_ast_destroyexpression(state, expr->init);
+                tin_ast_destroyexprlist(state, &expr->args);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstCallExpr), 0);
             }
             break;
 
-        case LITEXPR_GET:
+        case TINEXPR_GET:
         {
-            lit_ast_destroyexpression(state, ((LitAstGetExpr*)expression)->where);
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstGetExpr), 0);
+            tin_ast_destroyexpression(state, ((TinAstGetExpr*)expression)->where);
+            tin_gcmem_memrealloc(state, expression, sizeof(TinAstGetExpr), 0);
             break;
         }
 
-        case LITEXPR_SET:
+        case TINEXPR_SET:
         {
-            LitAstSetExpr* expr = (LitAstSetExpr*)expression;
+            TinAstSetExpr* expr = (TinAstSetExpr*)expression;
 
-            lit_ast_destroyexpression(state, expr->where);
-            lit_ast_destroyexpression(state, expr->value);
+            tin_ast_destroyexpression(state, expr->where);
+            tin_ast_destroyexpression(state, expr->value);
 
-            lit_gcmem_memrealloc(state, expression, sizeof(LitAstSetExpr), 0);
+            tin_gcmem_memrealloc(state, expression, sizeof(TinAstSetExpr), 0);
             break;
         }
 
-        case LITEXPR_LAMBDA:
+        case TINEXPR_LAMBDA:
             {
-                LitAstFunctionExpr* expr = (LitAstFunctionExpr*)expression;
-                lit_paramlist_destroyvalues(state, &expr->parameters);
-                lit_ast_destroyexpression(state, expr->body);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstFunctionExpr), 0);
+                TinAstFunctionExpr* expr = (TinAstFunctionExpr*)expression;
+                tin_paramlist_destroyvalues(state, &expr->parameters);
+                tin_ast_destroyexpression(state, expr->body);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstFunctionExpr), 0);
             }
             break;
-        case LITEXPR_ARRAY:
+        case TINEXPR_ARRAY:
             {
-                lit_ast_destroyexprlist(state, &((LitAstArrayExpr*)expression)->values);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstArrayExpr), 0);
+                tin_ast_destroyexprlist(state, &((TinAstArrayExpr*)expression)->values);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstArrayExpr), 0);
             }
             break;
-        case LITEXPR_OBJECT:
+        case TINEXPR_OBJECT:
             {
-                LitAstObjectExpr* map = (LitAstObjectExpr*)expression;
-                lit_vallist_destroy(state, &map->keys);
-                lit_ast_destroyexprlist(state, &map->values);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstObjectExpr), 0);
+                TinAstObjectExpr* map = (TinAstObjectExpr*)expression;
+                tin_vallist_destroy(state, &map->keys);
+                tin_ast_destroyexprlist(state, &map->values);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstObjectExpr), 0);
             }
             break;
-        case LITEXPR_SUBSCRIPT:
+        case TINEXPR_SUBSCRIPT:
             {
-                LitAstIndexExpr* expr = (LitAstIndexExpr*)expression;
-                lit_ast_destroyexpression(state, expr->array);
-                lit_ast_destroyexpression(state, expr->index);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstIndexExpr), 0);
+                TinAstIndexExpr* expr = (TinAstIndexExpr*)expression;
+                tin_ast_destroyexpression(state, expr->array);
+                tin_ast_destroyexpression(state, expr->index);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstIndexExpr), 0);
             }
             break;
-        case LITEXPR_THIS:
+        case TINEXPR_THIS:
             {
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstThisExpr), 0);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstThisExpr), 0);
             }
             break;
-        case LITEXPR_SUPER:
+        case TINEXPR_SUPER:
             {
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstSuperExpr), 0);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstSuperExpr), 0);
             }
             break;
-        case LITEXPR_RANGE:
+        case TINEXPR_RANGE:
             {
-                LitAstRangeExpr* expr = (LitAstRangeExpr*)expression;
-                lit_ast_destroyexpression(state, expr->from);
-                lit_ast_destroyexpression(state, expr->to);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstRangeExpr), 0);
+                TinAstRangeExpr* expr = (TinAstRangeExpr*)expression;
+                tin_ast_destroyexpression(state, expr->from);
+                tin_ast_destroyexpression(state, expr->to);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstRangeExpr), 0);
             }
             break;
-        case LITEXPR_TERNARY:
+        case TINEXPR_TERNARY:
             {
-                LitAstTernaryExpr* expr = (LitAstTernaryExpr*)expression;
-                lit_ast_destroyexpression(state, expr->condition);
-                lit_ast_destroyexpression(state, expr->if_branch);
-                lit_ast_destroyexpression(state, expr->else_branch);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstTernaryExpr), 0);
+                TinAstTernaryExpr* expr = (TinAstTernaryExpr*)expression;
+                tin_ast_destroyexpression(state, expr->condition);
+                tin_ast_destroyexpression(state, expr->ifbranch);
+                tin_ast_destroyexpression(state, expr->elsebranch);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstTernaryExpr), 0);
             }
             break;
-        case LITEXPR_INTERPOLATION:
+        case TINEXPR_INTERPOLATION:
             {
-                lit_ast_destroyexprlist(state, &((LitAstStrInterExpr*)expression)->expressions);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstStrInterExpr), 0);
+                tin_ast_destroyexprlist(state, &((TinAstStrInterExpr*)expression)->expressions);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstStrInterExpr), 0);
             }
             break;
-        case LITEXPR_REFERENCE:
+        case TINEXPR_REFERENCE:
             {
-                lit_ast_destroyexpression(state, ((LitAstRefExpr*)expression)->to);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstRefExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstRefExpr*)expression)->to);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstRefExpr), 0);
             }
             break;
-        case LITEXPR_EXPRESSION:
+        case TINEXPR_EXPRESSION:
             {
-                lit_ast_destroyexpression(state, ((LitAstExprExpr*)expression)->expression);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstExprExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstExprExpr*)expression)->expression);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstExprExpr), 0);
             }
             break;
-        case LITEXPR_BLOCK:
+        case TINEXPR_BLOCK:
             {
-                lit_ast_destroystmtlist(state, &((LitAstBlockExpr*)expression)->statements);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstBlockExpr), 0);
+                tin_ast_destroystmtlist(state, &((TinAstBlockExpr*)expression)->statements);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstBlockExpr), 0);
             }
             break;
-        case LITEXPR_VARSTMT:
+        case TINEXPR_VARSTMT:
             {
-                lit_ast_destroyexpression(state, ((LitAstAssignVarExpr*)expression)->init);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstAssignVarExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstAssignVarExpr*)expression)->init);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstAssignVarExpr), 0);
             }
             break;
-        case LITEXPR_IFSTMT:
+        case TINEXPR_IFSTMT:
             {
-                LitAstIfExpr* stmt = (LitAstIfExpr*)expression;
-                lit_ast_destroyexpression(state, stmt->condition);
-                lit_ast_destroyexpression(state, stmt->if_branch);
-                lit_ast_destroy_allocdexprlist(state, stmt->elseif_conditions);
-                lit_ast_destry_allocdstmtlist(state, stmt->elseif_branches);
-                lit_ast_destroyexpression(state, stmt->else_branch);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstIfExpr), 0);
+                TinAstIfExpr* stmt = (TinAstIfExpr*)expression;
+                tin_ast_destroyexpression(state, stmt->condition);
+                tin_ast_destroyexpression(state, stmt->ifbranch);
+                tin_ast_destroy_allocdexprlist(state, stmt->elseifconds);
+                tin_ast_destry_allocdstmtlist(state, stmt->elseifbranches);
+                tin_ast_destroyexpression(state, stmt->elsebranch);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstIfExpr), 0);
             }
             break;
-        case LITEXPR_WHILE:
+        case TINEXPR_WHILE:
             {
-                LitAstWhileExpr* stmt = (LitAstWhileExpr*)expression;
-                lit_ast_destroyexpression(state, stmt->condition);
-                lit_ast_destroyexpression(state, stmt->body);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstWhileExpr), 0);
+                TinAstWhileExpr* stmt = (TinAstWhileExpr*)expression;
+                tin_ast_destroyexpression(state, stmt->condition);
+                tin_ast_destroyexpression(state, stmt->body);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstWhileExpr), 0);
             }
             break;
-        case LITEXPR_FOR:
+        case TINEXPR_FOR:
             {
-                LitAstForExpr* stmt = (LitAstForExpr*)expression;
-                lit_ast_destroyexpression(state, stmt->increment);
-                lit_ast_destroyexpression(state, stmt->condition);
-                lit_ast_destroyexpression(state, stmt->init);
+                TinAstForExpr* stmt = (TinAstForExpr*)expression;
+                tin_ast_destroyexpression(state, stmt->increment);
+                tin_ast_destroyexpression(state, stmt->condition);
+                tin_ast_destroyexpression(state, stmt->init);
 
-                lit_ast_destroyexpression(state, stmt->var);
-                lit_ast_destroyexpression(state, stmt->body);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstForExpr), 0);
+                tin_ast_destroyexpression(state, stmt->var);
+                tin_ast_destroyexpression(state, stmt->body);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstForExpr), 0);
             }
             break;
-        case LITEXPR_CONTINUE:
+        case TINEXPR_CONTINUE:
             {
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstContinueExpr), 0);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstContinueExpr), 0);
             }
             break;
-        case LITEXPR_BREAK:
+        case TINEXPR_BREAK:
             {
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstBreakExpr), 0);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstBreakExpr), 0);
             }
             break;
-        case LITEXPR_FUNCTION:
+        case TINEXPR_FUNCTION:
             {
-                LitAstFunctionExpr* stmt = (LitAstFunctionExpr*)expression;
-                lit_ast_destroyexpression(state, stmt->body);
-                lit_paramlist_destroyvalues(state, &stmt->parameters);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstFunctionExpr), 0);
+                TinAstFunctionExpr* stmt = (TinAstFunctionExpr*)expression;
+                tin_ast_destroyexpression(state, stmt->body);
+                tin_paramlist_destroyvalues(state, &stmt->parameters);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstFunctionExpr), 0);
             }
             break;
-        case LITEXPR_RETURN:
+        case TINEXPR_RETURN:
             {
-                lit_ast_destroyexpression(state, ((LitAstReturnExpr*)expression)->expression);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstReturnExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstReturnExpr*)expression)->expression);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstReturnExpr), 0);
             }
             break;
-        case LITEXPR_METHOD:
+        case TINEXPR_METHOD:
             {
-                LitAstMethodExpr* stmt = (LitAstMethodExpr*)expression;
-                lit_paramlist_destroyvalues(state, &stmt->parameters);
-                lit_ast_destroyexpression(state, stmt->body);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstMethodExpr), 0);
+                TinAstMethodExpr* stmt = (TinAstMethodExpr*)expression;
+                tin_paramlist_destroyvalues(state, &stmt->parameters);
+                tin_ast_destroyexpression(state, stmt->body);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstMethodExpr), 0);
             }
             break;
-        case LITEXPR_CLASS:
+        case TINEXPR_CLASS:
             {
-                lit_ast_destroystmtlist(state, &((LitAstClassExpr*)expression)->fields);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstClassExpr), 0);
+                tin_ast_destroystmtlist(state, &((TinAstClassExpr*)expression)->fields);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstClassExpr), 0);
             }
             break;
-        case LITEXPR_FIELD:
+        case TINEXPR_FIELD:
             {
-                LitAstFieldExpr* stmt = (LitAstFieldExpr*)expression;
-                lit_ast_destroyexpression(state, stmt->getter);
-                lit_ast_destroyexpression(state, stmt->setter);
-                lit_gcmem_memrealloc(state, expression, sizeof(LitAstFieldExpr), 0);
+                TinAstFieldExpr* stmt = (TinAstFieldExpr*)expression;
+                tin_ast_destroyexpression(state, stmt->getter);
+                tin_ast_destroyexpression(state, stmt->setter);
+                tin_gcmem_memrealloc(state, expression, sizeof(TinAstFieldExpr), 0);
             }
             break;
         default:
             {
-                lit_state_raiseerror(state, COMPILE_ERROR, "Unknown expression type %d", (int)expression->type);
+                tin_state_raiseerror(state, COMPILE_ERROR, "Unknown expression type %d", (int)expression->type);
             }
             break;
     }
 }
 
-static LitAstExpression* lit_ast_allocexpr(LitState* state, uint64_t line, size_t size, LitAstExprType type)
+static TinAstExpression* tin_ast_allocexpr(TinState* state, uint64_t line, size_t size, TinAstExprType type)
 {
-    LitAstExpression* object;
-    object = (LitAstExpression*)lit_gcmem_memrealloc(state, NULL, 0, size);
+    TinAstExpression* object;
+    object = (TinAstExpression*)tin_gcmem_memrealloc(state, NULL, 0, size);
     object->type = type;
     object->line = line;
     return object;
 }
 
-LitAstLiteralExpr* lit_ast_make_literalexpr(LitState* state, size_t line, LitValue value)
+TinAstLiteralExpr* tin_ast_make_literalexpr(TinState* state, size_t line, TinValue value)
 {
-    LitAstLiteralExpr* expression;
-    expression = (LitAstLiteralExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstLiteralExpr), LITEXPR_LITERAL);
+    TinAstLiteralExpr* expression;
+    expression = (TinAstLiteralExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstLiteralExpr), TINEXPR_LITERAL);
     expression->value = value;
     return expression;
 }
 
-LitAstBinaryExpr* lit_ast_make_binaryexpr(LitState* state, size_t line, LitAstExpression* left, LitAstExpression* right, LitAstTokType op)
+TinAstBinaryExpr* tin_ast_make_binaryexpr(TinState* state, size_t line, TinAstExpression* left, TinAstExpression* right, TinAstTokType op)
 {
-    LitAstBinaryExpr* expression;
-    expression = (LitAstBinaryExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstBinaryExpr), LITEXPR_BINARY);
+    TinAstBinaryExpr* expression;
+    expression = (TinAstBinaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstBinaryExpr), TINEXPR_BINARY);
     expression->left = left;
     expression->right = right;
     expression->op = op;
@@ -362,60 +362,60 @@ LitAstBinaryExpr* lit_ast_make_binaryexpr(LitState* state, size_t line, LitAstEx
     return expression;
 }
 
-LitAstUnaryExpr* lit_ast_make_unaryexpr(LitState* state, size_t line, LitAstExpression* right, LitAstTokType op)
+TinAstUnaryExpr* tin_ast_make_unaryexpr(TinState* state, size_t line, TinAstExpression* right, TinAstTokType op)
 {
-    LitAstUnaryExpr* expression;
-    expression = (LitAstUnaryExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstUnaryExpr), LITEXPR_UNARY);
+    TinAstUnaryExpr* expression;
+    expression = (TinAstUnaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstUnaryExpr), TINEXPR_UNARY);
     expression->right = right;
     expression->op = op;
     return expression;
 }
 
-LitAstVarExpr* lit_ast_make_varexpr(LitState* state, size_t line, const char* name, size_t length)
+TinAstVarExpr* tin_ast_make_varexpr(TinState* state, size_t line, const char* name, size_t length)
 {
-    LitAstVarExpr* expression;
-    expression = (LitAstVarExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstVarExpr), LITEXPR_VAREXPR);
+    TinAstVarExpr* expression;
+    expression = (TinAstVarExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstVarExpr), TINEXPR_VAREXPR);
     expression->name = name;
     expression->length = length;
     return expression;
 }
 
-LitAstAssignExpr* lit_ast_make_assignexpr(LitState* state, size_t line, LitAstExpression* to, LitAstExpression* value)
+TinAstAssignExpr* tin_ast_make_assignexpr(TinState* state, size_t line, TinAstExpression* to, TinAstExpression* value)
 {
-    LitAstAssignExpr* expression;
-    expression = (LitAstAssignExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstAssignExpr), LITEXPR_ASSIGN);
+    TinAstAssignExpr* expression;
+    expression = (TinAstAssignExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstAssignExpr), TINEXPR_ASSIGN);
     expression->to = to;
     expression->value = value;
     return expression;
 }
 
-LitAstCallExpr* lit_ast_make_callexpr(LitState* state, size_t line, LitAstExpression* callee)
+TinAstCallExpr* tin_ast_make_callexpr(TinState* state, size_t line, TinAstExpression* callee)
 {
-    LitAstCallExpr* expression;
-    expression = (LitAstCallExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstCallExpr), LITEXPR_CALL);
+    TinAstCallExpr* expression;
+    expression = (TinAstCallExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstCallExpr), TINEXPR_CALL);
     expression->callee = callee;
     expression->init = NULL;
-    lit_exprlist_init(&expression->args);
+    tin_exprlist_init(&expression->args);
     return expression;
 }
 
-LitAstGetExpr* lit_ast_make_getexpr(LitState* state, size_t line, LitAstExpression* where, const char* name, size_t length, bool questionable, bool ignore_result)
+TinAstGetExpr* tin_ast_make_getexpr(TinState* state, size_t line, TinAstExpression* where, const char* name, size_t length, bool questionable, bool ignoreresult)
 {
-    LitAstGetExpr* expression;
-    expression = (LitAstGetExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstGetExpr), LITEXPR_GET);
+    TinAstGetExpr* expression;
+    expression = (TinAstGetExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstGetExpr), TINEXPR_GET);
     expression->where = where;
     expression->name = name;
     expression->length = length;
-    expression->ignore_emit = false;
+    expression->ignemit = false;
     expression->jump = questionable ? 0 : -1;
-    expression->ignore_result = ignore_result;
+    expression->ignresult = ignoreresult;
     return expression;
 }
 
-LitAstSetExpr* lit_ast_make_setexpr(LitState* state, size_t line, LitAstExpression* where, const char* name, size_t length, LitAstExpression* value)
+TinAstSetExpr* tin_ast_make_setexpr(TinState* state, size_t line, TinAstExpression* where, const char* name, size_t length, TinAstExpression* value)
 {
-    LitAstSetExpr* expression;
-    expression = (LitAstSetExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstSetExpr), LITEXPR_SET);
+    TinAstSetExpr* expression;
+    expression = (TinAstSetExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstSetExpr), TINEXPR_SET);
     expression->where = where;
     expression->name = name;
     expression->length = length;
@@ -423,124 +423,124 @@ LitAstSetExpr* lit_ast_make_setexpr(LitState* state, size_t line, LitAstExpressi
     return expression;
 }
 
-LitAstFunctionExpr* lit_ast_make_lambdaexpr(LitState* state, size_t line)
+TinAstFunctionExpr* tin_ast_make_lambdaexpr(TinState* state, size_t line)
 {
-    LitAstFunctionExpr* expression;
-    expression = (LitAstFunctionExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstFunctionExpr), LITEXPR_LAMBDA);
+    TinAstFunctionExpr* expression;
+    expression = (TinAstFunctionExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstFunctionExpr), TINEXPR_LAMBDA);
     expression->body = NULL;
-    lit_paramlist_init(&expression->parameters);
+    tin_paramlist_init(&expression->parameters);
     return expression;
 }
 
-LitAstArrayExpr* lit_ast_make_arrayexpr(LitState* state, size_t line)
+TinAstArrayExpr* tin_ast_make_arrayexpr(TinState* state, size_t line)
 {
-    LitAstArrayExpr* expression;
-    expression = (LitAstArrayExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstArrayExpr), LITEXPR_ARRAY);
-    lit_exprlist_init(&expression->values);
+    TinAstArrayExpr* expression;
+    expression = (TinAstArrayExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstArrayExpr), TINEXPR_ARRAY);
+    tin_exprlist_init(&expression->values);
     return expression;
 }
 
-LitAstObjectExpr* lit_ast_make_objectexpr(LitState* state, size_t line)
+TinAstObjectExpr* tin_ast_make_objectexpr(TinState* state, size_t line)
 {
-    LitAstObjectExpr* expression;
-    expression = (LitAstObjectExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstObjectExpr), LITEXPR_OBJECT);
-    lit_vallist_init(&expression->keys);
-    lit_exprlist_init(&expression->values);
+    TinAstObjectExpr* expression;
+    expression = (TinAstObjectExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstObjectExpr), TINEXPR_OBJECT);
+    tin_vallist_init(&expression->keys);
+    tin_exprlist_init(&expression->values);
     return expression;
 }
 
-LitAstIndexExpr* lit_ast_make_subscriptexpr(LitState* state, size_t line, LitAstExpression* array, LitAstExpression* index)
+TinAstIndexExpr* tin_ast_make_subscriptexpr(TinState* state, size_t line, TinAstExpression* array, TinAstExpression* index)
 {
-    LitAstIndexExpr* expression;
-    expression = (LitAstIndexExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstIndexExpr), LITEXPR_SUBSCRIPT);
+    TinAstIndexExpr* expression;
+    expression = (TinAstIndexExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstIndexExpr), TINEXPR_SUBSCRIPT);
     expression->array = array;
     expression->index = index;
     return expression;
 }
 
-LitAstThisExpr* lit_ast_make_thisexpr(LitState* state, size_t line)
+TinAstThisExpr* tin_ast_make_thisexpr(TinState* state, size_t line)
 {
-    return (LitAstThisExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstThisExpr), LITEXPR_THIS);
+    return (TinAstThisExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstThisExpr), TINEXPR_THIS);
 }
 
-LitAstSuperExpr* lit_ast_make_superexpr(LitState* state, size_t line, LitString* method, bool ignore_result)
+TinAstSuperExpr* tin_ast_make_superexpr(TinState* state, size_t line, TinString* method, bool ignoreresult)
 {
-    LitAstSuperExpr* expression;
-    expression = (LitAstSuperExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstSuperExpr), LITEXPR_SUPER);
+    TinAstSuperExpr* expression;
+    expression = (TinAstSuperExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstSuperExpr), TINEXPR_SUPER);
     expression->method = method;
-    expression->ignore_emit = false;
-    expression->ignore_result = ignore_result;
+    expression->ignemit = false;
+    expression->ignresult = ignoreresult;
     return expression;
 }
 
-LitAstRangeExpr* lit_ast_make_rangeexpr(LitState* state, size_t line, LitAstExpression* from, LitAstExpression* to)
+TinAstRangeExpr* tin_ast_make_rangeexpr(TinState* state, size_t line, TinAstExpression* from, TinAstExpression* to)
 {
-    LitAstRangeExpr* expression;
-    expression = (LitAstRangeExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstRangeExpr), LITEXPR_RANGE);
+    TinAstRangeExpr* expression;
+    expression = (TinAstRangeExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstRangeExpr), TINEXPR_RANGE);
     expression->from = from;
     expression->to = to;
     return expression;
 }
 
-LitAstTernaryExpr* lit_ast_make_ternaryexpr(LitState* state, size_t line, LitAstExpression* condition, LitAstExpression* if_branch, LitAstExpression* else_branch)
+TinAstTernaryExpr* tin_ast_make_ternaryexpr(TinState* state, size_t line, TinAstExpression* condition, TinAstExpression* ifbranch, TinAstExpression* elsebranch)
 {
-    LitAstTernaryExpr* expression;
-    expression = (LitAstTernaryExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstTernaryExpr), LITEXPR_TERNARY);
+    TinAstTernaryExpr* expression;
+    expression = (TinAstTernaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstTernaryExpr), TINEXPR_TERNARY);
     expression->condition = condition;
-    expression->if_branch = if_branch;
-    expression->else_branch = else_branch;
+    expression->ifbranch = ifbranch;
+    expression->elsebranch = elsebranch;
 
     return expression;
 }
 
-LitAstStrInterExpr* lit_ast_make_strinterpolexpr(LitState* state, size_t line)
+TinAstStrInterExpr* tin_ast_make_strinterpolexpr(TinState* state, size_t line)
 {
-    LitAstStrInterExpr* expression;
-    expression = (LitAstStrInterExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstStrInterExpr), LITEXPR_INTERPOLATION);
-    lit_exprlist_init(&expression->expressions);
+    TinAstStrInterExpr* expression;
+    expression = (TinAstStrInterExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstStrInterExpr), TINEXPR_INTERPOLATION);
+    tin_exprlist_init(&expression->expressions);
     return expression;
 }
 
-LitAstRefExpr* lit_ast_make_referenceexpr(LitState* state, size_t line, LitAstExpression* to)
+TinAstRefExpr* tin_ast_make_referenceexpr(TinState* state, size_t line, TinAstExpression* to)
 {
-    LitAstRefExpr* expression;
-    expression = (LitAstRefExpr*)lit_ast_allocexpr(state, line, sizeof(LitAstRefExpr), LITEXPR_REFERENCE);
+    TinAstRefExpr* expression;
+    expression = (TinAstRefExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstRefExpr), TINEXPR_REFERENCE);
     expression->to = to;
     return expression;
 }
 
 
 
-static LitAstExpression* lit_ast_allocstmt(LitState* state, uint64_t line, size_t size, LitAstExprType type)
+static TinAstExpression* tin_ast_allocstmt(TinState* state, uint64_t line, size_t size, TinAstExprType type)
 {
-    LitAstExpression* object;
-    object = (LitAstExpression*)lit_gcmem_memrealloc(state, NULL, 0, size);
+    TinAstExpression* object;
+    object = (TinAstExpression*)tin_gcmem_memrealloc(state, NULL, 0, size);
     object->type = type;
     object->line = line;
     return object;
 }
 
-LitAstExprExpr* lit_ast_make_exprstmt(LitState* state, size_t line, LitAstExpression* expression)
+TinAstExprExpr* tin_ast_make_exprstmt(TinState* state, size_t line, TinAstExpression* expression)
 {
-    LitAstExprExpr* statement;
-    statement = (LitAstExprExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstExprExpr), LITEXPR_EXPRESSION);
+    TinAstExprExpr* statement;
+    statement = (TinAstExprExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstExprExpr), TINEXPR_EXPRESSION);
     statement->expression = expression;
     statement->pop = true;
     return statement;
 }
 
-LitAstBlockExpr* lit_ast_make_blockexpr(LitState* state, size_t line)
+TinAstBlockExpr* tin_ast_make_blockexpr(TinState* state, size_t line)
 {
-    LitAstBlockExpr* statement;
-    statement = (LitAstBlockExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstBlockExpr), LITEXPR_BLOCK);
-    lit_exprlist_init(&statement->statements);
+    TinAstBlockExpr* statement;
+    statement = (TinAstBlockExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstBlockExpr), TINEXPR_BLOCK);
+    tin_exprlist_init(&statement->statements);
     return statement;
 }
 
-LitAstAssignVarExpr* lit_ast_make_assignvarexpr(LitState* state, size_t line, const char* name, size_t length, LitAstExpression* init, bool constant)
+TinAstAssignVarExpr* tin_ast_make_assignvarexpr(TinState* state, size_t line, const char* name, size_t length, TinAstExpression* init, bool constant)
 {
-    LitAstAssignVarExpr* statement;
-    statement = (LitAstAssignVarExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstAssignVarExpr), LITEXPR_VARSTMT);
+    TinAstAssignVarExpr* statement;
+    statement = (TinAstAssignVarExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstAssignVarExpr), TINEXPR_VARSTMT);
     statement->name = name;
     statement->length = length;
     statement->init = init;
@@ -548,123 +548,123 @@ LitAstAssignVarExpr* lit_ast_make_assignvarexpr(LitState* state, size_t line, co
     return statement;
 }
 
-LitAstIfExpr* lit_ast_make_ifexpr(LitState* state,
+TinAstIfExpr* tin_ast_make_ifexpr(TinState* state,
                                         size_t line,
-                                        LitAstExpression* condition,
-                                        LitAstExpression* if_branch,
-                                        LitAstExpression* else_branch,
-                                        LitAstExprList* elseif_conditions,
-                                        LitAstExprList* elseif_branches)
+                                        TinAstExpression* condition,
+                                        TinAstExpression* ifbranch,
+                                        TinAstExpression* elsebranch,
+                                        TinAstExprList* elseifconditions,
+                                        TinAstExprList* elseifbranches)
 {
-    LitAstIfExpr* statement;
-    statement = (LitAstIfExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstIfExpr), LITEXPR_IFSTMT);
+    TinAstIfExpr* statement;
+    statement = (TinAstIfExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstIfExpr), TINEXPR_IFSTMT);
     statement->condition = condition;
-    statement->if_branch = if_branch;
-    statement->else_branch = else_branch;
-    statement->elseif_conditions = elseif_conditions;
-    statement->elseif_branches = elseif_branches;
+    statement->ifbranch = ifbranch;
+    statement->elsebranch = elsebranch;
+    statement->elseifconds = elseifconditions;
+    statement->elseifbranches = elseifbranches;
     return statement;
 }
 
-LitAstWhileExpr* lit_ast_make_whileexpr(LitState* state, size_t line, LitAstExpression* condition, LitAstExpression* body)
+TinAstWhileExpr* tin_ast_make_whileexpr(TinState* state, size_t line, TinAstExpression* condition, TinAstExpression* body)
 {
-    LitAstWhileExpr* statement;
-    statement = (LitAstWhileExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstWhileExpr), LITEXPR_WHILE);
+    TinAstWhileExpr* statement;
+    statement = (TinAstWhileExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstWhileExpr), TINEXPR_WHILE);
     statement->condition = condition;
     statement->body = body;
     return statement;
 }
 
-LitAstForExpr* lit_ast_make_forexpr(LitState* state,
+TinAstForExpr* tin_ast_make_forexpr(TinState* state,
                                           size_t line,
-                                          LitAstExpression* init,
-                                          LitAstExpression* var,
-                                          LitAstExpression* condition,
-                                          LitAstExpression* increment,
-                                          LitAstExpression* body,
-                                          bool c_style)
+                                          TinAstExpression* init,
+                                          TinAstExpression* var,
+                                          TinAstExpression* condition,
+                                          TinAstExpression* increment,
+                                          TinAstExpression* body,
+                                          bool cstyle)
 {
-    LitAstForExpr* statement;
-    statement = (LitAstForExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstForExpr), LITEXPR_FOR);
+    TinAstForExpr* statement;
+    statement = (TinAstForExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstForExpr), TINEXPR_FOR);
     statement->init = init;
     statement->var = var;
     statement->condition = condition;
     statement->increment = increment;
     statement->body = body;
-    statement->c_style = c_style;
+    statement->cstyle = cstyle;
     return statement;
 }
 
-LitAstContinueExpr* lit_ast_make_continueexpr(LitState* state, size_t line)
+TinAstContinueExpr* tin_ast_make_continueexpr(TinState* state, size_t line)
 {
-    return (LitAstContinueExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstContinueExpr), LITEXPR_CONTINUE);
+    return (TinAstContinueExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstContinueExpr), TINEXPR_CONTINUE);
 }
 
-LitAstBreakExpr* lit_ast_make_breakexpr(LitState* state, size_t line)
+TinAstBreakExpr* tin_ast_make_breakexpr(TinState* state, size_t line)
 {
-    return (LitAstBreakExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstBreakExpr), LITEXPR_BREAK);
+    return (TinAstBreakExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstBreakExpr), TINEXPR_BREAK);
 }
 
-LitAstFunctionExpr* lit_ast_make_funcexpr(LitState* state, size_t line, const char* name, size_t length)
+TinAstFunctionExpr* tin_ast_make_funcexpr(TinState* state, size_t line, const char* name, size_t length)
 {
-    LitAstFunctionExpr* function;
-    function = (LitAstFunctionExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstFunctionExpr), LITEXPR_FUNCTION);
+    TinAstFunctionExpr* function;
+    function = (TinAstFunctionExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstFunctionExpr), TINEXPR_FUNCTION);
     function->name = name;
     function->length = length;
     function->body = NULL;
-    lit_paramlist_init(&function->parameters);
+    tin_paramlist_init(&function->parameters);
     return function;
 }
 
-LitAstReturnExpr* lit_ast_make_returnexpr(LitState* state, size_t line, LitAstExpression* expression)
+TinAstReturnExpr* tin_ast_make_returnexpr(TinState* state, size_t line, TinAstExpression* expression)
 {
-    LitAstReturnExpr* statement;
-    statement = (LitAstReturnExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstReturnExpr), LITEXPR_RETURN);
+    TinAstReturnExpr* statement;
+    statement = (TinAstReturnExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstReturnExpr), TINEXPR_RETURN);
     statement->expression = expression;
     return statement;
 }
 
-LitAstMethodExpr* lit_ast_make_methodexpr(LitState* state, size_t line, LitString* name, bool is_static)
+TinAstMethodExpr* tin_ast_make_methodexpr(TinState* state, size_t line, TinString* name, bool isstatic)
 {
-    LitAstMethodExpr* statement;
-    statement = (LitAstMethodExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstMethodExpr), LITEXPR_METHOD);
+    TinAstMethodExpr* statement;
+    statement = (TinAstMethodExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstMethodExpr), TINEXPR_METHOD);
     statement->name = name;
     statement->body = NULL;
-    statement->is_static = is_static;
-    lit_paramlist_init(&statement->parameters);
+    statement->isstatic = isstatic;
+    tin_paramlist_init(&statement->parameters);
     return statement;
 }
 
-LitAstClassExpr* lit_ast_make_classexpr(LitState* state, size_t line, LitString* name, LitString* parent)
+TinAstClassExpr* tin_ast_make_classexpr(TinState* state, size_t line, TinString* name, TinString* parent)
 {
-    LitAstClassExpr* statement;
-    statement = (LitAstClassExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstClassExpr), LITEXPR_CLASS);
+    TinAstClassExpr* statement;
+    statement = (TinAstClassExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstClassExpr), TINEXPR_CLASS);
     statement->name = name;
     statement->parent = parent;
-    lit_exprlist_init(&statement->fields);
+    tin_exprlist_init(&statement->fields);
     return statement;
 }
 
-LitAstFieldExpr* lit_ast_make_fieldexpr(LitState* state, size_t line, LitString* name, LitAstExpression* getter, LitAstExpression* setter, bool is_static)
+TinAstFieldExpr* tin_ast_make_fieldexpr(TinState* state, size_t line, TinString* name, TinAstExpression* getter, TinAstExpression* setter, bool isstatic)
 {
-    LitAstFieldExpr* statement;
-    statement = (LitAstFieldExpr*)lit_ast_allocstmt(state, line, sizeof(LitAstFieldExpr), LITEXPR_FIELD);
+    TinAstFieldExpr* statement;
+    statement = (TinAstFieldExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstFieldExpr), TINEXPR_FIELD);
     statement->name = name;
     statement->getter = getter;
     statement->setter = setter;
-    statement->is_static = is_static;
+    statement->isstatic = isstatic;
     return statement;
 }
 
-LitAstExprList* lit_ast_allocexprlist(LitState* state)
+TinAstExprList* tin_ast_allocexprlist(TinState* state)
 {
-    LitAstExprList* expressions;
-    expressions = (LitAstExprList*)lit_gcmem_memrealloc(state, NULL, 0, sizeof(LitAstExprList));
-    lit_exprlist_init(expressions);
+    TinAstExprList* expressions;
+    expressions = (TinAstExprList*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(TinAstExprList));
+    tin_exprlist_init(expressions);
     return expressions;
 }
 
-void lit_ast_destroy_allocdexprlist(LitState* state, LitAstExprList* expressions)
+void tin_ast_destroy_allocdexprlist(TinState* state, TinAstExprList* expressions)
 {
     size_t i;
     if(expressions == NULL)
@@ -673,21 +673,21 @@ void lit_ast_destroy_allocdexprlist(LitState* state, LitAstExprList* expressions
     }
     for(i = 0; i < expressions->count; i++)
     {
-        lit_ast_destroyexpression(state, expressions->values[i]);
+        tin_ast_destroyexpression(state, expressions->values[i]);
     }
-    lit_exprlist_destroy(state, expressions);
-    lit_gcmem_memrealloc(state, expressions, sizeof(LitAstExprList), 0);
+    tin_exprlist_destroy(state, expressions);
+    tin_gcmem_memrealloc(state, expressions, sizeof(TinAstExprList), 0);
 }
 
-LitAstExprList* lit_ast_allocate_stmtlist(LitState* state)
+TinAstExprList* tin_ast_allocate_stmtlist(TinState* state)
 {
-    LitAstExprList* statements;
-    statements = (LitAstExprList*)lit_gcmem_memrealloc(state, NULL, 0, sizeof(LitAstExprList));
-    lit_exprlist_init(statements);
+    TinAstExprList* statements;
+    statements = (TinAstExprList*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(TinAstExprList));
+    tin_exprlist_init(statements);
     return statements;
 }
 
-void lit_ast_destry_allocdstmtlist(LitState* state, LitAstExprList* statements)
+void tin_ast_destry_allocdstmtlist(TinState* state, TinAstExprList* statements)
 {
     size_t i;
     if(statements == NULL)
@@ -696,8 +696,8 @@ void lit_ast_destry_allocdstmtlist(LitState* state, LitAstExprList* statements)
     }
     for(i = 0; i < statements->count; i++)
     {
-        lit_ast_destroyexpression(state, statements->values[i]);
+        tin_ast_destroyexpression(state, statements->values[i]);
     }
-    lit_exprlist_destroy(state, statements);
-    lit_gcmem_memrealloc(state, statements, sizeof(LitAstExprList), 0);
+    tin_exprlist_destroy(state, statements);
+    tin_gcmem_memrealloc(state, statements, sizeof(TinAstExprList), 0);
 }

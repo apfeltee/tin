@@ -1,27 +1,27 @@
 
 #include "priv.h"
 
-static LitValue access_private(LitVM* vm, LitMap* map, LitString* name, LitValue* val)
+static TinValue access_private(TinVM* vm, TinMap* map, TinString* name, TinValue* val)
 {
     int index;
-    LitValue value;
-    LitString* id;
-    LitModule* module;
-    id = lit_string_copyconst(vm->state, "_module");
-    if(!lit_table_get(&map->values, id, &value) || !lit_value_ismodule(value))
+    TinValue value;
+    TinString* id;
+    TinModule* module;
+    id = tin_string_copyconst(vm->state, "_module");
+    if(!tin_table_get(&map->values, id, &value) || !tin_value_ismodule(value))
     {
         return NULL_VALUE;
     }
-    module = lit_value_asmodule(value);
+    module = tin_value_asmodule(value);
 
     if(id == name)
     {
-        return lit_value_fromobject(module);
+        return tin_value_fromobject(module);
     }
 
-    if(lit_table_get(&module->private_names->values, name, &value))
+    if(tin_table_get(&module->private_names->values, name, &value))
     {
-        index = (int)lit_value_asnumber(value);
+        index = (int)tin_value_asnumber(value);
         if(index > -1 && index < (int)module->private_count)
         {
             if(val != NULL)
@@ -36,64 +36,64 @@ static LitValue access_private(LitVM* vm, LitMap* map, LitString* name, LitValue
 }
 
 
-static LitValue objfn_module_privates(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_module_privates(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitModule* module;
-    LitMap* map;
+    TinModule* module;
+    TinMap* map;
     (void)argc;
     (void)argv;
-    module = lit_value_ismodule(instance) ? lit_value_asmodule(instance) : vm->fiber->module;
+    module = tin_value_ismodule(instance) ? tin_value_asmodule(instance) : vm->fiber->module;
     map = module->private_names;
     if(map->index_fn == NULL)
     {
         map->index_fn = access_private;
-        lit_table_set(vm->state, &map->values, lit_string_copyconst(vm->state, "_module"), lit_value_fromobject(module));
+        tin_table_set(vm->state, &map->values, tin_string_copyconst(vm->state, "_module"), tin_value_fromobject(module));
     }
-    return lit_value_fromobject(map);
+    return tin_value_fromobject(map);
 }
 
-static LitValue objfn_module_current(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_module_current(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_fromobject(vm->fiber->module);
+    return tin_value_fromobject(vm->fiber->module);
 }
 
-static LitValue objfn_module_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_module_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    return lit_string_format(vm->state, "Module @", lit_value_fromobject(lit_value_asmodule(instance)->name));
+    return tin_string_format(vm->state, "Module @", tin_value_fromobject(tin_value_asmodule(instance)->name));
 }
 
-static LitValue objfn_module_name(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_module_name(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_fromobject(lit_value_asmodule(instance)->name);
+    return tin_value_fromobject(tin_value_asmodule(instance)->name);
 }
 
-void lit_open_module_library(LitState* state)
+void tin_open_module_library(TinState* state)
 {
-    LitClass* klass;
-    klass = lit_create_classobject(state, "Module");
+    TinClass* klass;
+    klass = tin_create_classobject(state, "Module");
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
-        lit_class_bindconstructor(state, klass, util_invalid_constructor);
-        lit_class_setstaticfield(state, klass, "loaded", lit_value_fromobject(state->vm->modules));
-        lit_class_bindgetset(state, klass, "privates", objfn_module_privates, NULL, true);
-        lit_class_bindgetset(state, klass, "current", objfn_module_current, NULL, true);
-        lit_class_bindmethod(state, klass, "toString", objfn_module_tostring);
-        lit_class_bindgetset(state, klass, "name", objfn_module_name, NULL, false);
-        lit_class_bindgetset(state, klass, "privates", objfn_module_privates, NULL, false);
-        state->modulevalue_class = klass;
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
+        tin_class_bindconstructor(state, klass, util_invalid_constructor);
+        tin_class_setstaticfield(state, klass, "loaded", tin_value_fromobject(state->vm->modules));
+        tin_class_bindgetset(state, klass, "privates", objfn_module_privates, NULL, true);
+        tin_class_bindgetset(state, klass, "current", objfn_module_current, NULL, true);
+        tin_class_bindmethod(state, klass, "toString", objfn_module_tostring);
+        tin_class_bindgetset(state, klass, "name", objfn_module_name, NULL, false);
+        tin_class_bindgetset(state, klass, "privates", objfn_module_privates, NULL, false);
+        state->primmoduleclass = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+    tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
     if(klass->super == NULL)
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
     };
 }
 

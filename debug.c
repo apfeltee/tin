@@ -2,44 +2,44 @@
 #include <stdio.h>
 #include "priv.h"
 
-void lit_disassemble_module(LitState* state, LitModule* module, const char* source)
+void tin_disassemble_module(TinState* state, TinModule* module, const char* source)
 {
-    lit_disassemble_chunk(state, &module->main_function->chunk, module->main_function->name->chars, source);
+    tin_disassemble_chunk(state, &module->main_function->chunk, module->main_function->name->chars, source);
 }
 
-void lit_disassemble_chunk(LitState* state, LitChunk* chunk, const char* name, const char* source)
+void tin_disassemble_chunk(TinState* state, TinChunk* chunk, const char* name, const char* source)
 {
     size_t i;
     size_t offset;
-    LitValue value;
-    LitValList* values;
-    LitFunction* function;
+    TinValue value;
+    TinValList* values;
+    TinFunction* function;
     values = &chunk->constants;
 
-    for(i = 0; i < lit_vallist_count(values); i++)
+    for(i = 0; i < tin_vallist_count(values); i++)
     {
-        value = lit_vallist_get(values, i);
-        if(lit_value_isfunction(value))
+        value = tin_vallist_get(values, i);
+        if(tin_value_isfunction(value))
         {
-            function = lit_value_asfunction(value);
-            lit_disassemble_chunk(state, &function->chunk, function->name->chars, source);
+            function = tin_value_asfunction(value);
+            tin_disassemble_chunk(state, &function->chunk, function->name->chars, source);
         }
     }
-    lit_writer_writeformat(&state->debugwriter, "== %s ==\n", name);
+    tin_writer_writeformat(&state->debugwriter, "== %s ==\n", name);
     for(offset = 0; offset < chunk->count;)
     {
-        offset = lit_disassemble_instruction(state, chunk, offset, source);
+        offset = tin_disassemble_instruction(state, chunk, offset, source);
     }
 }
 
-static size_t print_simple_op(LitState* state, LitWriter* wr, const char* name, size_t offset)
+static size_t print_simple_op(TinState* state, TinWriter* wr, const char* name, size_t offset)
 {
     (void)state;
-    lit_writer_writeformat(wr, "%s%s%s\n", COLOR_YELLOW, name, COLOR_RESET);
+    tin_writer_writeformat(wr, "%s%s%s\n", COLOR_YELLOW, name, COLOR_RESET);
     return offset + 1;
 }
 
-static size_t print_constant_op(LitState* state, LitWriter* wr, const char* name, LitChunk* chunk, size_t offset, bool big)
+static size_t print_constant_op(TinState* state, TinWriter* wr, const char* name, TinChunk* chunk, size_t offset, bool big)
 {
     uint8_t constant;
     if(big)
@@ -51,42 +51,42 @@ static size_t print_constant_op(LitState* state, LitWriter* wr, const char* name
     {
         constant = chunk->code[offset + 1];
     }
-    lit_writer_writeformat(wr, "%s%-16s%s %4d '", COLOR_YELLOW, name, COLOR_RESET, constant);
-    lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant), true);
-    lit_writer_writeformat(wr, "'\n");
+    tin_writer_writeformat(wr, "%s%-16s%s %4d '", COLOR_YELLOW, name, COLOR_RESET, constant);
+    tin_towriter_value(state, wr, tin_vallist_get(&chunk->constants, constant), true);
+    tin_writer_writeformat(wr, "'\n");
     return offset + (big ? 3 : 2);
 }
 
-static size_t print_byte_op(LitState* state, LitWriter* wr, const char* name, LitChunk* chunk, size_t offset)
+static size_t print_byte_op(TinState* state, TinWriter* wr, const char* name, TinChunk* chunk, size_t offset)
 {
     uint8_t slot;
     (void)state;
     slot = chunk->code[offset + 1];
-    lit_writer_writeformat(wr, "%s%-16s%s %4d\n", COLOR_YELLOW, name, COLOR_RESET, slot);
+    tin_writer_writeformat(wr, "%s%-16s%s %4d\n", COLOR_YELLOW, name, COLOR_RESET, slot);
     return offset + 2;
 }
 
-static size_t print_short_op(LitState* state, LitWriter* wr, const char* name, LitChunk* chunk, size_t offset)
+static size_t print_short_op(TinState* state, TinWriter* wr, const char* name, TinChunk* chunk, size_t offset)
 {
     uint16_t slot;
     (void)state;
     slot = (uint16_t)(chunk->code[offset + 1] << 8);
     slot |= chunk->code[offset + 2];
-    lit_writer_writeformat(wr, "%s%-16s%s %4d\n", COLOR_YELLOW, name, COLOR_RESET, slot);
+    tin_writer_writeformat(wr, "%s%-16s%s %4d\n", COLOR_YELLOW, name, COLOR_RESET, slot);
     return offset + 2;
 }
 
-static size_t print_jump_op(LitState* state, LitWriter* wr, const char* name, int sign, LitChunk* chunk, size_t offset)
+static size_t print_jump_op(TinState* state, TinWriter* wr, const char* name, int sign, TinChunk* chunk, size_t offset)
 {
     uint16_t jump;
     (void)state;
     jump = (uint16_t)(chunk->code[offset + 1] << 8);
     jump |= chunk->code[offset + 2];
-    lit_writer_writeformat(wr, "%s%-16s%s %4d -> %d\n", COLOR_YELLOW, name, COLOR_RESET, (int)offset, (int)(offset + 3 + sign * jump));
+    tin_writer_writeformat(wr, "%s%-16s%s %4d -> %d\n", COLOR_YELLOW, name, COLOR_RESET, (int)offset, (int)(offset + 3 + sign * jump));
     return offset + 3;
 }
 
-static size_t print_invoke_op(LitState* state, LitWriter* wr, const char* name, LitChunk* chunk, size_t offset)
+static size_t print_invoke_op(TinState* state, TinWriter* wr, const char* name, TinChunk* chunk, size_t offset)
 {
     uint8_t arg_count;
     uint8_t constant;
@@ -94,13 +94,13 @@ static size_t print_invoke_op(LitState* state, LitWriter* wr, const char* name, 
     arg_count = chunk->code[offset + 1];
     constant = chunk->code[offset + 2];
     constant |= chunk->code[offset + 3];
-    lit_writer_writeformat(wr, "%s%-16s%s (%d args) %4d '", COLOR_YELLOW, name, COLOR_RESET, arg_count, constant);
-    lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant), true);
-    lit_writer_writeformat(wr, "'\n");
+    tin_writer_writeformat(wr, "%s%-16s%s (%d args) %4d '", COLOR_YELLOW, name, COLOR_RESET, arg_count, constant);
+    tin_towriter_value(state, wr, tin_vallist_get(&chunk->constants, constant), true);
+    tin_writer_writeformat(wr, "'\n");
     return offset + 4;
 }
 
-size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offset, const char* source)
+size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offset, const char* source)
 {
     bool same;
     int islocal;
@@ -114,11 +114,11 @@ size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offs
     char* prevline;
     char* outputline;
     char* currentline;
-    LitWriter* wr;
-    LitFunction* function;
+    TinWriter* wr;
+    TinFunction* function;
     wr = &state->debugwriter;
-    line = lit_chunk_getline(chunk, offset);
-    same = !chunk->has_line_info || (offset > 0 && line == lit_chunk_getline(chunk, offset - 1));
+    line = tin_chunk_getline(chunk, offset);
+    same = !chunk->has_line_info || (offset > 0 && line == tin_chunk_getline(chunk, offset - 1));
     if(!same && source != NULL)
     {
         index = 0;
@@ -136,19 +136,19 @@ size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offs
                 {
                     outputline++;
                 }
-                lit_writer_writeformat(wr, "%s        %.*s%s\n", COLOR_RED, nextline ? (int)(nextline - outputline) : (int)strlen(prevline), outputline, COLOR_RESET);
+                tin_writer_writeformat(wr, "%s        %.*s%s\n", COLOR_RED, nextline ? (int)(nextline - outputline) : (int)strlen(prevline), outputline, COLOR_RESET);
                 break;
             }
         }
     }
-    lit_writer_writeformat(wr, "%04d ", (int)offset);
+    tin_writer_writeformat(wr, "%04d ", (int)offset);
     if(same)
     {
-        lit_writer_writestring(wr, "   | ");
+        tin_writer_writestring(wr, "   | ");
     }
     else
     {
-        lit_writer_writeformat(wr, "%s%4d%s ", COLOR_BLUE, (int)line, COLOR_RESET);
+        tin_writer_writeformat(wr, "%s%4d%s ", COLOR_BLUE, (int)line, COLOR_RESET);
     }
     instruction = chunk->code[offset];
     switch(instruction)
@@ -257,15 +257,15 @@ size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offs
                 constant = (uint16_t)(chunk->code[offset] << 8);
                 offset++;
                 constant |= chunk->code[offset];
-                lit_writer_writeformat(wr, "%-16s %4d ", "OP_CLOSURE", constant);
-                lit_towriter_value(state, wr, lit_vallist_get(&chunk->constants, constant), true);
-                lit_writer_writeformat(wr, "\n");
-                function = lit_value_asfunction(lit_vallist_get(&chunk->constants, constant));
+                tin_writer_writeformat(wr, "%-16s %4d ", "OP_CLOSURE", constant);
+                tin_towriter_value(state, wr, tin_vallist_get(&chunk->constants, constant), true);
+                tin_writer_writeformat(wr, "\n");
+                function = tin_value_asfunction(tin_vallist_get(&chunk->constants, constant));
                 for(j = 0; j < function->upvalue_count; j++)
                 {
                     islocal = chunk->code[offset++];
                     index = chunk->code[offset++];
-                    lit_writer_writeformat(wr, "%04d      |                     %s %d\n", (int)(offset - 2), islocal ? "local" : "upvalue", (int)index);
+                    tin_writer_writeformat(wr, "%04d      |                     %s %d\n", (int)(offset - 2), islocal ? "local" : "upvalue", (int)index);
                 }
                 return offset;
             }
@@ -330,27 +330,27 @@ size_t lit_disassemble_instruction(LitState* state, LitChunk* chunk, size_t offs
             return print_simple_op(state, wr, "OP_SET_REFERENCE", offset);
         default:
             {
-                lit_writer_writeformat(wr, "Unknown opcode %d\n", instruction);
+                tin_writer_writeformat(wr, "Unknown opcode %d\n", instruction);
                 return offset + 1;
             }
             break;
     }
 }
 
-void lit_trace_frame(LitFiber* fiber, LitWriter* wr)
+void tin_trace_frame(TinFiber* fiber, TinWriter* wr)
 {
-    LitCallFrame* frame;
+    TinCallFrame* frame;
     (void)fiber;
     (void)frame;
     (void)wr;
-#ifdef LIT_TRACE_STACK
+#ifdef TIN_TRACE_STACK
     if(fiber == NULL)
     {
         return;
     }
     frame = &fiber->frames[fiber->frame_count - 1];
-    lit_writer_writeformat(wr, "== fiber %p f%i %s (expects %i, max %i, added %i, current %i, exits %i) ==\n", fiber,
-           fiber->frame_count - 1, frame->function->name->chars, frame->function->arg_count, frame->function->max_slots,
-           frame->function->max_slots + (int)(fiber->stack_top - fiber->stack), fiber->stack_capacity, frame->return_to_c);
+    tin_writer_writeformat(wr, "== fiber %p f%i %s (expects %i, max %i, added %i, current %i, exits %i) ==\n", fiber,
+           fiber->frame_count - 1, frame->function->name->chars, frame->function->arg_count, frame->function->maxslots,
+           frame->function->maxslots + (int)(fiber->stack_top - fiber->stack), fiber->stack_capacity, frame->return_to_c);
 #endif
 }

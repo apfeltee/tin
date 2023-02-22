@@ -1,105 +1,105 @@
 
 #include "priv.h"
 
-static LitValue objfn_range_iterator(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LIT_ENSURE_ARGS(vm->state, 1);
+    TIN_ENSURE_ARGS(vm->state, 1);
     int number;
-    LitRange* range;
-    range = lit_value_asrange(instance);
+    TinRange* range;
+    range = tin_value_asrange(instance);
     number = range->from;
     (void)vm;
     (void)argc;
-    if(lit_value_isnumber(argv[0]))
+    if(tin_value_isnumber(argv[0]))
     {
-        number = lit_value_asnumber(argv[0]);
+        number = tin_value_asnumber(argv[0]);
         if((range->to > range->from) ? (number >= range->to) : (number >= range->from))
         {
             return NULL_VALUE;
         }
         number += (((range->from - range->to) > 0) ? -1 : 1);
     }
-    return lit_value_makenumber(vm->state, number);
+    return tin_value_makefloatnumber(vm->state, number);
 }
 
-static LitValue objfn_range_iteratorvalue(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LIT_ENSURE_ARGS(vm->state, 1);
+    TIN_ENSURE_ARGS(vm->state, 1);
     (void)vm;
     (void)instance;
     return argv[0];
 }
 
-static LitValue objfn_range_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    LitRange* range;
-    range = lit_value_asrange(instance);
-    return lit_string_format(vm->state, "Range(#, #)", range->from, range->to);
+    TinRange* range;
+    range = tin_value_asrange(instance);
+    return tin_string_format(vm->state, "Range(#, #)", range->from, range->to);
 }
 
-static LitValue objfn_range_from(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_from(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argv;
     (void)argc;
-    return lit_value_makenumber(vm->state, lit_value_asrange(instance)->from);
+    return tin_value_makefloatnumber(vm->state, tin_value_asrange(instance)->from);
 }
 
-static LitValue objfn_range_set_from(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_set_from(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
-    lit_value_asrange(instance)->from = lit_value_asnumber(argv[0]);
+    tin_value_asrange(instance)->from = tin_value_asnumber(argv[0]);
     return argv[0];
 }
 
-static LitValue objfn_range_to(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_to(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_makenumber(vm->state, lit_value_asrange(instance)->to);
+    return tin_value_makefloatnumber(vm->state, tin_value_asrange(instance)->to);
 }
 
-static LitValue objfn_range_set_to(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_set_to(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
-    lit_value_asrange(instance)->to = lit_value_asnumber(argv[0]);
+    tin_value_asrange(instance)->to = tin_value_asnumber(argv[0]);
     return argv[0];
 }
 
-static LitValue objfn_range_length(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_range_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    LitRange* range;
-    range = lit_value_asrange(instance);
-    return lit_value_makenumber(vm->state, range->to - range->from);
+    TinRange* range;
+    range = tin_value_asrange(instance);
+    return tin_value_makefloatnumber(vm->state, range->to - range->from);
 }
 
-void lit_open_range_library(LitState* state)
+void tin_open_range_library(TinState* state)
 {
-    LitClass* klass;
-    klass = lit_create_classobject(state, "Range");
+    TinClass* klass;
+    klass = tin_create_classobject(state, "Range");
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
-        lit_class_bindconstructor(state, klass, util_invalid_constructor);
-        lit_class_bindmethod(state, klass, "iterator", objfn_range_iterator);
-        lit_class_bindmethod(state, klass, "iteratorValue", objfn_range_iteratorvalue);
-        lit_class_bindmethod(state, klass, "toString", objfn_range_tostring);
-        lit_class_bindgetset(state, klass, "from", objfn_range_from, objfn_range_set_from, false);
-        lit_class_bindgetset(state, klass, "to", objfn_range_to, objfn_range_set_to, false);
-        lit_class_bindgetset(state, klass, "length", objfn_range_length, NULL, false);
-        state->rangevalue_class = klass;
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
+        tin_class_bindconstructor(state, klass, util_invalid_constructor);
+        tin_class_bindmethod(state, klass, "iterator", objfn_range_iterator);
+        tin_class_bindmethod(state, klass, "iteratorValue", objfn_range_iteratorvalue);
+        tin_class_bindmethod(state, klass, "toString", objfn_range_tostring);
+        tin_class_bindgetset(state, klass, "from", objfn_range_from, objfn_range_set_from, false);
+        tin_class_bindgetset(state, klass, "to", objfn_range_to, objfn_range_set_to, false);
+        tin_class_bindgetset(state, klass, "length", objfn_range_length, NULL, false);
+        state->primrangeclass = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+    tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
     if(klass->super == NULL)
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
     };
 }
 

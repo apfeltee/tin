@@ -2,7 +2,7 @@
 #include "priv.h"
 #include "sds.h"
 
-void lit_datalist_init(LitDataList* dl, size_t typsz)
+void tin_datalist_init(TinDataList* dl, size_t typsz)
 {
     dl->values = NULL;
     dl->capacity = 0;
@@ -11,67 +11,67 @@ void lit_datalist_init(LitDataList* dl, size_t typsz)
     dl->elemsz = dl->rawelemsz + sizeof(intptr_t);
 }
 
-void lit_datalist_destroy(LitState* state, LitDataList* dl)
+void tin_datalist_destroy(TinState* state, TinDataList* dl)
 {
-    LIT_FREE_ARRAY(state, dl->elemsz, dl->values, dl->capacity);
-    lit_datalist_init(dl, dl->rawelemsz);
+    TIN_FREE_ARRAY(state, dl->elemsz, dl->values, dl->capacity);
+    tin_datalist_init(dl, dl->rawelemsz);
 }
 
-size_t lit_datalist_count(LitDataList* dl)
-{
-    return dl->count;
-}
-
-size_t lit_datalist_size(LitDataList* dl)
+size_t tin_datalist_count(TinDataList* dl)
 {
     return dl->count;
 }
 
-size_t lit_datalist_capacity(LitDataList* dl)
+size_t tin_datalist_size(TinDataList* dl)
+{
+    return dl->count;
+}
+
+size_t tin_datalist_capacity(TinDataList* dl)
 {
     return dl->capacity;
 }
 
-void lit_datalist_clear(LitDataList* dl)
+void tin_datalist_clear(TinDataList* dl)
 {
     dl->count = 0;
 }
 
-void lit_datalist_setcount(LitDataList* dl, size_t nc)
+void tin_datalist_setcount(TinDataList* dl, size_t nc)
 {
     dl->count = nc;
 }
 
-void lit_datalist_deccount(LitDataList* dl)
+void tin_datalist_deccount(TinDataList* dl)
 {
     dl->count--;
 }
 
-intptr_t lit_datalist_get(LitDataList* dl, size_t idx)
+intptr_t tin_datalist_get(TinDataList* dl, size_t idx)
 {
     return dl->values[idx];
 }
 
-intptr_t lit_datalist_set(LitDataList* dl, size_t idx, intptr_t val)
+intptr_t tin_datalist_set(TinDataList* dl, size_t idx, intptr_t val)
 {
     dl->values[idx] = val;
     return val;
 }
 
-void lit_datalist_push(LitState* state, LitDataList* dl, intptr_t value)
+void tin_datalist_push(TinState* state, TinDataList* dl, intptr_t value)
 {
     size_t oldcapacity;
     if(dl->capacity < (dl->count + 1))
     {
         oldcapacity = dl->capacity;
-        dl->capacity = LIT_GROW_CAPACITY(oldcapacity);
-        dl->values = LIT_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
+        dl->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        dl->values = TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
     }
     dl->values[dl->count] = value;
     dl->count++;
 }
 
-void lit_datalist_ensuresize(LitState* state, LitDataList* dl, size_t size)
+void tin_datalist_ensuresize(TinState* state, TinDataList* dl, size_t size)
 {
     size_t i;
     size_t oldcapacity;
@@ -79,7 +79,7 @@ void lit_datalist_ensuresize(LitState* state, LitDataList* dl, size_t size)
     {
         oldcapacity = dl->capacity;
         dl->capacity = size;
-        dl->values = LIT_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, size);
+        dl->values = TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, size);
         for(i = oldcapacity; i < size; i++)
         {
             dl->values[i] = 0;
@@ -93,50 +93,50 @@ void lit_datalist_ensuresize(LitState* state, LitDataList* dl, size_t size)
 
 /* -------------------------*/
 
-void lit_vallist_init(LitValList* vl)
+void tin_vallist_init(TinValList* vl)
 {
     vl->values = NULL;
     vl->capacity = 0;
     vl->count = 0;
 }
 
-void lit_vallist_destroy(LitState* state, LitValList* vl)
+void tin_vallist_destroy(TinState* state, TinValList* vl)
 {
-    LIT_FREE_ARRAY(state, sizeof(LitValue), vl->values, vl->capacity);
-    lit_vallist_init(vl);
+    TIN_FREE_ARRAY(state, sizeof(TinValue), vl->values, vl->capacity);
+    tin_vallist_init(vl);
 }
 
-size_t lit_vallist_size(LitValList* vl)
-{
-    return vl->count;
-}
-
-size_t lit_vallist_count(LitValList* vl)
+size_t tin_vallist_size(TinValList* vl)
 {
     return vl->count;
 }
 
-size_t lit_vallist_capacity(LitValList* vl)
+size_t tin_vallist_count(TinValList* vl)
+{
+    return vl->count;
+}
+
+size_t tin_vallist_capacity(TinValList* vl)
 {
     return vl->capacity;
 }
 
-void lit_vallist_setcount(LitValList* vl, size_t nc)
+void tin_vallist_setcount(TinValList* vl, size_t nc)
 {
     vl->count = nc;
 }
 
-void lit_vallist_clear(LitValList* vl)
+void tin_vallist_clear(TinValList* vl)
 {
     vl->count = 0;
 }
 
-void lit_vallist_deccount(LitValList* vl)
+void tin_vallist_deccount(TinValList* vl)
 {
     vl->count--;
 }
 
-void lit_vallist_ensuresize(LitState* state, LitValList* vl, size_t size)
+void tin_vallist_ensuresize(TinState* state, TinValList* vl, size_t size)
 {
         size_t i;
         size_t oldcapacity;
@@ -144,7 +144,7 @@ void lit_vallist_ensuresize(LitState* state, LitValList* vl, size_t size)
         {
             oldcapacity = vl->capacity;
             vl->capacity = size;
-            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), oldcapacity, size);
+            vl->values = TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, size);
             for(i = oldcapacity; i < size; i++)
             {
                 vl->values[i] = NULL_VALUE;
@@ -157,25 +157,25 @@ void lit_vallist_ensuresize(LitState* state, LitValList* vl, size_t size)
 }
 
 
-LitValue lit_vallist_set(LitValList* vl, size_t idx, LitValue val)
+TinValue tin_vallist_set(TinValList* vl, size_t idx, TinValue val)
 {
     vl->values[idx] = val;
     return val;
 }
 
-LitValue lit_vallist_get(LitValList* vl, size_t idx)
+TinValue tin_vallist_get(TinValList* vl, size_t idx)
 {
     return vl->values[idx];
 }
 
-void lit_vallist_push(LitState* state, LitValList* vl, LitValue value)
+void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
 {
         size_t oldcapacity;
         if(vl->capacity < vl->count + 1)
         {
             oldcapacity = vl->capacity;
-            vl->capacity = LIT_GROW_CAPACITY(oldcapacity);
-            vl->values = LIT_GROW_ARRAY(state, vl->values, sizeof(LitValue), oldcapacity, vl->capacity);
+            vl->capacity = TIN_GROW_CAPACITY(oldcapacity);
+            vl->values = TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, vl->capacity);
         }
         vl->values[vl->count] = value;
         vl->count++;
@@ -183,40 +183,40 @@ void lit_vallist_push(LitState* state, LitValList* vl, LitValue value)
 
 /* ---- Array object instance functions */
 
-LitArray* lit_create_array(LitState* state)
+TinArray* tin_create_array(TinState* state)
 {
-    LitArray* array;
-    array = (LitArray*)lit_gcmem_allocobject(state, sizeof(LitArray), LITTYPE_ARRAY, false);
-    lit_vallist_init(&array->list);
+    TinArray* array;
+    array = (TinArray*)tin_gcmem_allocobject(state, sizeof(TinArray), TINTYPE_ARRAY, false);
+    tin_vallist_init(&array->list);
     return array;
 }
 
 
-size_t lit_array_count(LitArray* arr)
+size_t tin_array_count(TinArray* arr)
 {
-    return lit_vallist_count(&arr->list);
+    return tin_vallist_count(&arr->list);
 }
 
-LitValue lit_array_pop(LitState* state, LitArray* arr)
+TinValue tin_array_pop(TinState* state, TinArray* arr)
 {
-    LitValue val;
+    TinValue val;
     (void)state;
-    if(lit_vallist_count(&arr->list) > 0)
+    if(tin_vallist_count(&arr->list) > 0)
     {
-        val = lit_vallist_get(&arr->list, lit_vallist_count(&arr->list) - 1);
-        lit_vallist_deccount(&arr->list);
+        val = tin_vallist_get(&arr->list, tin_vallist_count(&arr->list) - 1);
+        tin_vallist_deccount(&arr->list);
         return val;
     }
     return NULL_VALUE;
 }
 
-int lit_array_indexof(LitArray* array, LitValue value)
+int tin_array_indexof(TinArray* array, TinValue value)
 {
     size_t i;
-    LitValue itm;
-    for(i = 0; i < lit_vallist_count(&array->list); i++)
+    TinValue itm;
+    for(i = 0; i < tin_vallist_count(&array->list); i++)
     {
-        itm = lit_vallist_get(&array->list, i);
+        itm = tin_vallist_get(&array->list, i);
         if(&itm == &value)
         {
             return (int)i;
@@ -225,56 +225,56 @@ int lit_array_indexof(LitArray* array, LitValue value)
     return -1;
 }
 
-LitValue lit_array_removeat(LitArray* array, size_t index)
+TinValue tin_array_removeat(TinArray* array, size_t index)
 {
     size_t i;
     size_t count;
-    LitValue value;
-    LitValList* vl;
+    TinValue value;
+    TinValList* vl;
     vl = &array->list;
-    count = lit_vallist_count(vl);
+    count = tin_vallist_count(vl);
     if(index >= count)
     {
         return NULL_VALUE;
     }
-    value = lit_vallist_get(vl, index);
+    value = tin_vallist_get(vl, index);
     if(index == count - 1)
     {
-        lit_vallist_set(vl, index, NULL_VALUE);
+        tin_vallist_set(vl, index, NULL_VALUE);
     }
     else
     {
-        for(i = index; i < lit_vallist_count(vl) - 1; i++)
+        for(i = index; i < tin_vallist_count(vl) - 1; i++)
         {
-            lit_vallist_set(vl, i, lit_vallist_get(vl, i + 1));
+            tin_vallist_set(vl, i, tin_vallist_get(vl, i + 1));
         }
-        lit_vallist_set(vl, count - 1, NULL_VALUE);
+        tin_vallist_set(vl, count - 1, NULL_VALUE);
     }
-    lit_vallist_deccount(vl);
+    tin_vallist_deccount(vl);
     return value;
 }
 
-void lit_array_push(LitState* state, LitArray* array, LitValue val)
+void tin_array_push(TinState* state, TinArray* array, TinValue val)
 {
-    lit_vallist_push(state, &array->list, val);
+    tin_vallist_push(state, &array->list, val);
 }
 
-LitValue lit_array_get(LitState* state, LitArray* array, size_t idx)
+TinValue tin_array_get(TinState* state, TinArray* array, size_t idx)
 {
     (void)state;
-    if(idx <= lit_vallist_count(&array->list))
+    if(idx <= tin_vallist_count(&array->list))
     {
-        return lit_vallist_get(&array->list, idx);
+        return tin_vallist_get(&array->list, idx);
     }
     return NULL_VALUE;
 }
 
-LitArray* lit_array_splice(LitState* state, LitArray* oa, int from, int to)
+TinArray* tin_array_splice(TinState* state, TinArray* oa, int from, int to)
 {
     size_t i;
     size_t length;
-    LitArray* newarr;
-    length = lit_array_count(oa);
+    TinArray* newarr;
+    length = tin_array_count(oa);
     if(from < 0)
     {
         from = (int)length + from;
@@ -285,104 +285,104 @@ LitArray* lit_array_splice(LitState* state, LitArray* oa, int from, int to)
     }
     if(from > to)
     {
-        lit_vm_raiseexitingerror(state->vm, "Array.splice argument 'from' is larger than argument 'to'");
+        tin_vm_raiseexitingerror(state->vm, "Array.splice argument 'from' is larger than argument 'to'");
         return NULL;
     }
     from = fmax(from, 0);
     to = fmin(to, (int)length - 1);
     length = fmin(length, to - from + 1);
-    newarr = lit_create_array(state);
+    newarr = tin_create_array(state);
     for(i = 0; i < length; i++)
     {
-        lit_array_push(state, newarr, lit_array_get(state, oa, from + i));
+        tin_array_push(state, newarr, tin_array_get(state, oa, from + i));
     }
     return newarr;
 }
 
-static LitValue objfn_array_constructor(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
     (void)argc;
     (void)argv;
-    return lit_value_fromobject(lit_create_array(vm->state));
+    return tin_value_fromobject(tin_create_array(vm->state));
 }
 
-static LitValue objfn_array_splice(LitVM* vm, LitArray* array, int from, int to)
+static TinValue objfn_array_splice(TinVM* vm, TinArray* array, int from, int to)
 {
-    LitArray* newarr;
-    newarr = lit_array_splice(vm->state, array, from, to);
-    return lit_value_fromobject(newarr);
+    TinArray* newarr;
+    newarr = tin_array_splice(vm->state, array, from, to);
+    return tin_value_fromobject(newarr);
 }
 
-static LitValue objfn_array_slice(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_slice(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int from;
     int to;
-    from = lit_value_checknumber(vm, argv, argc, 0);
-    to = lit_value_checknumber(vm, argv, argc, 1);
-    return objfn_array_splice(vm, lit_value_asarray(instance), from, to);
+    from = tin_value_checknumber(vm, argv, argc, 0);
+    to = tin_value_checknumber(vm, argv, argc, 1);
+    return objfn_array_splice(vm, tin_value_asarray(instance), from, to);
 }
 
-static LitValue objfn_array_subscript(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int index;
-    LitRange* range;
-    LitValList* vl;
+    TinRange* range;
+    TinValList* vl;
     if(argc == 2)
     {
-        if(!lit_value_isnumber(argv[0]))
+        if(!tin_value_isnumber(argv[0]))
         {
-            lit_vm_raiseexitingerror(vm, "array index must be a number");
+            tin_vm_raiseexitingerror(vm, "array index must be a number");
         }
-        vl = &lit_value_asarray(instance)->list;
-        index = lit_value_asnumber(argv[0]);
+        vl = &tin_value_asarray(instance)->list;
+        index = tin_value_asnumber(argv[0]);
         if(index < 0)
         {
-            index = fmax(0, lit_vallist_count(vl) + index);
+            index = fmax(0, tin_vallist_count(vl) + index);
         }
-        lit_vallist_ensuresize(vm->state, vl, index + 1);
-        return lit_vallist_set(vl, index, argv[1]);
+        tin_vallist_ensuresize(vm->state, vl, index + 1);
+        return tin_vallist_set(vl, index, argv[1]);
     }
-    if(!lit_value_isnumber(argv[0]))
+    if(!tin_value_isnumber(argv[0]))
     {
-        if(lit_value_isrange(argv[0]))
+        if(tin_value_isrange(argv[0]))
         {
-            range = lit_value_asrange(argv[0]);
-            return objfn_array_splice(vm, lit_value_asarray(instance), (int)range->from, (int)range->to);
+            range = tin_value_asrange(argv[0]);
+            return objfn_array_splice(vm, tin_value_asarray(instance), (int)range->from, (int)range->to);
         }
-        lit_vm_raiseexitingerror(vm, "array index must be a number");
+        tin_vm_raiseexitingerror(vm, "array index must be a number");
         return NULL_VALUE;
     }
-    vl = &lit_value_asarray(instance)->list;
-    index = lit_value_asnumber(argv[0]);
+    vl = &tin_value_asarray(instance)->list;
+    index = tin_value_asnumber(argv[0]);
     if(index < 0)
     {
-        index = fmax(0, lit_vallist_count(vl) + index);
+        index = fmax(0, tin_vallist_count(vl) + index);
     }
-    if(lit_vallist_capacity(vl) <= (size_t)index)
+    if(tin_vallist_capacity(vl) <= (size_t)index)
     {
         return NULL_VALUE;
     }
-    return lit_vallist_get(vl, index);
+    return tin_vallist_get(vl, index);
 }
 
 
-static LitValue objfn_array_compare(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_compare(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
-    LitArray* self;
-    LitArray* other;
+    TinArray* self;
+    TinArray* other;
     (void)argc;
-    fprintf(stderr, "lit_vm_callcallable to objfn_array_compare\n");
-    self = lit_value_asarray(instance);
-    if(lit_value_isarray(argv[0]))
+    fprintf(stderr, "tin_vm_callcallable to objfn_array_compare\n");
+    self = tin_value_asarray(instance);
+    if(tin_value_isarray(argv[0]))
     {
-        other = lit_value_asarray(argv[0]);
-        if(lit_vallist_count(&self->list) == lit_vallist_count(&other->list))
+        other = tin_value_asarray(argv[0]);
+        if(tin_vallist_count(&self->list) == tin_vallist_count(&other->list))
         {
-            for(i=0; i<lit_vallist_count(&self->list); i++)
+            for(i=0; i<tin_vallist_count(&self->list); i++)
             {
-                if(!lit_value_compare(vm->state, lit_vallist_get(&self->list, i), lit_vallist_get(&other->list, i)))
+                if(!tin_value_compare(vm->state, tin_vallist_get(&self->list, i), tin_vallist_get(&other->list, i)))
                 {
                     return FALSE_VALUE;
                 }
@@ -391,182 +391,189 @@ static LitValue objfn_array_compare(LitVM* vm, LitValue instance, size_t argc, L
         }
         return FALSE_VALUE;
     }
-    lit_vm_raiseexitingerror(vm, "can only compare array to another array or null");
+    tin_vm_raiseexitingerror(vm, "can only compare array to another array or null");
     return FALSE_VALUE;
 }
 
 
-static LitValue objfn_array_add(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_add(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
     for(i=0; i<argc; i++)
     {
-        lit_array_push(vm->state, lit_value_asarray(instance), argv[i]);
+        tin_array_push(vm->state, tin_value_asarray(instance), argv[i]);
     }
     return NULL_VALUE;
 }
 
 
-static LitValue objfn_array_insert(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_insert(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int i;
     int index;
-    LitValue value;
-    LitValList* vl;
-    LIT_ENSURE_ARGS(vm->state, 2);
-    vl = &lit_value_asarray(instance)->list;
-    index = lit_value_checknumber(vm, argv, argc, 0);
+    TinValue value;
+    TinValList* vl;
+    TIN_ENSURE_ARGS(vm->state, 2);
+    vl = &tin_value_asarray(instance)->list;
+    index = tin_value_checknumber(vm, argv, argc, 0);
     if(index < 0)
     {
-        index = fmax(0, lit_vallist_count(vl) + index);
+        index = fmax(0, tin_vallist_count(vl) + index);
     }
     value = argv[1];
-    if((int)lit_vallist_count(vl) <= index)
+    if((int)tin_vallist_count(vl) <= index)
     {
-        lit_vallist_ensuresize(vm->state, vl, index + 1);
+        tin_vallist_ensuresize(vm->state, vl, index + 1);
     }
     else
     {
-        lit_vallist_ensuresize(vm->state, vl, lit_vallist_count(vl)  + 1);
-        for(i = lit_vallist_count(vl) - 1; i > index; i--)
+        tin_vallist_ensuresize(vm->state, vl, tin_vallist_count(vl)  + 1);
+        for(i = tin_vallist_count(vl) - 1; i > index; i--)
         {
-            lit_vallist_set(vl, i, lit_vallist_get(vl, i - 1));
+            tin_vallist_set(vl, i, tin_vallist_get(vl, i - 1));
         }
     }
-    lit_vallist_set(vl, index, value);
+    tin_vallist_set(vl, index, value);
     return NULL_VALUE;
 }
 
-static LitValue objfn_array_addall(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_addall(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
-    LitArray* array;
-    LitArray* toadd;
-    LIT_ENSURE_ARGS(vm->state, 1);
-    if(!lit_value_isarray(argv[0]))
+    TinArray* array;
+    TinArray* toadd;
+    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_value_isarray(argv[0]))
     {
-        lit_vm_raiseexitingerror(vm, "expected array as the argument");
+        tin_vm_raiseexitingerror(vm, "expected array as the argument");
     }
-    array = lit_value_asarray(instance);
-    toadd = lit_value_asarray(argv[0]);
-    for(i = 0; i < lit_vallist_count(&toadd->list); i++)
+    array = tin_value_asarray(instance);
+    toadd = tin_value_asarray(argv[0]);
+    for(i = 0; i < tin_vallist_count(&toadd->list); i++)
     {
-        lit_array_push(vm->state, array, lit_vallist_get(&toadd->list, i));
+        tin_array_push(vm->state, array, tin_vallist_get(&toadd->list, i));
     }
     return NULL_VALUE;
 }
 
-static LitValue objfn_array_indexof(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_indexof(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LIT_ENSURE_ARGS(vm->state, 1);
-    int index = lit_array_indexof(lit_value_asarray(instance), argv[0]);
-    return index == -1 ? NULL_VALUE : lit_value_makenumber(vm->state, index);
+    TIN_ENSURE_ARGS(vm->state, 1);
+    int index = tin_array_indexof(tin_value_asarray(instance), argv[0]);
+    if(index == -1)
+    {
+        return NULL_VALUE;
+    }
+    return tin_value_makefixednumber(vm->state, index);
 }
 
-
-static LitValue objfn_array_remove(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_remove(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int index;
-    LitArray* array;
-    LIT_ENSURE_ARGS(vm->state, 1);
-    array = lit_value_asarray(instance);
-    index = lit_array_indexof(array, argv[0]);
+    TinArray* array;
+    TIN_ENSURE_ARGS(vm->state, 1);
+    array = tin_value_asarray(instance);
+    index = tin_array_indexof(array, argv[0]);
     if(index != -1)
     {
-        return lit_array_removeat(array, (size_t)index);
+        return tin_array_removeat(array, (size_t)index);
     }
     return NULL_VALUE;
 }
 
-static LitValue objfn_array_removeat(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_removeat(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int index;
-    index = lit_value_checknumber(vm, argv, argc, 0);
+    index = tin_value_checknumber(vm, argv, argc, 0);
     if(index < 0)
     {
         return NULL_VALUE;
     }
-    return lit_array_removeat(lit_value_asarray(instance), (size_t)index);
+    return tin_array_removeat(tin_value_asarray(instance), (size_t)index);
 }
 
-static LitValue objfn_array_contains(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_contains(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LIT_ENSURE_ARGS(vm->state, 1);
-    return lit_value_makebool(vm->state, lit_array_indexof(lit_value_asarray(instance), argv[0]) != -1);
+    TIN_ENSURE_ARGS(vm->state, 1);
+    return tin_value_makebool(vm->state, tin_array_indexof(tin_value_asarray(instance), argv[0]) != -1);
 }
 
-static LitValue objfn_array_clear(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_clear(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    lit_vallist_clear(&lit_value_asarray(instance)->list);
+    tin_vallist_clear(&tin_value_asarray(instance)->list);
     return NULL_VALUE;
 }
 
-static LitValue objfn_array_iterator(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int number;
-    LitArray* array;
+    TinArray* array;
     (void)vm;
-    LIT_ENSURE_ARGS(vm->state, 1);
-    array = lit_value_asarray(instance);
+    TIN_ENSURE_ARGS(vm->state, 1);
+    array = tin_value_asarray(instance);
     number = 0;
-    if(lit_value_isnumber(argv[0]))
+    if(tin_value_isnumber(argv[0]))
     {
-        number = lit_value_asnumber(argv[0]);
-        if(number >= (int)lit_vallist_count(&array->list) - 1)
+        number = tin_value_asnumber(argv[0]);
+        if(number >= (int)tin_vallist_count(&array->list) - 1)
         {
             return NULL_VALUE;
         }
         number++;
     }
-    return lit_vallist_count(&array->list) == 0 ? NULL_VALUE : lit_value_makenumber(vm->state, number);
-}
-
-static LitValue objfn_array_iteratorvalue(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
-{
-    size_t index;
-    LitValList* vl;
-    index = lit_value_checknumber(vm, argv, argc, 0);
-    vl = &lit_value_asarray(instance)->list;
-    if(lit_vallist_count(vl) <= index)
+    if(tin_vallist_count(&array->list) == 0)
     {
         return NULL_VALUE;
     }
-    return lit_vallist_get(vl, index);
+    return tin_value_makefixednumber(vm->state, number);
 }
 
-static LitValue objfn_array_join(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    size_t index;
+    TinValList* vl;
+    index = tin_value_checknumber(vm, argv, argc, 0);
+    vl = &tin_value_asarray(instance)->list;
+    if(tin_vallist_count(vl) <= index)
+    {
+        return NULL_VALUE;
+    }
+    return tin_vallist_get(vl, index);
+}
+
+static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t i;
     size_t jlen;
     size_t index;
     size_t length;
     char* chars;
-    LitValList* vl;
-    LitString* string;
-    LitString* joinee;
-    LitString** strings;
+    TinValList* vl;
+    TinString* string;
+    TinString* joinee;
+    TinString** strings;
     (void)argc;
     (void)argv;
     joinee = NULL;
     length = 0;
     if(argc > 0)
     {
-        joinee = lit_value_asstring(argv[0]);
+        joinee = tin_value_asstring(argv[0]);
     }
-    vl = &lit_value_asarray(instance)->list;
-    //LitString* strings[vl->count];
-    strings = LIT_ALLOCATE(vm->state, sizeof(LitString*), lit_vallist_count(vl)+1);
-    for(i = 0; i < lit_vallist_count(vl); i++)
+    vl = &tin_value_asarray(instance)->list;
+    //TinString* strings[vl->count];
+    strings = TIN_ALLOCATE(vm->state, sizeof(TinString*), tin_vallist_count(vl)+1);
+    for(i = 0; i < tin_vallist_count(vl); i++)
     {
-        string = lit_value_tostring(vm->state, lit_vallist_get(vl, i));
+        string = tin_value_tostring(vm->state, tin_vallist_get(vl, i));
         strings[i] = string;
-        length += lit_string_getlength(string);
+        length += tin_string_getlength(string);
         if(joinee != NULL)
         {
-            length += lit_string_getlength(joinee);
+            length += tin_string_getlength(joinee);
         }
     }
     jlen = 0;
@@ -575,14 +582,14 @@ static LitValue objfn_array_join(LitVM* vm, LitValue instance, size_t argc, LitV
     chars = sdsMakeRoomFor(chars, length + 1);
     if(joinee != NULL)
     {
-        jlen = lit_string_getlength(joinee);
+        jlen = tin_string_getlength(joinee);
     }
-    for(i = 0; i < lit_vallist_count(vl); i++)
+    for(i = 0; i < tin_vallist_count(vl); i++)
     {
         string = strings[i];
-        memcpy(chars + index, string->chars, lit_string_getlength(string));
-        chars = sdscatlen(chars, string->chars, lit_string_getlength(string));
-        index += lit_string_getlength(string);
+        memcpy(chars + index, string->chars, tin_string_getlength(string));
+        chars = sdscatlen(chars, string->chars, tin_string_getlength(string));
+        index += tin_string_getlength(string);
         if(joinee != NULL)
         {
             
@@ -593,21 +600,21 @@ static LitValue objfn_array_join(LitVM* vm, LitValue instance, size_t argc, LitV
             index += jlen;
         }
     }
-    LIT_FREE(vm->state, sizeof(LitString*), strings);
-    return lit_value_fromobject(lit_string_take(vm->state, chars, length, true));
+    TIN_FREE(vm->state, sizeof(TinString*), strings);
+    return tin_value_fromobject(tin_string_take(vm->state, chars, length, true));
 }
 
-static LitValue objfn_array_sort(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_sort(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    LitValList* vl;
+    TinValList* vl;
     (void)vl;
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    vl = &lit_value_asarray(instance)->list;
+    vl = &tin_value_asarray(instance)->list;
     /*
-    if(argc == 1 && lit_value_iscallablefunction(argv[0]))
+    if(argc == 1 && tin_value_iscallablefunction(argv[0]))
     {
         util_custom_quick_sort(vm, vl->values, vl->count, argv[0]);
     }
@@ -619,92 +626,92 @@ static LitValue objfn_array_sort(LitVM* vm, LitValue instance, size_t argc, LitV
     return instance;
 }
 
-static LitValue objfn_array_clone(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_clone(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
     size_t i;
-    LitState* state;
-    LitValList* vl;
-    LitArray* array;
-    LitValList* newvl;
+    TinState* state;
+    TinValList* vl;
+    TinArray* array;
+    TinValList* newvl;
     state = vm->state;
-    vl = &lit_value_asarray(instance)->list;
-    array = lit_create_array(state);
+    vl = &tin_value_asarray(instance)->list;
+    array = tin_create_array(state);
     newvl = &array->list;
-    lit_vallist_ensuresize(state, newvl, lit_vallist_count(vl));
-    // lit_vallist_ensuresize sets the count to max of previous count (0 in this case) and new count, so we have to reset it
-    lit_vallist_setcount(newvl, 0);
-    for(i = 0; i < lit_vallist_count(vl); i++)
+    tin_vallist_ensuresize(state, newvl, tin_vallist_count(vl));
+    // tin_vallist_ensuresize sets the count to max of previous count (0 in this case) and new count, so we have to reset it
+    tin_vallist_setcount(newvl, 0);
+    for(i = 0; i < tin_vallist_count(vl); i++)
     {
-        lit_vallist_push(state, newvl, lit_vallist_get(vl, i));
+        tin_vallist_push(state, newvl, tin_vallist_get(vl, i));
     }
-    return lit_value_fromobject(array);
+    return tin_value_fromobject(array);
 }
 
-static LitValue objfn_array_tostring(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    LitArray* self;
-    LitWriter wr;
-    self = lit_value_asarray(instance);
-    lit_writer_init_string(vm->state, &wr);
-    lit_towriter_array(vm->state, &wr, self, lit_array_count(self));
-    return lit_value_fromobject(lit_writer_get_string(&wr));
+    TinArray* self;
+    TinWriter wr;
+    self = tin_value_asarray(instance);
+    tin_writer_init_string(vm->state, &wr);
+    tin_towriter_array(vm->state, &wr, self, tin_array_count(self));
+    return tin_value_fromobject(tin_writer_get_string(&wr));
 }
 
-static LitValue objfn_array_pop(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_pop(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
-    LitArray* self;
-    self = lit_value_asarray(instance);
-    return lit_array_pop(vm->state, self);
+    TinArray* self;
+    self = tin_value_asarray(instance);
+    return tin_array_pop(vm->state, self);
 }
 
 
-static LitValue objfn_array_length(LitVM* vm, LitValue instance, size_t argc, LitValue* argv)
+static TinValue objfn_array_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
     (void)argv;
-    return lit_value_makenumber(vm->state, lit_vallist_count(&lit_value_asarray(instance)->list));
+    return tin_value_makefixednumber(vm->state, tin_vallist_count(&tin_value_asarray(instance)->list));
 }
 
-void lit_open_array_library(LitState* state)
+void tin_open_array_library(TinState* state)
 {
-    LitClass* klass;
-    klass = lit_create_classobject(state, "Array");
+    TinClass* klass;
+    klass = tin_create_classobject(state, "Array");
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
-        lit_class_bindconstructor(state, klass, objfn_array_constructor);
-        lit_class_bindmethod(state, klass, "[]", objfn_array_subscript);
-        lit_class_bindmethod(state, klass, "==", objfn_array_compare);
-        lit_class_bindmethod(state, klass, "add", objfn_array_add);
-        lit_class_bindmethod(state, klass, "push", objfn_array_add);
-        lit_class_bindmethod(state, klass, "insert", objfn_array_insert);
-        lit_class_bindmethod(state, klass, "slice", objfn_array_slice);
-        lit_class_bindmethod(state, klass, "addAll", objfn_array_addall);
-        lit_class_bindmethod(state, klass, "remove", objfn_array_remove);
-        lit_class_bindmethod(state, klass, "removeAt", objfn_array_removeat);
-        lit_class_bindmethod(state, klass, "indexOf", objfn_array_indexof);
-        lit_class_bindmethod(state, klass, "contains", objfn_array_contains);
-        lit_class_bindmethod(state, klass, "clear", objfn_array_clear);
-        lit_class_bindmethod(state, klass, "iterator", objfn_array_iterator);
-        lit_class_bindmethod(state, klass, "iteratorValue", objfn_array_iteratorvalue);
-        lit_class_bindmethod(state, klass, "join", objfn_array_join);
-        lit_class_bindmethod(state, klass, "sort", objfn_array_sort);
-        lit_class_bindmethod(state, klass, "clone", objfn_array_clone);
-        lit_class_bindmethod(state, klass, "toString", objfn_array_tostring);
-        lit_class_bindmethod(state, klass, "pop", objfn_array_pop);
-        lit_class_bindgetset(state, klass, "length", objfn_array_length, NULL, false);
-        state->arrayvalue_class = klass;
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
+        tin_class_bindconstructor(state, klass, objfn_array_constructor);
+        tin_class_bindmethod(state, klass, "[]", objfn_array_subscript);
+        tin_class_bindmethod(state, klass, "==", objfn_array_compare);
+        tin_class_bindmethod(state, klass, "add", objfn_array_add);
+        tin_class_bindmethod(state, klass, "push", objfn_array_add);
+        tin_class_bindmethod(state, klass, "insert", objfn_array_insert);
+        tin_class_bindmethod(state, klass, "slice", objfn_array_slice);
+        tin_class_bindmethod(state, klass, "addAll", objfn_array_addall);
+        tin_class_bindmethod(state, klass, "remove", objfn_array_remove);
+        tin_class_bindmethod(state, klass, "removeAt", objfn_array_removeat);
+        tin_class_bindmethod(state, klass, "indexOf", objfn_array_indexof);
+        tin_class_bindmethod(state, klass, "contains", objfn_array_contains);
+        tin_class_bindmethod(state, klass, "clear", objfn_array_clear);
+        tin_class_bindmethod(state, klass, "iterator", objfn_array_iterator);
+        tin_class_bindmethod(state, klass, "iteratorValue", objfn_array_iteratorvalue);
+        tin_class_bindmethod(state, klass, "join", objfn_array_join);
+        tin_class_bindmethod(state, klass, "sort", objfn_array_sort);
+        tin_class_bindmethod(state, klass, "clone", objfn_array_clone);
+        tin_class_bindmethod(state, klass, "toString", objfn_array_tostring);
+        tin_class_bindmethod(state, klass, "pop", objfn_array_pop);
+        tin_class_bindgetset(state, klass, "length", objfn_array_length, NULL, false);
+        state->primarrayclass = klass;
     }
-    lit_state_setglobal(state, klass->name, lit_value_fromobject(klass));
+    tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
     if(klass->super == NULL)
     {
-        lit_class_inheritfrom(state, klass, state->objectvalue_class);
+        tin_class_inheritfrom(state, klass, state->primobjectclass);
     }
 }
 

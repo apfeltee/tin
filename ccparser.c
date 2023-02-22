@@ -4,214 +4,214 @@
 #include "priv.h"
 
 static jmp_buf prs_jmpbuffer;
-static LitAstParseRule rules[LITTOK_EOF + 1];
+static TinAstParseRule rules[TINTOK_EOF + 1];
 
 
-static LitAstTokType operators[]=
+static TinAstTokType operators[]=
 {
-    LITTOK_PLUS, LITTOK_MINUS, LITTOK_STAR, LITTOK_PERCENT, LITTOK_SLASH,
-    LITTOK_SHARP, LITTOK_BANG, LITTOK_LESS, LITTOK_LESS_EQUAL, LITTOK_GREATER,
-    LITTOK_GREATER_EQUAL, LITTOK_EQUAL_EQUAL, LITTOK_LEFT_BRACKET, LITTOK_EOF
+    TINTOK_PLUS, TINTOK_MINUS, TINTOK_STAR, TINTOK_PERCENT, TINTOK_SLASH,
+    TINTOK_SHARP, TINTOK_BANG, TINTOK_LESS, TINTOK_LESS_EQUAL, TINTOK_GREATER,
+    TINTOK_GREATER_EQUAL, TINTOK_EQUAL_EQUAL, TINTOK_LEFT_BRACKET, TINTOK_EOF
 };
 
 
 static bool didsetuprules;
-static void lit_astparser_setuprules();
-static void lit_astparser_sync(LitAstParser* parser);
+static void tin_astparser_setuprules();
+static void tin_astparser_sync(TinAstParser* parser);
 
-static LitAstExpression *lit_astparser_parseblock(LitAstParser *parser);
-static LitAstExpression *lit_astparser_parseprecedence(LitAstParser *parser, LitAstPrecedence precedence, bool err, bool ignsemi);
-static LitAstExpression *lit_astparser_parselambda(LitAstParser *parser, LitAstFunctionExpr *lambda);
-static void lit_astparser_parseparameters(LitAstParser *parser, LitAstParamList *parameters);
-static LitAstExpression *lit_astparser_parseexpression(LitAstParser *parser, bool ignsemi);
-static LitAstExpression *lit_astparser_parsevar_declaration(LitAstParser *parser, bool ignsemi);
-static LitAstExpression *lit_astparser_parseif(LitAstParser *parser);
-static LitAstExpression *lit_astparser_parsefor(LitAstParser *parser);
-static LitAstExpression *lit_astparser_parsewhile(LitAstParser *parser);
-static LitAstExpression *lit_astparser_parsereturn(LitAstParser *parser);
-static LitAstExpression *lit_astparser_parsefield(LitAstParser *parser, LitString *name, bool is_static);
-static LitAstExpression *lit_astparser_parsemethod(LitAstParser *parser, bool is_static);
-static LitAstExpression *lit_astparser_parseclass(LitAstParser *parser);
-static LitAstExpression *lit_astparser_parsestatement(LitAstParser *parser);
-static LitAstExpression *lit_astparser_parsedeclaration(LitAstParser *parser);
+static TinAstExpression *tin_astparser_parseblock(TinAstParser *parser);
+static TinAstExpression *tin_astparser_parseprecedence(TinAstParser *parser, TinAstPrecedence precedence, bool err, bool ignsemi);
+static TinAstExpression *tin_astparser_parselambda(TinAstParser *parser, TinAstFunctionExpr *lambda);
+static void tin_astparser_parseparameters(TinAstParser *parser, TinAstParamList *parameters);
+static TinAstExpression *tin_astparser_parseexpression(TinAstParser *parser, bool ignsemi);
+static TinAstExpression *tin_astparser_parsevar_declaration(TinAstParser *parser, bool ignsemi);
+static TinAstExpression *tin_astparser_parseif(TinAstParser *parser);
+static TinAstExpression *tin_astparser_parsefor(TinAstParser *parser);
+static TinAstExpression *tin_astparser_parsewhile(TinAstParser *parser);
+static TinAstExpression *tin_astparser_parsereturn(TinAstParser *parser);
+static TinAstExpression *tin_astparser_parsefield(TinAstParser *parser, TinString *name, bool isstatic);
+static TinAstExpression *tin_astparser_parsemethod(TinAstParser *parser, bool isstatic);
+static TinAstExpression *tin_astparser_parseclass(TinAstParser *parser);
+static TinAstExpression *tin_astparser_parsestatement(TinAstParser *parser);
+static TinAstExpression *tin_astparser_parsedeclaration(TinAstParser *parser);
 
-static LitAstExpression *lit_astparser_rulenumber(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulegroupingorlambda(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulecall(LitAstParser *parser, LitAstExpression *prev, bool canassign);
-static LitAstExpression *lit_astparser_ruleunary(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulebinary(LitAstParser *parser, LitAstExpression *prev, bool canassign);
-static LitAstExpression *lit_astparser_ruleand(LitAstParser *parser, LitAstExpression *prev, bool canassign);
-static LitAstExpression *lit_astparser_ruleor(LitAstParser *parser, LitAstExpression *prev, bool canassign);
-static LitAstExpression *lit_astparser_rulenull_filter(LitAstParser *parser, LitAstExpression *prev, bool canassign);
-static LitAstExpression *lit_astparser_rulecompound(LitAstParser *parser, LitAstExpression *prev, bool canassign);
-static LitAstExpression *lit_astparser_ruleliteral(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulestring(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_ruleinterpolation(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_ruleobject(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulevarexprbase(LitAstParser *parser, bool canassign, bool isnew);
-static LitAstExpression *lit_astparser_rulevarexpr(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulenewexpr(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_ruledot(LitAstParser *parser, LitAstExpression *previous, bool canassign);
-static LitAstExpression *lit_astparser_rulerange(LitAstParser *parser, LitAstExpression *previous, bool canassign);
-static LitAstExpression *lit_astparser_ruleternary(LitAstParser *parser, LitAstExpression *previous, bool canassign);
-static LitAstExpression *lit_astparser_rulearray(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulesubscript(LitAstParser *parser, LitAstExpression *previous, bool canassign);
-static LitAstExpression *lit_astparser_rulethis(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulesuper(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulereference(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulenothing(LitAstParser *parser, bool canassign);
-static LitAstExpression *lit_astparser_rulefunction(LitAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulenumber(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulegroupingorlambda(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulecall(TinAstParser *parser, TinAstExpression *prev, bool canassign);
+static TinAstExpression *tin_astparser_ruleunary(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulebinary(TinAstParser *parser, TinAstExpression *prev, bool canassign);
+static TinAstExpression *tin_astparser_ruleand(TinAstParser *parser, TinAstExpression *prev, bool canassign);
+static TinAstExpression *tin_astparser_ruleor(TinAstParser *parser, TinAstExpression *prev, bool canassign);
+static TinAstExpression *tin_astparser_rulenull_filter(TinAstParser *parser, TinAstExpression *prev, bool canassign);
+static TinAstExpression *tin_astparser_rulecompound(TinAstParser *parser, TinAstExpression *prev, bool canassign);
+static TinAstExpression *tin_astparser_ruleliteral(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulestring(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_ruleinterpolation(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_ruleobject(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulevarexprbase(TinAstParser *parser, bool canassign, bool isnew);
+static TinAstExpression *tin_astparser_rulevarexpr(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulenewexpr(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_ruledot(TinAstParser *parser, TinAstExpression *previous, bool canassign);
+static TinAstExpression *tin_astparser_rulerange(TinAstParser *parser, TinAstExpression *previous, bool canassign);
+static TinAstExpression *tin_astparser_ruleternary(TinAstParser *parser, TinAstExpression *previous, bool canassign);
+static TinAstExpression *tin_astparser_rulearray(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulesubscript(TinAstParser *parser, TinAstExpression *previous, bool canassign);
+static TinAstExpression *tin_astparser_rulethis(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulesuper(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulereference(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulenothing(TinAstParser *parser, bool canassign);
+static TinAstExpression *tin_astparser_rulefunction(TinAstParser *parser, bool canassign);
 
 
-static void lit_astparser_setuprules()
+static void tin_astparser_setuprules()
 {
-    rules[LITTOK_LEFT_PAREN] = (LitAstParseRule){ lit_astparser_rulegroupingorlambda, lit_astparser_rulecall, LITPREC_CALL };
-    rules[LITTOK_PLUS] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_TERM };
-    rules[LITTOK_MINUS] = (LitAstParseRule){ lit_astparser_ruleunary, lit_astparser_rulebinary, LITPREC_TERM };
-    rules[LITTOK_BANG] = (LitAstParseRule){ lit_astparser_ruleunary, lit_astparser_rulebinary, LITPREC_TERM };
-    rules[LITTOK_STAR] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_FACTOR };
-    rules[LITTOK_STAR_STAR] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_FACTOR };
-    rules[LITTOK_SLASH] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_FACTOR };
-    rules[LITTOK_SHARP] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_FACTOR };
-    rules[LITTOK_STAR] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_FACTOR };
-    rules[LITTOK_STAR] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_FACTOR };
-    rules[LITTOK_BAR] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_BOR };
-    rules[LITTOK_AMPERSAND] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_BAND };
-    rules[LITTOK_TILDE] = (LitAstParseRule){ lit_astparser_ruleunary, NULL, LITPREC_UNARY };
-    rules[LITTOK_CARET] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_BOR };
-    rules[LITTOK_LESS_LESS] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_SHIFT };
-    rules[LITTOK_GREATER_GREATER] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_SHIFT };
-    rules[LITTOK_PERCENT] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_FACTOR };
-    rules[LITTOK_IS] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_IS };
-    rules[LITTOK_NUMBER] = (LitAstParseRule){ lit_astparser_rulenumber, NULL, LITPREC_NONE };
-    rules[LITTOK_TRUE] = (LitAstParseRule){ lit_astparser_ruleliteral, NULL, LITPREC_NONE };
-    rules[LITTOK_FALSE] = (LitAstParseRule){ lit_astparser_ruleliteral, NULL, LITPREC_NONE };
-    rules[LITTOK_NULL] = (LitAstParseRule){ lit_astparser_ruleliteral, NULL, LITPREC_NONE };
-    rules[LITTOK_BANG_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_EQUALITY };
-    rules[LITTOK_EQUAL_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_EQUALITY };
-    rules[LITTOK_GREATER] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_COMPARISON };
-    rules[LITTOK_GREATER_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_COMPARISON };
-    rules[LITTOK_LESS] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_COMPARISON };
-    rules[LITTOK_LESS_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulebinary, LITPREC_COMPARISON };
-    rules[LITTOK_STRING] = (LitAstParseRule){ lit_astparser_rulestring, NULL, LITPREC_NONE };
-    rules[LITTOK_INTERPOLATION] = (LitAstParseRule){ lit_astparser_ruleinterpolation, NULL, LITPREC_NONE };
-    rules[LITTOK_IDENTIFIER] = (LitAstParseRule){ lit_astparser_rulevarexpr, NULL, LITPREC_NONE };
-    rules[LITTOK_NEW] = (LitAstParseRule){ lit_astparser_rulenewexpr, NULL, LITPREC_NONE };
-    rules[LITTOK_PLUS_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_MINUS_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_STAR_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_SLASH_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_SHARP_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_PERCENT_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_CARET_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_BAR_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_AMPERSAND_EQUAL] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_PLUS_PLUS] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_MINUS_MINUS] = (LitAstParseRule){ NULL, lit_astparser_rulecompound, LITPREC_COMPOUND };
-    rules[LITTOK_AMPERSAND_AMPERSAND] = (LitAstParseRule){ NULL, lit_astparser_ruleand, LITPREC_AND };
-    rules[LITTOK_BAR_BAR] = (LitAstParseRule){ NULL, lit_astparser_ruleor, LITPREC_AND };
-    rules[LITTOK_QUESTION_QUESTION] = (LitAstParseRule){ NULL, lit_astparser_rulenull_filter, LITPREC_NULL };
-    rules[LITTOK_DOT] = (LitAstParseRule){ NULL, lit_astparser_ruledot, LITPREC_CALL };
-    rules[LITTOK_SMALL_ARROW] = (LitAstParseRule){ NULL, lit_astparser_ruledot, LITPREC_CALL };
-    rules[LITTOK_DOT_DOT] = (LitAstParseRule){ NULL, lit_astparser_rulerange, LITPREC_RANGE };
-    rules[LITTOK_DOT_DOT_DOT] = (LitAstParseRule){ lit_astparser_rulevarexpr, NULL, LITPREC_ASSIGNMENT };
-    rules[LITTOK_LEFT_BRACKET] = (LitAstParseRule){ lit_astparser_rulearray, lit_astparser_rulesubscript, LITPREC_NONE };
-    rules[LITTOK_LEFT_BRACE] = (LitAstParseRule){ lit_astparser_ruleobject, NULL, LITPREC_NONE };
-    rules[LITTOK_THIS] = (LitAstParseRule){ lit_astparser_rulethis, NULL, LITPREC_NONE };
-    rules[LITTOK_SUPER] = (LitAstParseRule){ lit_astparser_rulesuper, NULL, LITPREC_NONE };
-    rules[LITTOK_QUESTION] = (LitAstParseRule){ NULL, lit_astparser_ruleternary, LITPREC_EQUALITY };
-    rules[LITTOK_REF] = (LitAstParseRule){ lit_astparser_rulereference, NULL, LITPREC_NONE };
-    rules[LITTOK_FUNCTION] = (LitAstParseRule){lit_astparser_rulefunction, NULL, LITPREC_NONE};
-    rules[LITTOK_SEMICOLON] = (LitAstParseRule){lit_astparser_rulenothing, NULL, LITPREC_NONE};
+    rules[TINTOK_LEFT_PAREN] = (TinAstParseRule){ tin_astparser_rulegroupingorlambda, tin_astparser_rulecall, TINPREC_CALL };
+    rules[TINTOK_PLUS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_TERM };
+    rules[TINTOK_MINUS] = (TinAstParseRule){ tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM };
+    rules[TINTOK_BANG] = (TinAstParseRule){ tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM };
+    rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_STAR_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_SLASH] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_SHARP] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_BAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BOR };
+    rules[TINTOK_AMPERSAND] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BAND };
+    rules[TINTOK_TILDE] = (TinAstParseRule){ tin_astparser_ruleunary, NULL, TINPREC_UNARY };
+    rules[TINTOK_CARET] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BOR };
+    rules[TINTOK_LESS_LESS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
+    rules[TINTOK_GREATER_GREATER] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
+    rules[TINTOK_PERCENT] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_IS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_IS };
+    rules[TINTOK_NUMBER] = (TinAstParseRule){ tin_astparser_rulenumber, NULL, TINPREC_NONE };
+    rules[TINTOK_TRUE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
+    rules[TINTOK_FALSE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
+    rules[TINTOK_NULL] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
+    rules[TINTOK_BANG_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
+    rules[TINTOK_EQUAL_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
+    rules[TINTOK_GREATER] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_GREATER_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_LESS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_LESS_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_STRING] = (TinAstParseRule){ tin_astparser_rulestring, NULL, TINPREC_NONE };
+    rules[TINTOK_INTERPOLATION] = (TinAstParseRule){ tin_astparser_ruleinterpolation, NULL, TINPREC_NONE };
+    rules[TINTOK_IDENTIFIER] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_NONE };
+    rules[TINTOK_NEW] = (TinAstParseRule){ tin_astparser_rulenewexpr, NULL, TINPREC_NONE };
+    rules[TINTOK_PLUS_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_MINUS_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_STAR_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_SLASH_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_SHARP_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_PERCENT_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_CARET_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_BAR_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_AMPERSAND_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_PLUS_PLUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_MINUS_MINUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_AMPERSAND_AMPERSAND] = (TinAstParseRule){ NULL, tin_astparser_ruleand, TINPREC_AND };
+    rules[TINTOK_BAR_BAR] = (TinAstParseRule){ NULL, tin_astparser_ruleor, TINPREC_AND };
+    rules[TINTOK_QUESTION_QUESTION] = (TinAstParseRule){ NULL, tin_astparser_rulenull_filter, TINPREC_NULL };
+    rules[TINTOK_DOT] = (TinAstParseRule){ NULL, tin_astparser_ruledot, TINPREC_CALL };
+    rules[TINTOK_SMALL_ARROW] = (TinAstParseRule){ NULL, tin_astparser_ruledot, TINPREC_CALL };
+    rules[TINTOK_DOT_DOT] = (TinAstParseRule){ NULL, tin_astparser_rulerange, TINPREC_RANGE };
+    rules[TINTOK_DOT_DOT_DOT] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_ASSIGNMENT };
+    rules[TINTOK_LEFT_BRACKET] = (TinAstParseRule){ tin_astparser_rulearray, tin_astparser_rulesubscript, TINPREC_NONE };
+    rules[TINTOK_LEFT_BRACE] = (TinAstParseRule){ tin_astparser_ruleobject, NULL, TINPREC_NONE };
+    rules[TINTOK_THIS] = (TinAstParseRule){ tin_astparser_rulethis, NULL, TINPREC_NONE };
+    rules[TINTOK_SUPER] = (TinAstParseRule){ tin_astparser_rulesuper, NULL, TINPREC_NONE };
+    rules[TINTOK_QUESTION] = (TinAstParseRule){ NULL, tin_astparser_ruleternary, TINPREC_EQUALITY };
+    rules[TINTOK_REF] = (TinAstParseRule){ tin_astparser_rulereference, NULL, TINPREC_NONE };
+    rules[TINTOK_FUNCTION] = (TinAstParseRule){tin_astparser_rulefunction, NULL, TINPREC_NONE};
+    rules[TINTOK_SEMICOLON] = (TinAstParseRule){tin_astparser_rulenothing, NULL, TINPREC_NONE};
 }
 
 
-const char* lit_astparser_token2name(int t)
+const char* tin_astparser_token2name(int t)
 {
     switch(t)
     {
-        case LITTOK_NEW_LINE: return "LITTOK_NEW_LINE";
-        case LITTOK_LEFT_PAREN: return "LITTOK_LEFT_PAREN";
-        case LITTOK_RIGHT_PAREN: return "LITTOK_RIGHT_PAREN";
-        case LITTOK_LEFT_BRACE: return "LITTOK_LEFT_BRACE";
-        case LITTOK_RIGHT_BRACE: return "LITTOK_RIGHT_BRACE";
-        case LITTOK_LEFT_BRACKET: return "LITTOK_LEFT_BRACKET";
-        case LITTOK_RIGHT_BRACKET: return "LITTOK_RIGHT_BRACKET";
-        case LITTOK_COMMA: return "LITTOK_COMMA";
-        case LITTOK_SEMICOLON: return "LITTOK_SEMICOLON";
-        case LITTOK_COLON: return "LITTOK_COLON";
-        case LITTOK_BAR_EQUAL: return "LITTOK_BAR_EQUAL";
-        case LITTOK_BAR: return "LITTOK_BAR";
-        case LITTOK_BAR_BAR: return "LITTOK_BAR_BAR";
-        case LITTOK_AMPERSAND_EQUAL: return "LITTOK_AMPERSAND_EQUAL";
-        case LITTOK_AMPERSAND: return "LITTOK_AMPERSAND";
-        case LITTOK_AMPERSAND_AMPERSAND: return "LITTOK_AMPERSAND_AMPERSAND";
-        case LITTOK_BANG: return "LITTOK_BANG";
-        case LITTOK_BANG_EQUAL: return "LITTOK_BANG_EQUAL";
-        case LITTOK_EQUAL: return "LITTOK_EQUAL";
-        case LITTOK_EQUAL_EQUAL: return "LITTOK_EQUAL_EQUAL";
-        case LITTOK_GREATER: return "LITTOK_GREATER";
-        case LITTOK_GREATER_EQUAL: return "LITTOK_GREATER_EQUAL";
-        case LITTOK_GREATER_GREATER: return "LITTOK_GREATER_GREATER";
-        case LITTOK_LESS: return "LITTOK_LESS";
-        case LITTOK_LESS_EQUAL: return "LITTOK_LESS_EQUAL";
-        case LITTOK_LESS_LESS: return "LITTOK_LESS_LESS";
-        case LITTOK_PLUS: return "LITTOK_PLUS";
-        case LITTOK_PLUS_EQUAL: return "LITTOK_PLUS_EQUAL";
-        case LITTOK_PLUS_PLUS: return "LITTOK_PLUS_PLUS";
-        case LITTOK_MINUS: return "LITTOK_MINUS";
-        case LITTOK_MINUS_EQUAL: return "LITTOK_MINUS_EQUAL";
-        case LITTOK_MINUS_MINUS: return "LITTOK_MINUS_MINUS";
-        case LITTOK_STAR: return "LITTOK_STAR";
-        case LITTOK_STAR_EQUAL: return "LITTOK_STAR_EQUAL";
-        case LITTOK_STAR_STAR: return "LITTOK_STAR_STAR";
-        case LITTOK_SLASH: return "LITTOK_SLASH";
-        case LITTOK_SLASH_EQUAL: return "LITTOK_SLASH_EQUAL";
-        case LITTOK_QUESTION: return "LITTOK_QUESTION";
-        case LITTOK_QUESTION_QUESTION: return "LITTOK_QUESTION_QUESTION";
-        case LITTOK_PERCENT: return "LITTOK_PERCENT";
-        case LITTOK_PERCENT_EQUAL: return "LITTOK_PERCENT_EQUAL";
-        case LITTOK_ARROW: return "LITTOK_ARROW";
-        case LITTOK_SMALL_ARROW: return "LITTOK_SMALL_ARROW";
-        case LITTOK_TILDE: return "LITTOK_TILDE";
-        case LITTOK_CARET: return "LITTOK_CARET";
-        case LITTOK_CARET_EQUAL: return "LITTOK_CARET_EQUAL";
-        case LITTOK_DOT: return "LITTOK_DOT";
-        case LITTOK_DOT_DOT: return "LITTOK_DOT_DOT";
-        case LITTOK_DOT_DOT_DOT: return "LITTOK_DOT_DOT_DOT";
-        case LITTOK_SHARP: return "LITTOK_SHARP";
-        case LITTOK_SHARP_EQUAL: return "LITTOK_SHARP_EQUAL";
-        case LITTOK_IDENTIFIER: return "LITTOK_IDENTIFIER";
-        case LITTOK_STRING: return "LITTOK_STRING";
-        case LITTOK_INTERPOLATION: return "LITTOK_INTERPOLATION";
-        case LITTOK_NUMBER: return "LITTOK_NUMBER";
-        case LITTOK_CLASS: return "LITTOK_CLASS";
-        case LITTOK_ELSE: return "LITTOK_ELSE";
-        case LITTOK_FALSE: return "LITTOK_FALSE";
-        case LITTOK_FOR: return "LITTOK_FOR";
-        case LITTOK_FUNCTION: return "LITTOK_FUNCTION";
-        case LITTOK_IF: return "LITTOK_IF";
-        case LITTOK_NULL: return "LITTOK_NULL";
-        case LITTOK_RETURN: return "LITTOK_RETURN";
-        case LITTOK_SUPER: return "LITTOK_SUPER";
-        case LITTOK_THIS: return "LITTOK_THIS";
-        case LITTOK_TRUE: return "LITTOK_TRUE";
-        case LITTOK_VAR: return "LITTOK_VAR";
-        case LITTOK_WHILE: return "LITTOK_WHILE";
-        case LITTOK_CONTINUE: return "LITTOK_CONTINUE";
-        case LITTOK_BREAK: return "LITTOK_BREAK";
-        case LITTOK_NEW: return "LITTOK_NEW";
-        case LITTOK_EXPORT: return "LITTOK_EXPORT";
-        case LITTOK_IS: return "LITTOK_IS";
-        case LITTOK_STATIC: return "LITTOK_STATIC";
-        case LITTOK_OPERATOR: return "LITTOK_OPERATOR";
-        case LITTOK_GET: return "LITTOK_GET";
-        case LITTOK_SET: return "LITTOK_SET";
-        case LITTOK_IN: return "LITTOK_IN";
-        case LITTOK_CONST: return "LITTOK_CONST";
-        case LITTOK_REF: return "LITTOK_REF";
-        case LITTOK_ERROR: return "LITTOK_ERROR";
-        case LITTOK_EOF: return "LITTOK_EOF";
+        case TINTOK_NEW_LINE: return "TINTOK_NEW_LINE";
+        case TINTOK_LEFT_PAREN: return "TINTOK_LEFT_PAREN";
+        case TINTOK_RIGHT_PAREN: return "TINTOK_RIGHT_PAREN";
+        case TINTOK_LEFT_BRACE: return "TINTOK_LEFT_BRACE";
+        case TINTOK_RIGHT_BRACE: return "TINTOK_RIGHT_BRACE";
+        case TINTOK_LEFT_BRACKET: return "TINTOK_LEFT_BRACKET";
+        case TINTOK_RIGHT_BRACKET: return "TINTOK_RIGHT_BRACKET";
+        case TINTOK_COMMA: return "TINTOK_COMMA";
+        case TINTOK_SEMICOLON: return "TINTOK_SEMICOLON";
+        case TINTOK_COLON: return "TINTOK_COLON";
+        case TINTOK_BAR_EQUAL: return "TINTOK_BAR_EQUAL";
+        case TINTOK_BAR: return "TINTOK_BAR";
+        case TINTOK_BAR_BAR: return "TINTOK_BAR_BAR";
+        case TINTOK_AMPERSAND_EQUAL: return "TINTOK_AMPERSAND_EQUAL";
+        case TINTOK_AMPERSAND: return "TINTOK_AMPERSAND";
+        case TINTOK_AMPERSAND_AMPERSAND: return "TINTOK_AMPERSAND_AMPERSAND";
+        case TINTOK_BANG: return "TINTOK_BANG";
+        case TINTOK_BANG_EQUAL: return "TINTOK_BANG_EQUAL";
+        case TINTOK_EQUAL: return "TINTOK_EQUAL";
+        case TINTOK_EQUAL_EQUAL: return "TINTOK_EQUAL_EQUAL";
+        case TINTOK_GREATER: return "TINTOK_GREATER";
+        case TINTOK_GREATER_EQUAL: return "TINTOK_GREATER_EQUAL";
+        case TINTOK_GREATER_GREATER: return "TINTOK_GREATER_GREATER";
+        case TINTOK_LESS: return "TINTOK_LESS";
+        case TINTOK_LESS_EQUAL: return "TINTOK_LESS_EQUAL";
+        case TINTOK_LESS_LESS: return "TINTOK_LESS_LESS";
+        case TINTOK_PLUS: return "TINTOK_PLUS";
+        case TINTOK_PLUS_EQUAL: return "TINTOK_PLUS_EQUAL";
+        case TINTOK_PLUS_PLUS: return "TINTOK_PLUS_PLUS";
+        case TINTOK_MINUS: return "TINTOK_MINUS";
+        case TINTOK_MINUS_EQUAL: return "TINTOK_MINUS_EQUAL";
+        case TINTOK_MINUS_MINUS: return "TINTOK_MINUS_MINUS";
+        case TINTOK_STAR: return "TINTOK_STAR";
+        case TINTOK_STAR_EQUAL: return "TINTOK_STAR_EQUAL";
+        case TINTOK_STAR_STAR: return "TINTOK_STAR_STAR";
+        case TINTOK_SLASH: return "TINTOK_SLASH";
+        case TINTOK_SLASH_EQUAL: return "TINTOK_SLASH_EQUAL";
+        case TINTOK_QUESTION: return "TINTOK_QUESTION";
+        case TINTOK_QUESTION_QUESTION: return "TINTOK_QUESTION_QUESTION";
+        case TINTOK_PERCENT: return "TINTOK_PERCENT";
+        case TINTOK_PERCENT_EQUAL: return "TINTOK_PERCENT_EQUAL";
+        case TINTOK_ARROW: return "TINTOK_ARROW";
+        case TINTOK_SMALL_ARROW: return "TINTOK_SMALL_ARROW";
+        case TINTOK_TILDE: return "TINTOK_TILDE";
+        case TINTOK_CARET: return "TINTOK_CARET";
+        case TINTOK_CARET_EQUAL: return "TINTOK_CARET_EQUAL";
+        case TINTOK_DOT: return "TINTOK_DOT";
+        case TINTOK_DOT_DOT: return "TINTOK_DOT_DOT";
+        case TINTOK_DOT_DOT_DOT: return "TINTOK_DOT_DOT_DOT";
+        case TINTOK_SHARP: return "TINTOK_SHARP";
+        case TINTOK_SHARP_EQUAL: return "TINTOK_SHARP_EQUAL";
+        case TINTOK_IDENTIFIER: return "TINTOK_IDENTIFIER";
+        case TINTOK_STRING: return "TINTOK_STRING";
+        case TINTOK_INTERPOLATION: return "TINTOK_INTERPOLATION";
+        case TINTOK_NUMBER: return "TINTOK_NUMBER";
+        case TINTOK_CLASS: return "TINTOK_CLASS";
+        case TINTOK_ELSE: return "TINTOK_ELSE";
+        case TINTOK_FALSE: return "TINTOK_FALSE";
+        case TINTOK_FOR: return "TINTOK_FOR";
+        case TINTOK_FUNCTION: return "TINTOK_FUNCTION";
+        case TINTOK_IF: return "TINTOK_IF";
+        case TINTOK_NULL: return "TINTOK_NULL";
+        case TINTOK_RETURN: return "TINTOK_RETURN";
+        case TINTOK_SUPER: return "TINTOK_SUPER";
+        case TINTOK_THIS: return "TINTOK_THIS";
+        case TINTOK_TRUE: return "TINTOK_TRUE";
+        case TINTOK_VAR: return "TINTOK_VAR";
+        case TINTOK_WHILE: return "TINTOK_WHILE";
+        case TINTOK_CONTINUE: return "TINTOK_CONTINUE";
+        case TINTOK_BREAK: return "TINTOK_BREAK";
+        case TINTOK_NEW: return "TINTOK_NEW";
+        case TINTOK_EXPORT: return "TINTOK_EXPORT";
+        case TINTOK_IS: return "TINTOK_IS";
+        case TINTOK_STATIC: return "TINTOK_STATIC";
+        case TINTOK_OPERATOR: return "TINTOK_OPERATOR";
+        case TINTOK_GET: return "TINTOK_GET";
+        case TINTOK_SET: return "TINTOK_SET";
+        case TINTOK_IN: return "TINTOK_IN";
+        case TINTOK_CONST: return "TINTOK_CONST";
+        case TINTOK_REF: return "TINTOK_REF";
+        case TINTOK_ERROR: return "TINTOK_ERROR";
+        case TINTOK_EOF: return "TINTOK_EOF";
         default:
             break;
     }
@@ -219,125 +219,125 @@ const char* lit_astparser_token2name(int t)
 }
 
 
-static void lit_astparser_initcompiler(LitAstParser* parser, LitAstCompiler* compiler)
+static void tin_astparser_initcompiler(TinAstParser* parser, TinAstCompiler* compiler)
 {
     compiler->scope_depth = 0;
     compiler->function = NULL;
-    compiler->enclosing = (struct LitAstCompiler*)parser->compiler;
+    compiler->enclosing = (struct TinAstCompiler*)parser->compiler;
 
     parser->compiler = compiler;
 }
 
-static void lit_astparser_endcompiler(LitAstParser* parser, LitAstCompiler* compiler)
+static void tin_astparser_endcompiler(TinAstParser* parser, TinAstCompiler* compiler)
 {
-    parser->compiler = (LitAstCompiler*)compiler->enclosing;
+    parser->compiler = (TinAstCompiler*)compiler->enclosing;
 }
 
-static void lit_astparser_beginscope(LitAstParser* parser)
+static void tin_astparser_beginscope(TinAstParser* parser)
 {
     parser->compiler->scope_depth++;
 }
 
-static void lit_astparser_endscope(LitAstParser* parser)
+static void tin_astparser_endscope(TinAstParser* parser)
 {
     parser->compiler->scope_depth--;
 }
 
-static LitAstParseRule* lit_astparser_getrule(LitAstTokType type)
+static TinAstParseRule* tin_astparser_getrule(TinAstTokType type)
 {
     return &rules[type];
 }
 
-static inline bool prs_is_at_end(LitAstParser* parser)
+static inline bool prs_is_at_end(TinAstParser* parser)
 {
-    return parser->current.type == LITTOK_EOF;
+    return parser->current.type == TINTOK_EOF;
 }
 
-void lit_astparser_init(LitState* state, LitAstParser* parser)
+void tin_astparser_init(TinState* state, TinAstParser* parser)
 {
     if(!didsetuprules)
     {
         didsetuprules = true;
-        lit_astparser_setuprules();
+        tin_astparser_setuprules();
     }
     parser->state = state;
-    parser->had_error = false;
+    parser->haderror = false;
     parser->panic_mode = false;
 }
 
-void lit_astparser_destroy(LitAstParser* parser)
+void tin_astparser_destroy(TinAstParser* parser)
 {
     (void)parser;
 }
 
-static void lit_astparser_raisestring(LitAstParser* parser, LitAstToken* token, const char* message)
+static void tin_astparser_raisestring(TinAstParser* parser, TinAstToken* token, const char* message)
 {
     (void)token;
     if(parser->panic_mode)
     {
         return;
     }
-    lit_state_raiseerror(parser->state, COMPILE_ERROR, message);
-    parser->had_error = true;
-    lit_astparser_sync(parser);
+    tin_state_raiseerror(parser->state, COMPILE_ERROR, message);
+    parser->haderror = true;
+    tin_astparser_sync(parser);
 }
 
-static void lit_astparser_raiseat(LitAstParser* parser, LitAstToken* token, const char* fmt, va_list args)
+static void tin_astparser_raiseat(TinAstParser* parser, TinAstToken* token, const char* fmt, va_list args)
 {
-    lit_astparser_raisestring(parser, token, lit_vformat_error(parser->state, token->line, fmt, args)->chars);
+    tin_astparser_raisestring(parser, token, tin_vformat_error(parser->state, token->line, fmt, args)->chars);
 }
 
-static void lit_astparser_raiseatcurrent(LitAstParser* parser, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    lit_astparser_raiseat(parser, &parser->current, fmt, args);
-    va_end(args);
-}
-
-static void lit_astparser_raiseerror(LitAstParser* parser, const char* fmt, ...)
+static void tin_astparser_raiseatcurrent(TinAstParser* parser, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    lit_astparser_raiseat(parser, &parser->previous, fmt, args);
+    tin_astparser_raiseat(parser, &parser->current, fmt, args);
     va_end(args);
 }
 
-static void lit_astparser_advance(LitAstParser* parser)
+static void tin_astparser_raiseerror(TinAstParser* parser, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    tin_astparser_raiseat(parser, &parser->previous, fmt, args);
+    va_end(args);
+}
+
+static void tin_astparser_advance(TinAstParser* parser)
 {
     parser->previous = parser->current;
 
     while(true)
     {
-        parser->current = lit_astlex_scantoken(parser->state->scanner);
-        if(parser->current.type != LITTOK_ERROR)
+        parser->current = tin_astlex_scantoken(parser->state->scanner);
+        if(parser->current.type != TINTOK_ERROR)
         {
             break;
         }
-        lit_astparser_raisestring(parser, &parser->current, parser->current.start);
+        tin_astparser_raisestring(parser, &parser->current, parser->current.start);
     }
 }
 
-static bool lit_astparser_check(LitAstParser* parser, LitAstTokType type)
+static bool tin_astparser_check(TinAstParser* parser, TinAstTokType type)
 {
     return parser->current.type == type;
 }
 
-static bool lit_astparser_match(LitAstParser* parser, LitAstTokType type)
+static bool tin_astparser_match(TinAstParser* parser, TinAstTokType type)
 {
     if(parser->current.type == type)
     {
-        lit_astparser_advance(parser);
+        tin_astparser_advance(parser);
         return true;
     }
     return false;
 }
 
-static bool lit_astparser_matchnewline(LitAstParser* parser)
+static bool tin_astparser_matchnewline(TinAstParser* parser)
 {
     while(true)
     {
-        if(!lit_astparser_match(parser, LITTOK_NEW_LINE))
+        if(!tin_astparser_match(parser, TINTOK_NEW_LINE))
         {
             return false;
         }
@@ -345,13 +345,13 @@ static bool lit_astparser_matchnewline(LitAstParser* parser)
     return true;
 }
 
-static void lit_astparser_ignorenewlines(LitAstParser* parser, bool checksemi)
+static void tin_astparser_ignorenewlines(TinAstParser* parser, bool checksemi)
 {
     (void)checksemi;
-    lit_astparser_matchnewline(parser);
+    tin_astparser_matchnewline(parser);
 }
 
-static void lit_astparser_consume(LitAstParser* parser, LitAstTokType type, const char* onerror)
+static void tin_astparser_consume(TinAstParser* parser, TinAstTokType type, const char* onerror)
 {
     bool line;
     size_t olen;
@@ -359,55 +359,55 @@ static void lit_astparser_consume(LitAstParser* parser, LitAstTokType type, cons
     const char* otext;
     if(parser->current.type == type)
     {
-        lit_astparser_advance(parser);
+        tin_astparser_advance(parser);
         return;
     }
-    //fprintf(stderr, "in lit_astparser_consume: failed?\n");
-    line = parser->previous.type == LITTOK_NEW_LINE;
+    //fprintf(stderr, "in tin_astparser_consume: failed?\n");
+    line = parser->previous.type == TINTOK_NEW_LINE;
     olen = (line ? 8 : parser->previous.length);
     otext = (line ? "new line" : parser->previous.start);
-    fmt = lit_format_error(parser->state, parser->current.line, "expected %s, got '%.*s'", onerror, olen, otext)->chars;
-    lit_astparser_raisestring(parser, &parser->current,fmt);
+    fmt = tin_format_error(parser->state, parser->current.line, "expected %s, got '%.*s'", onerror, olen, otext)->chars;
+    tin_astparser_raisestring(parser, &parser->current,fmt);
 }
 
-static LitAstExpression* lit_astparser_parseblock(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parseblock(TinAstParser* parser)
 {
-    LitAstBlockExpr* statement;
-    lit_astparser_beginscope(parser);
-    statement = lit_ast_make_blockexpr(parser->state, parser->previous.line);
+    TinAstBlockExpr* statement;
+    tin_astparser_beginscope(parser);
+    statement = tin_ast_make_blockexpr(parser->state, parser->previous.line);
     while(true)
     {
-        lit_astparser_ignorenewlines(parser, true);
-        if(lit_astparser_check(parser, LITTOK_RIGHT_BRACE) || lit_astparser_check(parser, LITTOK_EOF))
+        tin_astparser_ignorenewlines(parser, true);
+        if(tin_astparser_check(parser, TINTOK_RIGHT_BRACE) || tin_astparser_check(parser, TINTOK_EOF))
         {
             break;
         }
-        lit_astparser_ignorenewlines(parser, true);
-        lit_exprlist_push(parser->state, &statement->statements, lit_astparser_parsestatement(parser));
-        lit_astparser_ignorenewlines(parser, true);
+        tin_astparser_ignorenewlines(parser, true);
+        tin_exprlist_push(parser->state, &statement->statements, tin_astparser_parsestatement(parser));
+        tin_astparser_ignorenewlines(parser, true);
     }
-    lit_astparser_ignorenewlines(parser, true);
-    lit_astparser_consume(parser, LITTOK_RIGHT_BRACE, "'}'");
-    lit_astparser_ignorenewlines(parser, true);
-    lit_astparser_endscope(parser);
-    return (LitAstExpression*)statement;
+    tin_astparser_ignorenewlines(parser, true);
+    tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}'");
+    tin_astparser_ignorenewlines(parser, true);
+    tin_astparser_endscope(parser);
+    return (TinAstExpression*)statement;
 }
 
-static LitAstExpression* lit_astparser_parseprecedence(LitAstParser* parser, LitAstPrecedence precedence, bool err, bool ignsemi)
+static TinAstExpression* tin_astparser_parseprecedence(TinAstParser* parser, TinAstPrecedence precedence, bool err, bool ignsemi)
 {
     bool new_line;
     bool prevnewline;
     bool parserprevnewline;
     bool canassign;
-    LitAstExpression* expr;
-    LitAstParsePrefixFn prefix_rule;
-    LitAstParseInfixFn infix_rule;
-    LitAstToken previous;
+    TinAstExpression* expr;
+    TinAstParsePrefixFn prefix_rule;
+    TinAstParseInfixFn infix_rule;
+    TinAstToken previous;
     (void)new_line;
     prevnewline = false;
     previous = parser->previous;
-    lit_astparser_advance(parser);
-    prefix_rule = lit_astparser_getrule(parser->previous.type)->prefix;
+    tin_astparser_advance(parser);
+    prefix_rule = tin_astparser_getrule(parser->previous.type)->prefix;
     if(prefix_rule == NULL)
     {
         //if(parser->previous.type != parser->current.type)
@@ -415,7 +415,7 @@ static LitAstExpression* lit_astparser_parseprecedence(LitAstParser* parser, Lit
             // todo: file start
             new_line = previous.start != NULL && *previous.start == '\n';
             parserprevnewline = parser->previous.start != NULL && *parser->previous.start == '\n';
-            lit_astparser_raiseerror(parser, "expected expression after '%.*s', got '%.*s'",
+            tin_astparser_raiseerror(parser, "expected expression after '%.*s', got '%.*s'",
                 (prevnewline ? 8 : previous.length),
                 (prevnewline ? "new line" : previous.start),
                 (parserprevnewline ? 8 : parser->previous.length),
@@ -424,64 +424,64 @@ static LitAstExpression* lit_astparser_parseprecedence(LitAstParser* parser, Lit
             return NULL;
         }
     }
-    canassign = precedence <= LITPREC_ASSIGNMENT;
+    canassign = precedence <= TINPREC_ASSIGNMENT;
     expr = prefix_rule(parser, canassign);
-    lit_astparser_ignorenewlines(parser, ignsemi);
-    while(precedence <= lit_astparser_getrule(parser->current.type)->precedence)
+    tin_astparser_ignorenewlines(parser, ignsemi);
+    while(precedence <= tin_astparser_getrule(parser->current.type)->precedence)
     {
-        lit_astparser_advance(parser);
-        infix_rule = lit_astparser_getrule(parser->previous.type)->infix;
+        tin_astparser_advance(parser);
+        infix_rule = tin_astparser_getrule(parser->previous.type)->infix;
         expr = infix_rule(parser, expr, canassign);
     }
-    if(err && canassign && lit_astparser_match(parser, LITTOK_EQUAL))
+    if(err && canassign && tin_astparser_match(parser, TINTOK_EQUAL))
     {
-        lit_astparser_raiseerror(parser, "invalid assigment target");
+        tin_astparser_raiseerror(parser, "invalid assigment target");
     }
     return expr;
 }
 
-static LitAstExpression* lit_astparser_rulenumber(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulenumber(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
-    return (LitAstExpression*)lit_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value);
+    return (TinAstExpression*)tin_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value);
 }
 
-static LitAstExpression* lit_astparser_parselambda(LitAstParser* parser, LitAstFunctionExpr* lambda)
+static TinAstExpression* tin_astparser_parselambda(TinAstParser* parser, TinAstFunctionExpr* lambda)
 {
-    lambda->body = lit_astparser_parsestatement(parser);
-    return (LitAstExpression*)lambda;
+    lambda->body = tin_astparser_parsestatement(parser);
+    return (TinAstExpression*)lambda;
 }
 
-static void lit_astparser_parseparameters(LitAstParser* parser, LitAstParamList* parameters)
+static void tin_astparser_parseparameters(TinAstParser* parser, TinAstParamList* parameters)
 {
     bool haddefault;
     size_t arglength;
     const char* argname;
-    LitAstExpression* default_value;
+    TinAstExpression* defexpr;
     haddefault = false;
-    while(!lit_astparser_check(parser, LITTOK_RIGHT_PAREN))
+    while(!tin_astparser_check(parser, TINTOK_RIGHT_PAREN))
     {
         // Vararg ...
-        if(lit_astparser_match(parser, LITTOK_DOT_DOT_DOT))
+        if(tin_astparser_match(parser, TINTOK_DOT_DOT_DOT))
         {
-            lit_paramlist_push(parser->state, parameters, (LitAstParameter){ "...", 3, NULL });
+            tin_paramlist_push(parser->state, parameters, (TinAstParameter){ "...", 3, NULL });
             return;
         }
-        lit_astparser_consume(parser, LITTOK_IDENTIFIER, "argument name");
+        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "argument name");
         argname = parser->previous.start;
         arglength = parser->previous.length;
-        default_value = NULL;
-        if(lit_astparser_match(parser, LITTOK_EQUAL))
+        defexpr = NULL;
+        if(tin_astparser_match(parser, TINTOK_EQUAL))
         {
             haddefault = true;
-            default_value = lit_astparser_parseexpression(parser, true);
+            defexpr = tin_astparser_parseexpression(parser, true);
         }
         else if(haddefault)
         {
-            lit_astparser_raiseerror(parser, "default arguments must always be in the end of the argument list.");
+            tin_astparser_raiseerror(parser, "default arguments must always be in the end of the argument list.");
         }
-        lit_paramlist_push(parser->state, parameters, (LitAstParameter){ argname, arglength, default_value });
-        if(!lit_astparser_match(parser, LITTOK_COMMA))
+        tin_paramlist_push(parser->state, parameters, (TinAstParameter){ argname, arglength, defexpr });
+        if(!tin_astparser_match(parser, TINTOK_COMMA))
         {
             break;
         }
@@ -491,7 +491,7 @@ static void lit_astparser_parseparameters(LitAstParser* parser, LitAstParamList*
 /*
 * this is extremely not working at all.
 */
-static LitAstExpression* lit_astparser_rulegroupingorlambda(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* parser, bool canassign)
 {
     bool stop;
     bool haddefault;
@@ -504,79 +504,79 @@ static LitAstExpression* lit_astparser_rulegroupingorlambda(LitAstParser* parser
     const char* start;
     const char* argname;
     const char* firstargstart;
-    LitAstExpression* expression;
-    LitAstExpression* default_value;
-    LitAstScanner* scanner;
+    TinAstExpression* expression;
+    TinAstExpression* defexpr;
+    TinAstScanner* scanner;
     (void)canassign;
     (void)hadarrow;
     (void)had_array;
     hadarrow = false;
-    if(lit_astparser_match(parser, LITTOK_RIGHT_PAREN))
+    if(tin_astparser_match(parser, TINTOK_RIGHT_PAREN))
     {
-        lit_astparser_consume(parser, LITTOK_ARROW, "=> after lambda arguments");
-        return lit_astparser_parselambda(parser, lit_ast_make_lambdaexpr(parser->state, parser->previous.line));
+        tin_astparser_consume(parser, TINTOK_ARROW, "=> after lambda arguments");
+        return tin_astparser_parselambda(parser, tin_ast_make_lambdaexpr(parser->state, parser->previous.line));
     }
     start = parser->previous.start;
     line = parser->previous.line;
-    if(lit_astparser_match(parser, LITTOK_IDENTIFIER) || lit_astparser_match(parser, LITTOK_DOT_DOT_DOT))
+    if(tin_astparser_match(parser, TINTOK_IDENTIFIER) || tin_astparser_match(parser, TINTOK_DOT_DOT_DOT))
     {
-        LitState* state = parser->state;
+        TinState* state = parser->state;
         firstargstart = parser->previous.start;
         firstarglength = parser->previous.length;
-        if(lit_astparser_match(parser, LITTOK_COMMA) || (lit_astparser_match(parser, LITTOK_RIGHT_PAREN) && lit_astparser_match(parser, LITTOK_ARROW)))
+        if(tin_astparser_match(parser, TINTOK_COMMA) || (tin_astparser_match(parser, TINTOK_RIGHT_PAREN) && tin_astparser_match(parser, TINTOK_ARROW)))
         {
-            had_array = parser->previous.type == LITTOK_ARROW;
-            hadvararg= parser->previous.type == LITTOK_DOT_DOT_DOT;
+            had_array = parser->previous.type == TINTOK_ARROW;
+            hadvararg= parser->previous.type == TINTOK_DOT_DOT_DOT;
             // This is a lambda
-            LitAstFunctionExpr* lambda = lit_ast_make_lambdaexpr(state, line);
-            LitAstExpression* defvalue = NULL;
-            haddefault = lit_astparser_match(parser, LITTOK_EQUAL);
+            TinAstFunctionExpr* lambda = tin_ast_make_lambdaexpr(state, line);
+            TinAstExpression* defvalue = NULL;
+            haddefault = tin_astparser_match(parser, TINTOK_EQUAL);
             if(haddefault)
             {
-                defvalue = lit_astparser_parseexpression(parser, true);
+                defvalue = tin_astparser_parseexpression(parser, true);
             }
-            lit_paramlist_push(state, &lambda->parameters, (LitAstParameter){ firstargstart, firstarglength, defvalue });
-            if(!hadvararg && parser->previous.type == LITTOK_COMMA)
+            tin_paramlist_push(state, &lambda->parameters, (TinAstParameter){ firstargstart, firstarglength, defvalue });
+            if(!hadvararg && parser->previous.type == TINTOK_COMMA)
             {
                 do
                 {
                     stop = false;
-                    if(lit_astparser_match(parser, LITTOK_DOT_DOT_DOT))
+                    if(tin_astparser_match(parser, TINTOK_DOT_DOT_DOT))
                     {
                         stop = true;
                     }
                     else
                     {
-                        lit_astparser_consume(parser, LITTOK_IDENTIFIER, "argument name");
+                        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "argument name");
                     }
 
                     argname = parser->previous.start;
                     arglength = parser->previous.length;
-                    default_value = NULL;
-                    if(lit_astparser_match(parser, LITTOK_EQUAL))
+                    defexpr = NULL;
+                    if(tin_astparser_match(parser, TINTOK_EQUAL))
                     {
-                        default_value = lit_astparser_parseexpression(parser, true);
+                        defexpr = tin_astparser_parseexpression(parser, true);
                         haddefault = true;
                     }
                     else if(haddefault)
                     {
-                        lit_astparser_raiseerror(parser, "default arguments must always be in the end of the argument list.");
+                        tin_astparser_raiseerror(parser, "default arguments must always be in the end of the argument list.");
                     }
-                    lit_paramlist_push(state, &lambda->parameters, (LitAstParameter){ argname, arglength, default_value });
+                    tin_paramlist_push(state, &lambda->parameters, (TinAstParameter){ argname, arglength, defexpr });
                     if(stop)
                     {
                         break;
                     }
-                } while(lit_astparser_match(parser, LITTOK_COMMA));
+                } while(tin_astparser_match(parser, TINTOK_COMMA));
             }
             #if 0
             if(!hadarrow)
             {
-                lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')' after lambda parameters");
-                lit_astparser_consume(parser, LITTOK_ARROW, "=> after lambda parameters");
+                tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after lambda parameters");
+                tin_astparser_consume(parser, TINTOK_ARROW, "=> after lambda parameters");
             }
             #endif
-            return lit_astparser_parselambda(parser, lambda);
+            return tin_astparser_parselambda(parser, lambda);
         }
         else
         {
@@ -584,33 +584,33 @@ static LitAstExpression* lit_astparser_rulegroupingorlambda(LitAstParser* parser
             scanner = state->scanner;
             scanner->current = start;
             scanner->line = line;
-            parser->current = lit_astlex_scantoken(scanner);
-            lit_astparser_advance(parser);
+            parser->current = tin_astlex_scantoken(scanner);
+            tin_astparser_advance(parser);
         }
     }
-    expression = lit_astparser_parseexpression(parser, true);
-    lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')' after grouping expression");
+    expression = tin_astparser_parseexpression(parser, true);
+    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after grouping expression");
     return expression;
 }
 
-static LitAstExpression* lit_astparser_rulecall(LitAstParser* parser, LitAstExpression* prev, bool canassign)
+static TinAstExpression* tin_astparser_rulecall(TinAstParser* parser, TinAstExpression* prev, bool canassign)
 {
     (void)canassign;
-    LitAstExpression* e;
-    LitAstVarExpr* ee;
-    LitAstCallExpr* expression;
-    expression = lit_ast_make_callexpr(parser->state, parser->previous.line, prev);
-    while(!lit_astparser_check(parser, LITTOK_RIGHT_PAREN))
+    TinAstExpression* e;
+    TinAstVarExpr* ee;
+    TinAstCallExpr* expression;
+    expression = tin_ast_make_callexpr(parser->state, parser->previous.line, prev);
+    while(!tin_astparser_check(parser, TINTOK_RIGHT_PAREN))
     {
-        e = lit_astparser_parseexpression(parser, true);
-        lit_exprlist_push(parser->state, &expression->args, e);
-        if(!lit_astparser_match(parser, LITTOK_COMMA))
+        e = tin_astparser_parseexpression(parser, true);
+        tin_exprlist_push(parser->state, &expression->args, e);
+        if(!tin_astparser_match(parser, TINTOK_COMMA))
         {
             break;
         }
-        if(e->type == LITEXPR_VAREXPR)
+        if(e->type == TINEXPR_VAREXPR)
         {
-            ee = (LitAstVarExpr*)e;
+            ee = (TinAstVarExpr*)e;
             // Vararg ...
             if(ee->length == 3 && memcmp(ee->name, "...", 3) == 0)
             {
@@ -620,136 +620,136 @@ static LitAstExpression* lit_astparser_rulecall(LitAstParser* parser, LitAstExpr
     }
     if(expression->args.count > 255)
     {
-        lit_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)expression->args.count);
+        tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)expression->args.count);
     }
-    lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')' after arguments");
-    return (LitAstExpression*)expression;
+    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after arguments");
+    return (TinAstExpression*)expression;
 }
 
-static LitAstExpression* lit_astparser_ruleunary(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_ruleunary(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
     size_t line;
-    LitAstExpression* expression;
-    LitAstTokType op;
+    TinAstExpression* expression;
+    TinAstTokType op;
     op = parser->previous.type;
     line = parser->previous.line;
-    expression = lit_astparser_parseprecedence(parser, LITPREC_UNARY, true, true);
-    return (LitAstExpression*)lit_ast_make_unaryexpr(parser->state, line, expression, op);
+    expression = tin_astparser_parseprecedence(parser, TINPREC_UNARY, true, true);
+    return (TinAstExpression*)tin_ast_make_unaryexpr(parser->state, line, expression, op);
 }
 
-static LitAstExpression* lit_astparser_rulebinary(LitAstParser* parser, LitAstExpression* prev, bool canassign)
+static TinAstExpression* tin_astparser_rulebinary(TinAstParser* parser, TinAstExpression* prev, bool canassign)
 {
     (void)canassign;
     bool invert;
     size_t line;
-    LitAstParseRule* rule;
-    LitAstExpression* expression;
-    LitAstTokType op;
-    invert = parser->previous.type == LITTOK_BANG;
+    TinAstParseRule* rule;
+    TinAstExpression* expression;
+    TinAstTokType op;
+    invert = parser->previous.type == TINTOK_BANG;
     if(invert)
     {
-        lit_astparser_consume(parser, LITTOK_IS, "'is' after '!'");
+        tin_astparser_consume(parser, TINTOK_IS, "'is' after '!'");
     }
     op = parser->previous.type;
     line = parser->previous.line;
-    rule = lit_astparser_getrule(op);
-    expression = lit_astparser_parseprecedence(parser, (LitAstPrecedence)(rule->precedence + 1), true, true);
-    expression = (LitAstExpression*)lit_ast_make_binaryexpr(parser->state, line, prev, expression, op);
+    rule = tin_astparser_getrule(op);
+    expression = tin_astparser_parseprecedence(parser, (TinAstPrecedence)(rule->precedence + 1), true, true);
+    expression = (TinAstExpression*)tin_ast_make_binaryexpr(parser->state, line, prev, expression, op);
     if(invert)
     {
-        expression = (LitAstExpression*)lit_ast_make_unaryexpr(parser->state, line, expression, LITTOK_BANG);
+        expression = (TinAstExpression*)tin_ast_make_unaryexpr(parser->state, line, expression, TINTOK_BANG);
     }
     return expression;
 }
 
-static LitAstExpression* lit_astparser_ruleand(LitAstParser* parser, LitAstExpression* prev, bool canassign)
+static TinAstExpression* tin_astparser_ruleand(TinAstParser* parser, TinAstExpression* prev, bool canassign)
 {
     (void)canassign;
     size_t line;
-    LitAstTokType op;
+    TinAstTokType op;
     op = parser->previous.type;
     line = parser->previous.line;
-    return (LitAstExpression*)lit_ast_make_binaryexpr(parser->state, line, prev, lit_astparser_parseprecedence(parser, LITPREC_AND, true, true), op);
+    return (TinAstExpression*)tin_ast_make_binaryexpr(parser->state, line, prev, tin_astparser_parseprecedence(parser, TINPREC_AND, true, true), op);
 }
 
-static LitAstExpression* lit_astparser_ruleor(LitAstParser* parser, LitAstExpression* prev, bool canassign)
+static TinAstExpression* tin_astparser_ruleor(TinAstParser* parser, TinAstExpression* prev, bool canassign)
 {
     (void)canassign;
     size_t line;
-    LitAstTokType op;
+    TinAstTokType op;
     op = parser->previous.type;
     line = parser->previous.line;
-    return (LitAstExpression*)lit_ast_make_binaryexpr(parser->state, line, prev, lit_astparser_parseprecedence(parser, LITPREC_OR, true, true), op);
+    return (TinAstExpression*)tin_ast_make_binaryexpr(parser->state, line, prev, tin_astparser_parseprecedence(parser, TINPREC_OR, true, true), op);
 }
 
-static LitAstExpression* lit_astparser_rulenull_filter(LitAstParser* parser, LitAstExpression* prev, bool canassign)
+static TinAstExpression* tin_astparser_rulenull_filter(TinAstParser* parser, TinAstExpression* prev, bool canassign)
 {
     (void)canassign;
     size_t line;
-    LitAstTokType op;
+    TinAstTokType op;
     op = parser->previous.type;
     line = parser->previous.line;
-    return (LitAstExpression*)lit_ast_make_binaryexpr(parser->state, line, prev, lit_astparser_parseprecedence(parser, LITPREC_NULL, true, true), op);
+    return (TinAstExpression*)tin_ast_make_binaryexpr(parser->state, line, prev, tin_astparser_parseprecedence(parser, TINPREC_NULL, true, true), op);
 }
 
-static LitAstTokType lit_astparser_convertcompoundop(LitAstTokType op)
+static TinAstTokType tin_astparser_convertcompoundop(TinAstTokType op)
 {
     switch(op)
     {
-        case LITTOK_PLUS_EQUAL:
+        case TINTOK_PLUS_EQUAL:
             {
-                return LITTOK_PLUS;
+                return TINTOK_PLUS;
             }
             break;
-        case LITTOK_MINUS_EQUAL:
+        case TINTOK_MINUS_EQUAL:
             {
-                return LITTOK_MINUS;
+                return TINTOK_MINUS;
             }
             break;
-        case LITTOK_STAR_EQUAL:
+        case TINTOK_STAR_EQUAL:
             {
-                return LITTOK_STAR;
+                return TINTOK_STAR;
             }
             break;
-        case LITTOK_SLASH_EQUAL:
+        case TINTOK_SLASH_EQUAL:
             {
-                return LITTOK_SLASH;
+                return TINTOK_SLASH;
             }
             break;
-        case LITTOK_SHARP_EQUAL:
+        case TINTOK_SHARP_EQUAL:
             {
-                return LITTOK_SHARP;
+                return TINTOK_SHARP;
             }
             break;
-        case LITTOK_PERCENT_EQUAL:
+        case TINTOK_PERCENT_EQUAL:
             {
-                return LITTOK_PERCENT;
+                return TINTOK_PERCENT;
             }
             break;
-        case LITTOK_CARET_EQUAL:
+        case TINTOK_CARET_EQUAL:
             {
-                return LITTOK_CARET;
+                return TINTOK_CARET;
             }
             break;
-        case LITTOK_BAR_EQUAL:
+        case TINTOK_BAR_EQUAL:
             {
-                return LITTOK_BAR;
+                return TINTOK_BAR;
             }
             break;
-        case LITTOK_AMPERSAND_EQUAL:
+        case TINTOK_AMPERSAND_EQUAL:
             {
-                return LITTOK_AMPERSAND;
+                return TINTOK_AMPERSAND;
             }
             break;
-        case LITTOK_PLUS_PLUS:
+        case TINTOK_PLUS_PLUS:
             {
-                return LITTOK_PLUS;
+                return TINTOK_PLUS;
             }
             break;
-        case LITTOK_MINUS_MINUS:
+        case TINTOK_MINUS_MINUS:
             {
-                return LITTOK_MINUS;
+                return TINTOK_MINUS;
             }
             break;
         default:
@@ -758,53 +758,54 @@ static LitAstTokType lit_astparser_convertcompoundop(LitAstTokType op)
             }
             break;
     }
-    return (LitAstTokType)-1;
+    return (TinAstTokType)-1;
 }
 
-static LitAstExpression* lit_astparser_rulecompound(LitAstParser* parser, LitAstExpression* prev, bool canassign)
+static TinAstExpression* tin_astparser_rulecompound(TinAstParser* parser, TinAstExpression* prev, bool canassign)
 {
     (void)canassign;
     size_t line;
-    LitAstBinaryExpr* binary;
-    LitAstExpression* expression;
-    LitAstParseRule* rule;
-    LitAstTokType op;
+    TinAstBinaryExpr* binary;
+    TinAstExpression* expression;
+    TinAstParseRule* rule;
+    TinAstTokType op;
     op = parser->previous.type;
     line = parser->previous.line;
-    rule = lit_astparser_getrule(op);
-    if(op == LITTOK_PLUS_PLUS || op == LITTOK_MINUS_MINUS)
+    rule = tin_astparser_getrule(op);
+    if(op == TINTOK_PLUS_PLUS || op == TINTOK_MINUS_MINUS)
     {
-        expression = (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, lit_value_makefixednumber(parser->state, 1));
+        expression = (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, tin_value_makefixednumber(parser->state, 1));
     }
     else
     {
-        expression = lit_astparser_parseprecedence(parser, (LitAstPrecedence)(rule->precedence + 1), true, true);
+        expression = tin_astparser_parseprecedence(parser, (TinAstPrecedence)(rule->precedence + 1), true, true);
     }
-    binary = lit_ast_make_binaryexpr(parser->state, line, prev, expression, lit_astparser_convertcompoundop(op));
-    binary->ignore_left = true;// To make sure we don't free it twice
-    return (LitAstExpression*)lit_ast_make_assignexpr(parser->state, line, prev, (LitAstExpression*)binary);
+    binary = tin_ast_make_binaryexpr(parser->state, line, prev, expression, tin_astparser_convertcompoundop(op));
+    // To make sure we don't free it twice
+    binary->ignore_left = true;
+    return (TinAstExpression*)tin_ast_make_assignexpr(parser->state, line, prev, (TinAstExpression*)binary);
 }
 
-static LitAstExpression* lit_astparser_ruleliteral(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_ruleliteral(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
     size_t line;
     line = parser->previous.line;
     switch(parser->previous.type)
     {
-        case LITTOK_TRUE:
+        case TINTOK_TRUE:
             {
-                return (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, TRUE_VALUE);
+                return (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, TRUE_VALUE);
             }
             break;
-        case LITTOK_FALSE:
+        case TINTOK_FALSE:
             {
-                return (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, FALSE_VALUE);
+                return (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, FALSE_VALUE);
             }
             break;
-        case LITTOK_NULL:
+        case TINTOK_NULL:
             {
-                return (LitAstExpression*)lit_ast_make_literalexpr(parser->state, line, NULL_VALUE);
+                return (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, NULL_VALUE);
             }
             break;
         default:
@@ -816,765 +817,765 @@ static LitAstExpression* lit_astparser_ruleliteral(LitAstParser* parser, bool ca
     return NULL;
 }
 
-static LitAstExpression* lit_astparser_rulestring(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulestring(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
-    LitAstExpression* expression;
-    expression = (LitAstExpression*)lit_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value);
-    if(lit_astparser_match(parser, LITTOK_LEFT_BRACKET))
+    TinAstExpression* expression;
+    expression = (TinAstExpression*)tin_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value);
+    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
     {
-        return lit_astparser_rulesubscript(parser, expression, canassign);
+        return tin_astparser_rulesubscript(parser, expression, canassign);
     }
     return expression;
 }
 
-static LitAstExpression* lit_astparser_ruleinterpolation(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_ruleinterpolation(TinAstParser* parser, bool canassign)
 {
-    LitAstStrInterExpr* expression;
+    TinAstStrInterExpr* expression;
     (void)canassign;
-    expression = lit_ast_make_strinterpolexpr(parser->state, parser->previous.line);
+    expression = tin_ast_make_strinterpolexpr(parser->state, parser->previous.line);
     do
     {
-        if(lit_string_getlength(lit_value_asstring(parser->previous.value)) > 0)
+        if(tin_string_getlength(tin_value_asstring(parser->previous.value)) > 0)
         {
-            lit_exprlist_push(
+            tin_exprlist_push(
             parser->state, &expression->expressions,
-            (LitAstExpression*)lit_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value));
+            (TinAstExpression*)tin_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value));
         }
-        lit_exprlist_push(parser->state, &expression->expressions, lit_astparser_parseexpression(parser, true));
-    } while(lit_astparser_match(parser, LITTOK_INTERPOLATION));
-    lit_astparser_consume(parser, LITTOK_STRING, "end of interpolation");
-    if(lit_string_getlength(lit_value_asstring(parser->previous.value)) > 0)
+        tin_exprlist_push(parser->state, &expression->expressions, tin_astparser_parseexpression(parser, true));
+    } while(tin_astparser_match(parser, TINTOK_INTERPOLATION));
+    tin_astparser_consume(parser, TINTOK_STRING, "end of interpolation");
+    if(tin_string_getlength(tin_value_asstring(parser->previous.value)) > 0)
     {
-        lit_exprlist_push(
+        tin_exprlist_push(
         parser->state, &expression->expressions,
-        (LitAstExpression*)lit_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value));
+        (TinAstExpression*)tin_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value));
     }
-    if(lit_astparser_match(parser, LITTOK_LEFT_BRACKET))
+    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
     {
-        return lit_astparser_rulesubscript(parser, (LitAstExpression*)expression, canassign);
+        return tin_astparser_rulesubscript(parser, (TinAstExpression*)expression, canassign);
     }
-    return (LitAstExpression*)expression;
+    return (TinAstExpression*)expression;
 }
 
-static LitAstExpression* lit_astparser_ruleobject(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_ruleobject(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
-    LitAstObjectExpr* object;
-    object = lit_ast_make_objectexpr(parser->state, parser->previous.line);
-    lit_astparser_ignorenewlines(parser, true);
-    while(!lit_astparser_check(parser, LITTOK_RIGHT_BRACE))
+    TinAstObjectExpr* object;
+    object = tin_ast_make_objectexpr(parser->state, parser->previous.line);
+    tin_astparser_ignorenewlines(parser, true);
+    while(!tin_astparser_check(parser, TINTOK_RIGHT_BRACE))
     {
-        lit_astparser_ignorenewlines(parser, true);
-        lit_astparser_consume(parser, LITTOK_IDENTIFIER, "key string after '{'");
-        lit_vallist_push(parser->state, &object->keys, lit_value_fromobject(lit_string_copy(parser->state, parser->previous.start, parser->previous.length)));
-        lit_astparser_ignorenewlines(parser, true);
-        lit_astparser_consume(parser, LITTOK_EQUAL, "'=' after key string");
-        lit_astparser_ignorenewlines(parser, true);
-        lit_exprlist_push(parser->state, &object->values, lit_astparser_parseexpression(parser, true));
-        if(!lit_astparser_match(parser, LITTOK_COMMA))
+        tin_astparser_ignorenewlines(parser, true);
+        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "key string after '{'");
+        tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, parser->previous.start, parser->previous.length)));
+        tin_astparser_ignorenewlines(parser, true);
+        tin_astparser_consume(parser, TINTOK_EQUAL, "'=' after key string");
+        tin_astparser_ignorenewlines(parser, true);
+        tin_exprlist_push(parser->state, &object->values, tin_astparser_parseexpression(parser, true));
+        if(!tin_astparser_match(parser, TINTOK_COMMA))
         {
             break;
         }
     }
-    lit_astparser_ignorenewlines(parser, true);
-    lit_astparser_consume(parser, LITTOK_RIGHT_BRACE, "'}' after object");
-    return (LitAstExpression*)object;
+    tin_astparser_ignorenewlines(parser, true);
+    tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}' after object");
+    return (TinAstExpression*)object;
 }
 
-static LitAstExpression* lit_astparser_rulevarexprbase(LitAstParser* parser, bool canassign, bool isnew)
+static TinAstExpression* tin_astparser_rulevarexprbase(TinAstParser* parser, bool canassign, bool isnew)
 {
     (void)canassign;
     bool hadargs;
-    LitAstCallExpr* callex;
-    LitAstExpression* expression;
-    expression = (LitAstExpression*)lit_ast_make_varexpr(parser->state, parser->previous.line, parser->previous.start, parser->previous.length);
+    TinAstCallExpr* callex;
+    TinAstExpression* expression;
+    expression = (TinAstExpression*)tin_ast_make_varexpr(parser->state, parser->previous.line, parser->previous.start, parser->previous.length);
     if(isnew)
     {
-        hadargs = lit_astparser_check(parser, LITTOK_LEFT_PAREN);
+        hadargs = tin_astparser_check(parser, TINTOK_LEFT_PAREN);
         callex = NULL;
         if(hadargs)
         {
-            lit_astparser_advance(parser);
-            callex = (LitAstCallExpr*)lit_astparser_rulecall(parser, expression, false);
+            tin_astparser_advance(parser);
+            callex = (TinAstCallExpr*)tin_astparser_rulecall(parser, expression, false);
         }
-        if(lit_astparser_match(parser, LITTOK_LEFT_BRACE))
+        if(tin_astparser_match(parser, TINTOK_LEFT_BRACE))
         {
             if(callex == NULL)
             {
-                callex = lit_ast_make_callexpr(parser->state, expression->line, expression);
+                callex = tin_ast_make_callexpr(parser->state, expression->line, expression);
             }
-            callex->init = lit_astparser_ruleobject(parser, false);
+            callex->init = tin_astparser_ruleobject(parser, false);
         }
         else if(!hadargs)
         {
-            lit_astparser_raiseatcurrent(parser, "expected %s, got '%.*s'", "argument list for instance creation",
+            tin_astparser_raiseatcurrent(parser, "expected %s, got '%.*s'", "argument list for instance creation",
                              parser->previous.length, parser->previous.start);
         }
-        return (LitAstExpression*)callex;
+        return (TinAstExpression*)callex;
     }
-    if(lit_astparser_match(parser, LITTOK_LEFT_BRACKET))
+    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
     {
-        return lit_astparser_rulesubscript(parser, expression, canassign);
+        return tin_astparser_rulesubscript(parser, expression, canassign);
     }
-    if(canassign && lit_astparser_match(parser, LITTOK_EQUAL))
+    if(canassign && tin_astparser_match(parser, TINTOK_EQUAL))
     {
-        return (LitAstExpression*)lit_ast_make_assignexpr(parser->state, parser->previous.line, expression,
-                                                            lit_astparser_parseexpression(parser, true));
+        return (TinAstExpression*)tin_ast_make_assignexpr(parser->state, parser->previous.line, expression,
+                                                            tin_astparser_parseexpression(parser, true));
     }
     return expression;
 }
 
-static LitAstExpression* lit_astparser_rulevarexpr(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulevarexpr(TinAstParser* parser, bool canassign)
 {
-    return lit_astparser_rulevarexprbase(parser, canassign, false);
+    return tin_astparser_rulevarexprbase(parser, canassign, false);
 }
 
-static LitAstExpression* lit_astparser_rulenewexpr(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulenewexpr(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
-    lit_astparser_consume(parser, LITTOK_IDENTIFIER, "class name after 'new'");
-    return lit_astparser_rulevarexprbase(parser, false, true);
+    tin_astparser_consume(parser, TINTOK_IDENTIFIER, "class name after 'new'");
+    return tin_astparser_rulevarexprbase(parser, false, true);
 }
 
-static LitAstExpression* lit_astparser_ruledot(LitAstParser* parser, LitAstExpression* previous, bool canassign)
+static TinAstExpression* tin_astparser_ruledot(TinAstParser* parser, TinAstExpression* previous, bool canassign)
 {
     (void)canassign;
     bool ignored;
     size_t line;
     size_t length;
     const char* name;
-    LitAstExpression* expression;
+    TinAstExpression* expression;
     line = parser->previous.line;
-    ignored = parser->previous.type == LITTOK_SMALL_ARROW;
-    if(!(lit_astparser_match(parser, LITTOK_CLASS) || lit_astparser_match(parser, LITTOK_SUPER)))
+    ignored = parser->previous.type == TINTOK_SMALL_ARROW;
+    if(!(tin_astparser_match(parser, TINTOK_CLASS) || tin_astparser_match(parser, TINTOK_SUPER)))
     {// class and super are allowed field names
-        lit_astparser_consume(parser, LITTOK_IDENTIFIER, ignored ? "propety name after '->'" : "property name after '.'");
+        tin_astparser_consume(parser, TINTOK_IDENTIFIER, ignored ? "propety name after '->'" : "property name after '.'");
     }
     name = parser->previous.start;
     length = parser->previous.length;
-    if(!ignored && canassign && lit_astparser_match(parser, LITTOK_EQUAL))
+    if(!ignored && canassign && tin_astparser_match(parser, TINTOK_EQUAL))
     {
-        return (LitAstExpression*)lit_ast_make_setexpr(parser->state, line, previous, name, length, lit_astparser_parseexpression(parser, true));
+        return (TinAstExpression*)tin_ast_make_setexpr(parser->state, line, previous, name, length, tin_astparser_parseexpression(parser, true));
     }
-    expression = (LitAstExpression*)lit_ast_make_getexpr(parser->state, line, previous, name, length, false, ignored);
-    if(!ignored && lit_astparser_match(parser, LITTOK_LEFT_BRACKET))
+    expression = (TinAstExpression*)tin_ast_make_getexpr(parser->state, line, previous, name, length, false, ignored);
+    if(!ignored && tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
     {
-        return lit_astparser_rulesubscript(parser, expression, canassign);
+        return tin_astparser_rulesubscript(parser, expression, canassign);
     }
     return expression;
 }
 
-static LitAstExpression* lit_astparser_rulerange(LitAstParser* parser, LitAstExpression* previous, bool canassign)
+static TinAstExpression* tin_astparser_rulerange(TinAstParser* parser, TinAstExpression* previous, bool canassign)
 {
     (void)canassign;
     size_t line;
     line = parser->previous.line;
-    return (LitAstExpression*)lit_ast_make_rangeexpr(parser->state, line, previous, lit_astparser_parseexpression(parser, true));
+    return (TinAstExpression*)tin_ast_make_rangeexpr(parser->state, line, previous, tin_astparser_parseexpression(parser, true));
 }
 
-static LitAstExpression* lit_astparser_ruleternary(LitAstParser* parser, LitAstExpression* previous, bool canassign)
+static TinAstExpression* tin_astparser_ruleternary(TinAstParser* parser, TinAstExpression* previous, bool canassign)
 {
     (void)canassign;
     bool ignored;
     size_t line;
-    LitAstExpression* ifbranch;
-    LitAstExpression* elsebranch;
+    TinAstExpression* ifbranch;
+    TinAstExpression* elsebranch;
     line = parser->previous.line;
-    if(lit_astparser_match(parser, LITTOK_DOT) || lit_astparser_match(parser, LITTOK_SMALL_ARROW))
+    if(tin_astparser_match(parser, TINTOK_DOT) || tin_astparser_match(parser, TINTOK_SMALL_ARROW))
     {
-        ignored = parser->previous.type == LITTOK_SMALL_ARROW;
-        lit_astparser_consume(parser, LITTOK_IDENTIFIER, ignored ? "property name after '->'" : "property name after '.'");
-        return (LitAstExpression*)lit_ast_make_getexpr(parser->state, line, previous, parser->previous.start,
+        ignored = parser->previous.type == TINTOK_SMALL_ARROW;
+        tin_astparser_consume(parser, TINTOK_IDENTIFIER, ignored ? "property name after '->'" : "property name after '.'");
+        return (TinAstExpression*)tin_ast_make_getexpr(parser->state, line, previous, parser->previous.start,
                                                          parser->previous.length, true, ignored);
     }
-    ifbranch = lit_astparser_parseexpression(parser, true);
-    lit_astparser_consume(parser, LITTOK_COLON, "':' after expression");
-    elsebranch = lit_astparser_parseexpression(parser, true);
-    return (LitAstExpression*)lit_ast_make_ternaryexpr(parser->state, line, previous, ifbranch, elsebranch);
+    ifbranch = tin_astparser_parseexpression(parser, true);
+    tin_astparser_consume(parser, TINTOK_COLON, "':' after expression");
+    elsebranch = tin_astparser_parseexpression(parser, true);
+    return (TinAstExpression*)tin_ast_make_ternaryexpr(parser->state, line, previous, ifbranch, elsebranch);
 }
 
-static LitAstExpression* lit_astparser_rulearray(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulearray(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
-    LitAstExpression* expr;
-    LitAstArrayExpr* array;
-    array = lit_ast_make_arrayexpr(parser->state, parser->previous.line);
-    lit_astparser_ignorenewlines(parser, true);
-    while(!lit_astparser_check(parser, LITTOK_RIGHT_BRACKET))
+    TinAstExpression* expr;
+    TinAstArrayExpr* array;
+    array = tin_ast_make_arrayexpr(parser->state, parser->previous.line);
+    tin_astparser_ignorenewlines(parser, true);
+    while(!tin_astparser_check(parser, TINTOK_RIGHT_BRACKET))
     {
         expr = NULL;
-        lit_astparser_ignorenewlines(parser, true);
+        tin_astparser_ignorenewlines(parser, true);
         #if 1
-            expr = lit_astparser_parseexpression(parser, true);
+            expr = tin_astparser_parseexpression(parser, true);
         #else
-            if(lit_astparser_check(parser, LITTOK_COMMA))
+            if(tin_astparser_check(parser, TINTOK_COMMA))
             {
-                //lit_astparser_rulenull_filter(LitAstParser *parser, LitAstExpression *prev, _Bool canassign)
-                expr = lit_astparser_rulenull_filter(parser, NULL, false);
+                //tin_astparser_rulenull_filter(TinAstParser *parser, TinAstExpression *prev, _Bool canassign)
+                expr = tin_astparser_rulenull_filter(parser, NULL, false);
             }
             else
             {
-                expr = lit_astparser_parseexpression(parser, true);
+                expr = tin_astparser_parseexpression(parser, true);
             }
         #endif
-        lit_exprlist_push(parser->state, &array->values, expr);
-        if(!lit_astparser_match(parser, LITTOK_COMMA))
+        tin_exprlist_push(parser->state, &array->values, expr);
+        if(!tin_astparser_match(parser, TINTOK_COMMA))
         {
             break;
         }
-        lit_astparser_ignorenewlines(parser, true);
+        tin_astparser_ignorenewlines(parser, true);
     }
-    lit_astparser_ignorenewlines(parser, true);
-    lit_astparser_consume(parser, LITTOK_RIGHT_BRACKET, "']' after array");
-    if(lit_astparser_match(parser, LITTOK_LEFT_BRACKET))
+    tin_astparser_ignorenewlines(parser, true);
+    tin_astparser_consume(parser, TINTOK_RIGHT_BRACKET, "']' after array");
+    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
     {
-        return lit_astparser_rulesubscript(parser, (LitAstExpression*)array, canassign);
+        return tin_astparser_rulesubscript(parser, (TinAstExpression*)array, canassign);
     }
-    return (LitAstExpression*)array;
+    return (TinAstExpression*)array;
 }
 
-static LitAstExpression* lit_astparser_rulesubscript(LitAstParser* parser, LitAstExpression* previous, bool canassign)
+static TinAstExpression* tin_astparser_rulesubscript(TinAstParser* parser, TinAstExpression* previous, bool canassign)
 {
     size_t line;
-    LitAstExpression* index;
-    LitAstExpression* expression;
+    TinAstExpression* index;
+    TinAstExpression* expression;
     line = parser->previous.line;
-    index = lit_astparser_parseexpression(parser, true);
-    lit_astparser_consume(parser, LITTOK_RIGHT_BRACKET, "']' after subscript");
-    expression = (LitAstExpression*)lit_ast_make_subscriptexpr(parser->state, line, previous, index);
-    if(lit_astparser_match(parser, LITTOK_LEFT_BRACKET))
+    index = tin_astparser_parseexpression(parser, true);
+    tin_astparser_consume(parser, TINTOK_RIGHT_BRACKET, "']' after subscript");
+    expression = (TinAstExpression*)tin_ast_make_subscriptexpr(parser->state, line, previous, index);
+    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
     {
-        return lit_astparser_rulesubscript(parser, expression, canassign);
+        return tin_astparser_rulesubscript(parser, expression, canassign);
     }
-    else if(canassign && lit_astparser_match(parser, LITTOK_EQUAL))
+    else if(canassign && tin_astparser_match(parser, TINTOK_EQUAL))
     {
-        return (LitAstExpression*)lit_ast_make_assignexpr(parser->state, parser->previous.line, expression, lit_astparser_parseexpression(parser, true));
+        return (TinAstExpression*)tin_ast_make_assignexpr(parser->state, parser->previous.line, expression, tin_astparser_parseexpression(parser, true));
     }
     return expression;
 }
 
-static LitAstExpression* lit_astparser_rulethis(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulethis(TinAstParser* parser, bool canassign)
 {
-    LitAstExpression* expression;
-    expression = (LitAstExpression*)lit_ast_make_thisexpr(parser->state, parser->previous.line);
-    if(lit_astparser_match(parser, LITTOK_LEFT_BRACKET))
+    TinAstExpression* expression;
+    expression = (TinAstExpression*)tin_ast_make_thisexpr(parser->state, parser->previous.line);
+    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
     {
-        return lit_astparser_rulesubscript(parser, expression, canassign);
+        return tin_astparser_rulesubscript(parser, expression, canassign);
     }
     return expression;
 }
 
-static LitAstExpression* lit_astparser_rulesuper(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulesuper(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
     bool ignoring;
     size_t line;
-    LitAstExpression* expression;
+    TinAstExpression* expression;
     line = parser->previous.line;
-    if(!(lit_astparser_match(parser, LITTOK_DOT) || lit_astparser_match(parser, LITTOK_SMALL_ARROW)))
+    if(!(tin_astparser_match(parser, TINTOK_DOT) || tin_astparser_match(parser, TINTOK_SMALL_ARROW)))
     {
-        expression = (LitAstExpression*)lit_ast_make_superexpr(
-        parser->state, line, lit_string_copy(parser->state, "constructor", 11), false);
-        lit_astparser_consume(parser, LITTOK_LEFT_PAREN, "'(' after 'super'");
-        return lit_astparser_rulecall(parser, expression, false);
+        expression = (TinAstExpression*)tin_ast_make_superexpr(
+        parser->state, line, tin_string_copy(parser->state, "constructor", 11), false);
+        tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after 'super'");
+        return tin_astparser_rulecall(parser, expression, false);
     }
-    ignoring = parser->previous.type == LITTOK_SMALL_ARROW;
-    lit_astparser_consume(parser, LITTOK_IDENTIFIER, ignoring ? "super method name after '->'" : "super method name after '.'");
-    expression = (LitAstExpression*)lit_ast_make_superexpr(
-    parser->state, line, lit_string_copy(parser->state, parser->previous.start, parser->previous.length), ignoring);
-    if(lit_astparser_match(parser, LITTOK_LEFT_PAREN))
+    ignoring = parser->previous.type == TINTOK_SMALL_ARROW;
+    tin_astparser_consume(parser, TINTOK_IDENTIFIER, ignoring ? "super method name after '->'" : "super method name after '.'");
+    expression = (TinAstExpression*)tin_ast_make_superexpr(
+    parser->state, line, tin_string_copy(parser->state, parser->previous.start, parser->previous.length), ignoring);
+    if(tin_astparser_match(parser, TINTOK_LEFT_PAREN))
     {
-        return lit_astparser_rulecall(parser, expression, false);
+        return tin_astparser_rulecall(parser, expression, false);
     }
     return expression;
 }
 
-static LitAstExpression *lit_astparser_rulenothing(LitAstParser *parser, bool canassign)
+static TinAstExpression *tin_astparser_rulenothing(TinAstParser *parser, bool canassign)
 {
     (void)parser;
     (void)canassign;
     return NULL;
 }
 
-static LitAstExpression* lit_astparser_rulereference(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulereference(TinAstParser* parser, bool canassign)
 {
     size_t line;
-    LitAstRefExpr* expression;
+    TinAstRefExpr* expression;
     (void)canassign;
     line = parser->previous.line;
-    lit_astparser_ignorenewlines(parser, true);
-    expression = lit_ast_make_referenceexpr(parser->state, line, lit_astparser_parseprecedence(parser, LITPREC_CALL, false, true));
-    if(lit_astparser_match(parser, LITTOK_EQUAL))
+    tin_astparser_ignorenewlines(parser, true);
+    expression = tin_ast_make_referenceexpr(parser->state, line, tin_astparser_parseprecedence(parser, TINPREC_CALL, false, true));
+    if(tin_astparser_match(parser, TINTOK_EQUAL))
     {
-        return (LitAstExpression*)lit_ast_make_assignexpr(parser->state, line, (LitAstExpression*)expression, lit_astparser_parseexpression(parser, true));
+        return (TinAstExpression*)tin_ast_make_assignexpr(parser->state, line, (TinAstExpression*)expression, tin_astparser_parseexpression(parser, true));
     }
-    return (LitAstExpression*)expression;
+    return (TinAstExpression*)expression;
 }
 
 
 
-static LitAstExpression* lit_astparser_parsestatement(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parsestatement(TinAstParser* parser)
 {
-    LitAstExpression* expression;
-    lit_astparser_ignorenewlines(parser, true);
+    TinAstExpression* expression;
+    tin_astparser_ignorenewlines(parser, true);
     if(setjmp(prs_jmpbuffer))
     {
         return NULL;
     }
-    if(lit_astparser_match(parser, LITTOK_VAR) || lit_astparser_match(parser, LITTOK_CONST))
+    if(tin_astparser_match(parser, TINTOK_VAR) || tin_astparser_match(parser, TINTOK_CONST))
     {
-        return lit_astparser_parsevar_declaration(parser, true);
+        return tin_astparser_parsevar_declaration(parser, true);
     }
-    else if(lit_astparser_match(parser, LITTOK_IF))
+    else if(tin_astparser_match(parser, TINTOK_IF))
     {
-        return lit_astparser_parseif(parser);
+        return tin_astparser_parseif(parser);
     }
-    else if(lit_astparser_match(parser, LITTOK_FOR))
+    else if(tin_astparser_match(parser, TINTOK_FOR))
     {
-        return lit_astparser_parsefor(parser);
+        return tin_astparser_parsefor(parser);
     }
-    else if(lit_astparser_match(parser, LITTOK_WHILE))
+    else if(tin_astparser_match(parser, TINTOK_WHILE))
     {
-        return lit_astparser_parsewhile(parser);
+        return tin_astparser_parsewhile(parser);
     }
-    else if(lit_astparser_match(parser, LITTOK_CONTINUE))
+    else if(tin_astparser_match(parser, TINTOK_CONTINUE))
     {
-        return (LitAstExpression*)lit_ast_make_continueexpr(parser->state, parser->previous.line);
+        return (TinAstExpression*)tin_ast_make_continueexpr(parser->state, parser->previous.line);
     }
-    else if(lit_astparser_match(parser, LITTOK_BREAK))
+    else if(tin_astparser_match(parser, TINTOK_BREAK))
     {
-        return (LitAstExpression*)lit_ast_make_breakexpr(parser->state, parser->previous.line);
+        return (TinAstExpression*)tin_ast_make_breakexpr(parser->state, parser->previous.line);
     }
-    else if(lit_astparser_match(parser, LITTOK_FUNCTION) || lit_astparser_match(parser, LITTOK_EXPORT))
+    else if(tin_astparser_match(parser, TINTOK_FUNCTION) || tin_astparser_match(parser, TINTOK_EXPORT))
     {
-        return lit_astparser_rulefunction(parser, false);
+        return tin_astparser_rulefunction(parser, false);
     }
-    else if(lit_astparser_match(parser, LITTOK_RETURN))
+    else if(tin_astparser_match(parser, TINTOK_RETURN))
     {
-        return lit_astparser_parsereturn(parser);
+        return tin_astparser_parsereturn(parser);
     }
-    else if(lit_astparser_match(parser, LITTOK_LEFT_BRACE))
+    else if(tin_astparser_match(parser, TINTOK_LEFT_BRACE))
     {
-        return lit_astparser_parseblock(parser);
+        return tin_astparser_parseblock(parser);
     }
-    expression = lit_astparser_parseexpression(parser, true);
-    return expression == NULL ? NULL : (LitAstExpression*)lit_ast_make_exprstmt(parser->state, parser->previous.line, expression);
+    expression = tin_astparser_parseexpression(parser, true);
+    return expression == NULL ? NULL : (TinAstExpression*)tin_ast_make_exprstmt(parser->state, parser->previous.line, expression);
 }
 
-static LitAstExpression* lit_astparser_parseexpression(LitAstParser* parser, bool ignsemi)
+static TinAstExpression* tin_astparser_parseexpression(TinAstParser* parser, bool ignsemi)
 {
-    lit_astparser_ignorenewlines(parser, ignsemi);
-    return lit_astparser_parseprecedence(parser, LITPREC_ASSIGNMENT, true, ignsemi);
+    tin_astparser_ignorenewlines(parser, ignsemi);
+    return tin_astparser_parseprecedence(parser, TINPREC_ASSIGNMENT, true, ignsemi);
 }
 
-static LitAstExpression* lit_astparser_parsevar_declaration(LitAstParser* parser, bool ignsemi)
+static TinAstExpression* tin_astparser_parsevar_declaration(TinAstParser* parser, bool ignsemi)
 {
     bool constant;
     size_t line;
     size_t length;
     const char* name;
-    LitAstExpression* init;
-    constant = parser->previous.type == LITTOK_CONST;
+    TinAstExpression* init;
+    constant = parser->previous.type == TINTOK_CONST;
     line = parser->previous.line;
-    lit_astparser_consume(parser, LITTOK_IDENTIFIER, "variable name");
+    tin_astparser_consume(parser, TINTOK_IDENTIFIER, "variable name");
     name = parser->previous.start;
     length = parser->previous.length;
     init = NULL;
-    if(lit_astparser_match(parser, LITTOK_EQUAL))
+    if(tin_astparser_match(parser, TINTOK_EQUAL))
     {
-        init = lit_astparser_parseexpression(parser, ignsemi);
+        init = tin_astparser_parseexpression(parser, ignsemi);
     }
-    return (LitAstExpression*)lit_ast_make_assignvarexpr(parser->state, line, name, length, init, constant);
+    return (TinAstExpression*)tin_ast_make_assignvarexpr(parser->state, line, name, length, init, constant);
 }
 
-static LitAstExpression* lit_astparser_parseif(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parseif(TinAstParser* parser)
 {
     size_t line;
     bool invert;
     bool hadparen;
-    LitAstExpression* condition;
-    LitAstExpression* ifbranch;
-    LitAstExprList* elseifconds;
-    LitAstExprList* elseifbranches;
-    LitAstExpression* elsebranch;
-    LitAstExpression* e;
+    TinAstExpression* condition;
+    TinAstExpression* ifbranch;
+    TinAstExprList* elseifconds;
+    TinAstExprList* elseifbranches;
+    TinAstExpression* elsebranch;
+    TinAstExpression* e;
     line = parser->previous.line;
-    invert = lit_astparser_match(parser, LITTOK_BANG);
-    hadparen = lit_astparser_match(parser, LITTOK_LEFT_PAREN);
-    condition = lit_astparser_parseexpression(parser, true);
+    invert = tin_astparser_match(parser, TINTOK_BANG);
+    hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
+    condition = tin_astparser_parseexpression(parser, true);
     if(hadparen)
     {
-        lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')'");
+        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
     }
     if(invert)
     {
-        condition = (LitAstExpression*)lit_ast_make_unaryexpr(parser->state, condition->line, condition, LITTOK_BANG);
+        condition = (TinAstExpression*)tin_ast_make_unaryexpr(parser->state, condition->line, condition, TINTOK_BANG);
     }
-    lit_astparser_ignorenewlines(parser, true);
-    ifbranch = lit_astparser_parsestatement(parser);
+    tin_astparser_ignorenewlines(parser, true);
+    ifbranch = tin_astparser_parsestatement(parser);
     elseifconds = NULL;
     elseifbranches = NULL;
     elsebranch = NULL;
-    lit_astparser_ignorenewlines(parser, true);
-    while(lit_astparser_match(parser, LITTOK_ELSE))
+    tin_astparser_ignorenewlines(parser, true);
+    while(tin_astparser_match(parser, TINTOK_ELSE))
     {
         // else if
-        lit_astparser_ignorenewlines(parser, true);
-        if(lit_astparser_match(parser, LITTOK_IF))
+        tin_astparser_ignorenewlines(parser, true);
+        if(tin_astparser_match(parser, TINTOK_IF))
         {
             if(elseifconds == NULL)
             {
-                elseifconds = lit_ast_allocexprlist(parser->state);
-                elseifbranches = lit_ast_allocate_stmtlist(parser->state);
+                elseifconds = tin_ast_allocexprlist(parser->state);
+                elseifbranches = tin_ast_allocate_stmtlist(parser->state);
             }
-            invert = lit_astparser_match(parser, LITTOK_BANG);
-            hadparen = lit_astparser_match(parser, LITTOK_LEFT_PAREN);
-            lit_astparser_ignorenewlines(parser, true);
-            e = lit_astparser_parseexpression(parser, true);
+            invert = tin_astparser_match(parser, TINTOK_BANG);
+            hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
+            tin_astparser_ignorenewlines(parser, true);
+            e = tin_astparser_parseexpression(parser, true);
             if(hadparen)
             {
-                lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')'");
+                tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
             }
-            lit_astparser_ignorenewlines(parser, true);
+            tin_astparser_ignorenewlines(parser, true);
             if(invert)
             {
-                e = (LitAstExpression*)lit_ast_make_unaryexpr(parser->state, condition->line, e, LITTOK_BANG);
+                e = (TinAstExpression*)tin_ast_make_unaryexpr(parser->state, condition->line, e, TINTOK_BANG);
             }
-            lit_exprlist_push(parser->state, elseifconds, e);
-            lit_exprlist_push(parser->state, elseifbranches, lit_astparser_parsestatement(parser));
+            tin_exprlist_push(parser->state, elseifconds, e);
+            tin_exprlist_push(parser->state, elseifbranches, tin_astparser_parsestatement(parser));
             continue;
         }
         // else
         if(elsebranch != NULL)
         {
-            lit_astparser_raiseerror(parser, "if-statement can have only one else-branch");
+            tin_astparser_raiseerror(parser, "if-statement can have only one else-branch");
         }
-        lit_astparser_ignorenewlines(parser, true);
-        elsebranch = lit_astparser_parsestatement(parser);
+        tin_astparser_ignorenewlines(parser, true);
+        elsebranch = tin_astparser_parsestatement(parser);
     }
-    return (LitAstExpression*)lit_ast_make_ifexpr(parser->state, line, condition, ifbranch, elsebranch, elseifconds, elseifbranches);
+    return (TinAstExpression*)tin_ast_make_ifexpr(parser->state, line, condition, ifbranch, elsebranch, elseifconds, elseifbranches);
 }
 
-static LitAstExpression* lit_astparser_parsefor(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parsefor(TinAstParser* parser)
 {
-    bool c_style;
+    bool cstyle;
     bool hadparen;
     size_t line;
-    LitAstExpression* condition;
-    LitAstExpression* increment;
-    LitAstExpression* var;
-    LitAstExpression* init;
+    TinAstExpression* condition;
+    TinAstExpression* increment;
+    TinAstExpression* var;
+    TinAstExpression* init;
     line= parser->previous.line;
-    hadparen = lit_astparser_match(parser, LITTOK_LEFT_PAREN);
+    hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
     var = NULL;
     init = NULL;
-    if(!lit_astparser_check(parser, LITTOK_SEMICOLON))
+    if(!tin_astparser_check(parser, TINTOK_SEMICOLON))
     {
-        if(lit_astparser_match(parser, LITTOK_VAR))
+        if(tin_astparser_match(parser, TINTOK_VAR))
         {
-            var = lit_astparser_parsevar_declaration(parser, false);
+            var = tin_astparser_parsevar_declaration(parser, false);
         }
         else
         {
-            init = lit_astparser_parseexpression(parser, false);
+            init = tin_astparser_parseexpression(parser, false);
         }
     }
-    c_style = !lit_astparser_match(parser, LITTOK_IN);
+    cstyle = !tin_astparser_match(parser, TINTOK_IN);
     condition= NULL;
     increment = NULL;
-    if(c_style)
+    if(cstyle)
     {
-        lit_astparser_consume(parser, LITTOK_SEMICOLON, "';'");
-        condition = lit_astparser_check(parser, LITTOK_SEMICOLON) ? NULL : lit_astparser_parseexpression(parser, false);
-        lit_astparser_consume(parser, LITTOK_SEMICOLON, "';'");
-        increment = lit_astparser_check(parser, LITTOK_RIGHT_PAREN) ? NULL : lit_astparser_parseexpression(parser, false);
+        tin_astparser_consume(parser, TINTOK_SEMICOLON, "';'");
+        condition = tin_astparser_check(parser, TINTOK_SEMICOLON) ? NULL : tin_astparser_parseexpression(parser, false);
+        tin_astparser_consume(parser, TINTOK_SEMICOLON, "';'");
+        increment = tin_astparser_check(parser, TINTOK_RIGHT_PAREN) ? NULL : tin_astparser_parseexpression(parser, false);
     }
     else
     {
-        condition = lit_astparser_parseexpression(parser, true);
+        condition = tin_astparser_parseexpression(parser, true);
         if(var == NULL)
         {
-            lit_astparser_raiseerror(parser, "for-loops using in-iteration must declare a new variable");
+            tin_astparser_raiseerror(parser, "for-loops using in-iteration must declare a new variable");
         }
     }
     if(hadparen)
     {
-        lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')'");
+        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
     }
-    lit_astparser_ignorenewlines(parser, true);
-    return (LitAstExpression*)lit_ast_make_forexpr(parser->state, line, init, var, condition, increment,
-                                                   lit_astparser_parsestatement(parser), c_style);
+    tin_astparser_ignorenewlines(parser, true);
+    return (TinAstExpression*)tin_ast_make_forexpr(parser->state, line, init, var, condition, increment,
+                                                   tin_astparser_parsestatement(parser), cstyle);
 }
 
-static LitAstExpression* lit_astparser_parsewhile(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parsewhile(TinAstParser* parser)
 {
     bool hadparen;
     size_t line;
-    LitAstExpression* body;
+    TinAstExpression* body;
     line = parser->previous.line;
-    hadparen = lit_astparser_match(parser, LITTOK_LEFT_PAREN);
-    LitAstExpression* condition = lit_astparser_parseexpression(parser, true);
+    hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
+    TinAstExpression* condition = tin_astparser_parseexpression(parser, true);
     if(hadparen)
     {
-        lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')'");
+        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
     }
-    lit_astparser_ignorenewlines(parser, true);
-    body = lit_astparser_parsestatement(parser);
-    return (LitAstExpression*)lit_ast_make_whileexpr(parser->state, line, condition, body);
+    tin_astparser_ignorenewlines(parser, true);
+    body = tin_astparser_parsestatement(parser);
+    return (TinAstExpression*)tin_ast_make_whileexpr(parser->state, line, condition, body);
 }
 
-static LitAstExpression* lit_astparser_rulefunction(LitAstParser* parser, bool canassign)
+static TinAstExpression* tin_astparser_rulefunction(TinAstParser* parser, bool canassign)
 {
     bool isexport;
     bool islambda;
     size_t line;
     size_t fnamelen;
     const char* fnamestr;
-    LitAstCompiler compiler;
-    LitAstFunctionExpr* function;
-    LitAstFunctionExpr* lambda;
-    LitAstSetExpr* to;
+    TinAstCompiler compiler;
+    TinAstFunctionExpr* function;
+    TinAstFunctionExpr* lambda;
+    TinAstSetExpr* to;
     islambda = canassign;
-    isexport = parser->previous.type == LITTOK_EXPORT;
+    isexport = parser->previous.type == TINTOK_EXPORT;
     fnamestr = "<anonymous>";
     fnamelen = strlen(fnamestr);
     if(isexport)
     {
-        lit_astparser_consume(parser, LITTOK_FUNCTION, "'function' after 'export'");
+        tin_astparser_consume(parser, TINTOK_FUNCTION, "'function' after 'export'");
     }
     line = parser->previous.line;
-    if(lit_astparser_check(parser, LITTOK_IDENTIFIER))
+    if(tin_astparser_check(parser, TINTOK_IDENTIFIER))
     {
-        lit_astparser_consume(parser, LITTOK_IDENTIFIER, "function name");
+        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "function name");
         fnamestr = parser->previous.start;
         fnamelen = parser->previous.length;
     }
-    if(lit_astparser_match(parser, LITTOK_DOT) || islambda)
-    //if(lit_astparser_match(parser, LITTOK_DOT))
+    if(tin_astparser_match(parser, TINTOK_DOT) || islambda)
+    //if(tin_astparser_match(parser, TINTOK_DOT))
     {
         to = NULL;
-        if(lit_astparser_check(parser, LITTOK_IDENTIFIER))
+        if(tin_astparser_check(parser, TINTOK_IDENTIFIER))
         {
-            lit_astparser_consume(parser, LITTOK_IDENTIFIER, "function name");
+            tin_astparser_consume(parser, TINTOK_IDENTIFIER, "function name");
         }
-        lambda = lit_ast_make_lambdaexpr(parser->state, line);
+        lambda = tin_ast_make_lambdaexpr(parser->state, line);
         //if(islambda)
         /*
         {
-            to = lit_ast_make_setexpr(
+            to = tin_ast_make_setexpr(
                 parser->state,
                 line,
-                (LitAstExpression*)lit_ast_make_varexpr(parser->state, line, fnamestr, fnamelen),
+                (TinAstExpression*)tin_ast_make_varexpr(parser->state, line, fnamestr, fnamelen),
                 parser->previous.start,
                 parser->previous.length,
-                (LitAstExpression*)lambda
+                (TinAstExpression*)lambda
             );
         }
         */
-        lit_astparser_consume(parser, LITTOK_LEFT_PAREN, "'(' after function name");
-        lit_astparser_initcompiler(parser, &compiler);
-        lit_astparser_beginscope(parser);
-        lit_astparser_parseparameters(parser, &lambda->parameters);
+        tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after function name");
+        tin_astparser_initcompiler(parser, &compiler);
+        tin_astparser_beginscope(parser);
+        tin_astparser_parseparameters(parser, &lambda->parameters);
         if(lambda->parameters.count > 255)
         {
-            lit_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)lambda->parameters.count);
+            tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)lambda->parameters.count);
         }
-        lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')' after function arguments");
-        lit_astparser_ignorenewlines(parser, true);
-        lambda->body = lit_astparser_parsestatement(parser);
-        lit_astparser_endscope(parser);
-        lit_astparser_endcompiler(parser, &compiler);
+        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after function arguments");
+        tin_astparser_ignorenewlines(parser, true);
+        lambda->body = tin_astparser_parsestatement(parser);
+        tin_astparser_endscope(parser);
+        tin_astparser_endcompiler(parser, &compiler);
         if(islambda)
         {
-            return (LitAstExpression*)lambda;
+            return (TinAstExpression*)lambda;
         }
-        return (LitAstExpression*)lit_ast_make_exprstmt(parser->state, line, (LitAstExpression*)to);
+        return (TinAstExpression*)tin_ast_make_exprstmt(parser->state, line, (TinAstExpression*)to);
     }
-    function = lit_ast_make_funcexpr(parser->state, line, fnamestr, fnamelen);
+    function = tin_ast_make_funcexpr(parser->state, line, fnamestr, fnamelen);
     function->exported = isexport;
-    lit_astparser_consume(parser, LITTOK_LEFT_PAREN, "'(' after function name");
-    lit_astparser_initcompiler(parser, &compiler);
-    lit_astparser_beginscope(parser);
-    lit_astparser_parseparameters(parser, &function->parameters);
+    tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after function name");
+    tin_astparser_initcompiler(parser, &compiler);
+    tin_astparser_beginscope(parser);
+    tin_astparser_parseparameters(parser, &function->parameters);
     if(function->parameters.count > 255)
     {
-        lit_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)function->parameters.count);
+        tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)function->parameters.count);
     }
-    lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')' after function arguments");
-    function->body = lit_astparser_parsestatement(parser);
-    lit_astparser_endscope(parser);
-    lit_astparser_endcompiler(parser, &compiler);
-    return (LitAstExpression*)function;
+    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after function arguments");
+    function->body = tin_astparser_parsestatement(parser);
+    tin_astparser_endscope(parser);
+    tin_astparser_endcompiler(parser, &compiler);
+    return (TinAstExpression*)function;
 }
 
-static LitAstExpression* lit_astparser_parsereturn(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parsereturn(TinAstParser* parser)
 {
     size_t line;
-    LitAstExpression* expression;
+    TinAstExpression* expression;
     line = parser->previous.line;
     expression = NULL;
-    if(!lit_astparser_check(parser, LITTOK_NEW_LINE) && !lit_astparser_check(parser, LITTOK_RIGHT_BRACE))
+    if(!tin_astparser_check(parser, TINTOK_NEW_LINE) && !tin_astparser_check(parser, TINTOK_RIGHT_BRACE))
     {
-        expression = lit_astparser_parseexpression(parser, true);
+        expression = tin_astparser_parseexpression(parser, true);
     }
-    return (LitAstExpression*)lit_ast_make_returnexpr(parser->state, line, expression);
+    return (TinAstExpression*)tin_ast_make_returnexpr(parser->state, line, expression);
 }
 
-static LitAstExpression* lit_astparser_parsefield(LitAstParser* parser, LitString* name, bool is_static)
+static TinAstExpression* tin_astparser_parsefield(TinAstParser* parser, TinString* name, bool isstatic)
 {
     size_t line;
-    LitAstExpression* getter;
-    LitAstExpression* setter;
+    TinAstExpression* getter;
+    TinAstExpression* setter;
     line = parser->previous.line;
     getter = NULL;
     setter = NULL;
-    if(lit_astparser_match(parser, LITTOK_ARROW))
+    if(tin_astparser_match(parser, TINTOK_ARROW))
     {
-        getter = lit_astparser_parsestatement(parser);
+        getter = tin_astparser_parsestatement(parser);
     }
     else
     {
-        lit_astparser_match(parser, LITTOK_LEFT_BRACE);// Will be LITTOK_LEFT_BRACE, otherwise this method won't be called
-        lit_astparser_ignorenewlines(parser, true);
-        if(lit_astparser_match(parser, LITTOK_GET))
+        tin_astparser_match(parser, TINTOK_LEFT_BRACE);// Will be TINTOK_LEFT_BRACE, otherwise this method won't be called
+        tin_astparser_ignorenewlines(parser, true);
+        if(tin_astparser_match(parser, TINTOK_GET))
         {
-            lit_astparser_match(parser, LITTOK_ARROW);// Ignore it if it's present
-            getter = lit_astparser_parsestatement(parser);
+            tin_astparser_match(parser, TINTOK_ARROW);// Ignore it if it's present
+            getter = tin_astparser_parsestatement(parser);
         }
-        lit_astparser_ignorenewlines(parser, true);
-        if(lit_astparser_match(parser, LITTOK_SET))
+        tin_astparser_ignorenewlines(parser, true);
+        if(tin_astparser_match(parser, TINTOK_SET))
         {
-            lit_astparser_match(parser, LITTOK_ARROW);// Ignore it if it's present
-            setter = lit_astparser_parsestatement(parser);
+            tin_astparser_match(parser, TINTOK_ARROW);// Ignore it if it's present
+            setter = tin_astparser_parsestatement(parser);
         }
         if(getter == NULL && setter == NULL)
         {
-            lit_astparser_raiseerror(parser, "expected declaration of either getter or setter, got none");
+            tin_astparser_raiseerror(parser, "expected declaration of either getter or setter, got none");
         }
-        lit_astparser_ignorenewlines(parser, true);
-        lit_astparser_consume(parser, LITTOK_RIGHT_BRACE, "'}' after field declaration");
+        tin_astparser_ignorenewlines(parser, true);
+        tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}' after field declaration");
     }
-    return (LitAstExpression*)lit_ast_make_fieldexpr(parser->state, line, name, getter, setter, is_static);
+    return (TinAstExpression*)tin_ast_make_fieldexpr(parser->state, line, name, getter, setter, isstatic);
 }
 
-static LitAstExpression* lit_astparser_parsemethod(LitAstParser* parser, bool is_static)
+static TinAstExpression* tin_astparser_parsemethod(TinAstParser* parser, bool isstatic)
 {
     size_t i;
-    LitAstCompiler compiler;
-    LitAstMethodExpr* method;
-    LitString* name;
-    if(lit_astparser_match(parser, LITTOK_STATIC))
+    TinAstCompiler compiler;
+    TinAstMethodExpr* method;
+    TinString* name;
+    if(tin_astparser_match(parser, TINTOK_STATIC))
     {
-        is_static = true;
+        isstatic = true;
     }
     name = NULL;
-    if(lit_astparser_match(parser, LITTOK_OPERATOR))
+    if(tin_astparser_match(parser, TINTOK_OPERATOR))
     {
-        if(is_static)
+        if(isstatic)
         {
-            lit_astparser_raiseerror(parser, "operator methods cannot be static or defined in static classes");
+            tin_astparser_raiseerror(parser, "operator methods cannot be static or defined in static classes");
         }
         i = 0;
-        while(operators[i] != LITTOK_EOF)
+        while(operators[i] != TINTOK_EOF)
         {
-            if(lit_astparser_match(parser, operators[i]))
+            if(tin_astparser_match(parser, operators[i]))
             {
                 break;
             }
             i++;
         }
-        if(parser->previous.type == LITTOK_LEFT_BRACKET)
+        if(parser->previous.type == TINTOK_LEFT_BRACKET)
         {
-            lit_astparser_consume(parser, LITTOK_RIGHT_BRACKET, "']' after '[' in op method declaration");
-            name = lit_string_copy(parser->state, "[]", 2);
+            tin_astparser_consume(parser, TINTOK_RIGHT_BRACKET, "']' after '[' in op method declaration");
+            name = tin_string_copy(parser->state, "[]", 2);
         }
         else
         {
-            name = lit_string_copy(parser->state, parser->previous.start, parser->previous.length);
+            name = tin_string_copy(parser->state, parser->previous.start, parser->previous.length);
         }
     }
     else
     {
-        lit_astparser_consume(parser, LITTOK_IDENTIFIER, "method name");
-        name = lit_string_copy(parser->state, parser->previous.start, parser->previous.length);
-        if(lit_astparser_check(parser, LITTOK_LEFT_BRACE) || lit_astparser_check(parser, LITTOK_ARROW))
+        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "method name");
+        name = tin_string_copy(parser->state, parser->previous.start, parser->previous.length);
+        if(tin_astparser_check(parser, TINTOK_LEFT_BRACE) || tin_astparser_check(parser, TINTOK_ARROW))
         {
-            return lit_astparser_parsefield(parser, name, is_static);
+            return tin_astparser_parsefield(parser, name, isstatic);
         }
     }
-    method = lit_ast_make_methodexpr(parser->state, parser->previous.line, name, is_static);
-    lit_astparser_initcompiler(parser, &compiler);
-    lit_astparser_beginscope(parser);
-    lit_astparser_consume(parser, LITTOK_LEFT_PAREN, "'(' after method name");
-    lit_astparser_parseparameters(parser, &method->parameters);
+    method = tin_ast_make_methodexpr(parser->state, parser->previous.line, name, isstatic);
+    tin_astparser_initcompiler(parser, &compiler);
+    tin_astparser_beginscope(parser);
+    tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after method name");
+    tin_astparser_parseparameters(parser, &method->parameters);
     if(method->parameters.count > 255)
     {
-        lit_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)method->parameters.count);
+        tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)method->parameters.count);
     }
-    lit_astparser_consume(parser, LITTOK_RIGHT_PAREN, "')' after method arguments");
-    method->body = lit_astparser_parsestatement(parser);
-    lit_astparser_endscope(parser);
-    lit_astparser_endcompiler(parser, &compiler);
-    return (LitAstExpression*)method;
+    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after method arguments");
+    method->body = tin_astparser_parsestatement(parser);
+    tin_astparser_endscope(parser);
+    tin_astparser_endcompiler(parser, &compiler);
+    return (TinAstExpression*)method;
 }
 
-static LitAstExpression* lit_astparser_parseclass(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parseclass(TinAstParser* parser)
 {
     bool finishedparsingfields;
     bool fieldisstatic;
     size_t line;
-    bool is_static;
-    LitString* name;
-    LitString* super;
-    LitAstClassExpr* klass;
-    LitAstExpression* var;
-    LitAstExpression* method;
+    bool isstatic;
+    TinString* name;
+    TinString* super;
+    TinAstClassExpr* klass;
+    TinAstExpression* var;
+    TinAstExpression* method;
     if(setjmp(prs_jmpbuffer))
     {
         return NULL;
     }
     line = parser->previous.line;
-    is_static = parser->previous.type == LITTOK_STATIC;
-    if(is_static)
+    isstatic = parser->previous.type == TINTOK_STATIC;
+    if(isstatic)
     {
-        lit_astparser_consume(parser, LITTOK_CLASS, "'class' after 'static'");
+        tin_astparser_consume(parser, TINTOK_CLASS, "'class' after 'static'");
     }
-    lit_astparser_consume(parser, LITTOK_IDENTIFIER, "class name after 'class'");
-    name = lit_string_copy(parser->state, parser->previous.start, parser->previous.length);
+    tin_astparser_consume(parser, TINTOK_IDENTIFIER, "class name after 'class'");
+    name = tin_string_copy(parser->state, parser->previous.start, parser->previous.length);
     super = NULL;
-    if(lit_astparser_match(parser, LITTOK_COLON))
+    if(tin_astparser_match(parser, TINTOK_COLON))
     {
-        lit_astparser_consume(parser, LITTOK_IDENTIFIER, "super class name after ':'");
-        super = lit_string_copy(parser->state, parser->previous.start, parser->previous.length);
+        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "super class name after ':'");
+        super = tin_string_copy(parser->state, parser->previous.start, parser->previous.length);
         if(super == name)
         {
-            lit_astparser_raiseerror(parser, "class cannot inherit itself");
+            tin_astparser_raiseerror(parser, "class cannot inherit itself");
         }
     }
-    klass = lit_ast_make_classexpr(parser->state, line, name, super);
-    lit_astparser_ignorenewlines(parser, true);
-    lit_astparser_consume(parser, LITTOK_LEFT_BRACE, "'{' before class body");
-    lit_astparser_ignorenewlines(parser, true);
+    klass = tin_ast_make_classexpr(parser->state, line, name, super);
+    tin_astparser_ignorenewlines(parser, true);
+    tin_astparser_consume(parser, TINTOK_LEFT_BRACE, "'{' before class body");
+    tin_astparser_ignorenewlines(parser, true);
     finishedparsingfields = false;
-    while(!lit_astparser_check(parser, LITTOK_RIGHT_BRACE))
+    while(!tin_astparser_check(parser, TINTOK_RIGHT_BRACE))
     {
         fieldisstatic = false;
-        if(lit_astparser_match(parser, LITTOK_STATIC))
+        if(tin_astparser_match(parser, TINTOK_STATIC))
         {
             fieldisstatic = true;
-            if(lit_astparser_match(parser, LITTOK_VAR))
+            if(tin_astparser_match(parser, TINTOK_VAR))
             {
                 if(finishedparsingfields)
                 {
-                    lit_astparser_raiseerror(parser, "all static fields must be defined before the methods");
+                    tin_astparser_raiseerror(parser, "all static fields must be defined before the methods");
                 }
-                var = lit_astparser_parsevar_declaration(parser, true);
+                var = tin_astparser_parsevar_declaration(parser, true);
                 if(var != NULL)
                 {
-                    lit_exprlist_push(parser->state, &klass->fields, var);
+                    tin_exprlist_push(parser->state, &klass->fields, var);
                 }
-                lit_astparser_ignorenewlines(parser, true);
+                tin_astparser_ignorenewlines(parser, true);
                 continue;
             }
             else
@@ -1582,93 +1583,93 @@ static LitAstExpression* lit_astparser_parseclass(LitAstParser* parser)
                 finishedparsingfields = true;
             }
         }
-        method = lit_astparser_parsemethod(parser, is_static || fieldisstatic);
+        method = tin_astparser_parsemethod(parser, isstatic || fieldisstatic);
         if(method != NULL)
         {
-            lit_exprlist_push(parser->state, &klass->fields, method);
+            tin_exprlist_push(parser->state, &klass->fields, method);
         }
-        lit_astparser_ignorenewlines(parser, true);
+        tin_astparser_ignorenewlines(parser, true);
     }
-    lit_astparser_consume(parser, LITTOK_RIGHT_BRACE, "'}' after class body");
-    return (LitAstExpression*)klass;
+    tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}' after class body");
+    return (TinAstExpression*)klass;
 }
 
-static void lit_astparser_sync(LitAstParser* parser)
+static void tin_astparser_sync(TinAstParser* parser)
 {
     parser->panic_mode = false;
-    while(parser->current.type != LITTOK_EOF)
+    while(parser->current.type != TINTOK_EOF)
     {
-        if(parser->previous.type == LITTOK_NEW_LINE)
+        if(parser->previous.type == TINTOK_NEW_LINE)
         {
             longjmp(prs_jmpbuffer, 1);
             return;
         }
         switch(parser->current.type)
         {
-            case LITTOK_CLASS:
-            case LITTOK_FUNCTION:
-            case LITTOK_EXPORT:
-            case LITTOK_VAR:
-            case LITTOK_CONST:
-            case LITTOK_FOR:
-            case LITTOK_STATIC:
-            case LITTOK_IF:
-            case LITTOK_WHILE:
-            case LITTOK_RETURN:
+            case TINTOK_CLASS:
+            case TINTOK_FUNCTION:
+            case TINTOK_EXPORT:
+            case TINTOK_VAR:
+            case TINTOK_CONST:
+            case TINTOK_FOR:
+            case TINTOK_STATIC:
+            case TINTOK_IF:
+            case TINTOK_WHILE:
+            case TINTOK_RETURN:
             {
                 longjmp(prs_jmpbuffer, 1);
                 return;
             }
             default:
             {
-                lit_astparser_advance(parser);
+                tin_astparser_advance(parser);
             }
         }
     }
 }
 
-static LitAstExpression* lit_astparser_parsedeclaration(LitAstParser* parser)
+static TinAstExpression* tin_astparser_parsedeclaration(TinAstParser* parser)
 {
-    LitAstExpression* statement;
+    TinAstExpression* statement;
     statement = NULL;
-    if(lit_astparser_match(parser, LITTOK_CLASS) || lit_astparser_match(parser, LITTOK_STATIC))
+    if(tin_astparser_match(parser, TINTOK_CLASS) || tin_astparser_match(parser, TINTOK_STATIC))
     {
-        statement = lit_astparser_parseclass(parser);
+        statement = tin_astparser_parseclass(parser);
     }
     else
     {
-        statement = lit_astparser_parsestatement(parser);
+        statement = tin_astparser_parsestatement(parser);
     }
     return statement;
 }
 
-bool lit_astparser_parsesource(LitAstParser* parser, const char* file_name, const char* source, LitAstExprList* statements)
+bool tin_astparser_parsesource(TinAstParser* parser, const char* filename, const char* source, TinAstExprList* statements)
 {
-    LitAstCompiler compiler;
-    LitAstExpression* statement;
-    parser->had_error = false;
+    TinAstCompiler compiler;
+    TinAstExpression* statement;
+    parser->haderror = false;
     parser->panic_mode = false;
-    lit_astlex_init(parser->state, parser->state->scanner, file_name, source);
-    lit_astparser_initcompiler(parser, &compiler);
-    lit_astparser_advance(parser);
-    lit_astparser_ignorenewlines(parser, true);
+    tin_astlex_init(parser->state, parser->state->scanner, filename, source);
+    tin_astparser_initcompiler(parser, &compiler);
+    tin_astparser_advance(parser);
+    tin_astparser_ignorenewlines(parser, true);
     if(!prs_is_at_end(parser))
     {
         do
         {
-            statement = lit_astparser_parsedeclaration(parser);
+            statement = tin_astparser_parsedeclaration(parser);
             if(statement != NULL)
             {
-                lit_exprlist_push(parser->state, statements, statement);
+                tin_exprlist_push(parser->state, statements, statement);
             }
-            if(!lit_astparser_matchnewline(parser))
+            if(!tin_astparser_matchnewline(parser))
             {
-                if(lit_astparser_match(parser, LITTOK_EOF))
+                if(tin_astparser_match(parser, TINTOK_EOF))
                 {
                     break;
                 }
             }
         } while(!prs_is_at_end(parser));
     }
-    return parser->had_error || parser->state->scanner->had_error;
+    return parser->haderror || parser->state->scanner->haderror;
 }
