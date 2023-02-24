@@ -1,20 +1,21 @@
 
-s = "foo"
-if(s == "foo")
+class foo
 {
-    println("string cmp works?")
-}
-else
-{
-    println("or does it?")
+    init()
+    {
+        
+    }
 }
 
-switch(s)
+f = new foo()
+f["barb"] = "dork"
+
+println(f)
+
+String["awooga"] = function()
 {
-    case "foo":
-        println("case works?")
-        break
-    default:
-        println("... or not?\n")
-        break
-}
+    
+};
+
+println("".awooga);
+

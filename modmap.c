@@ -377,110 +377,12 @@ static TinValue objfn_map_tostring(TinVM* vm, TinValue instance, size_t argc, Ti
 {
     (void)argc;
     (void)argv;
-    bool haswrapper;
-    bool hasmore;
-    size_t i;
-    size_t index;
-    size_t valueamount;
-    size_t olength;
-    size_t bufferindex;
-    char* buffer;
-    TinState* state;
     TinMap* map;
-    TinTable* values;
-    TinTableEntry* entry;
-    TinValue field;
-    TinString* strobval;
-    TinString* key;
-    TinString* value;
-    TinString** valuesconverted;
-    TinString** keys;
-    state = vm->state;
+    TinWriter wr;
     map = tin_value_asmap(instance);
-    values = &map->values;
-    if(values->count == 0)
-    {
-        return tin_value_makestring(state, "{}");
-    }
-    haswrapper = map->index_fn != NULL;
-    hasmore = values->count > TIN_CONTAINER_OUTPUT_MAX;
-    valueamount = hasmore ? TIN_CONTAINER_OUTPUT_MAX : values->count;
-    valuesconverted = TIN_ALLOCATE(vm->state, sizeof(TinString*), valueamount+1);
-    keys = TIN_ALLOCATE(vm->state, sizeof(TinString*), valueamount+1);
-    olength = 3;
-    if(hasmore)
-    {
-        olength += SINGLE_LINE_MAPS_ENABLED ? 5 : 6;
-    }
-    i = 0;
-    index = 0;
-    do
-    {
-        entry = &values->entries[index++];
-        if(entry->key != NULL)
-        {
-            // Special hidden key
-            field = haswrapper ? map->index_fn(vm, map, entry->key, NULL) : entry->value;
-            // This check is required to prevent infinite loops when playing with Module.privates and such
-            strobval = (tin_value_ismap(field) && tin_value_asmap(field)->index_fn != NULL) ? tin_string_copyconst(state, "map") : tin_value_tostring(state, field);
-            tin_state_pushroot(state, (TinObject*)strobval);
-            valuesconverted[i] = strobval;
-            keys[i] = entry->key;
-            olength += (
-                tin_string_getlength(entry->key) + 3 + tin_string_getlength(strobval) +
-                #ifdef SINGLE_LINE_MAPS
-                    (i == valueamount - 1 ? 1 : 2)
-                #else
-                    (i == valueamount - 1 ? 2 : 3)
-                #endif
-            );
-            i++;
-        }
-    } while(i < valueamount);
-    buffer = TIN_ALLOCATE(vm->state, sizeof(char), olength+1);
-    #ifdef SINGLE_LINE_MAPS
-    memcpy(buffer, "{ ", 2);
-    #else
-    memcpy(buffer, "{\n", 2);
-    #endif
-    bufferindex = 2;
-    for(i = 0; i < valueamount; i++)
-    {
-        key = keys[i];
-        value = valuesconverted[i];
-        #ifndef SINGLE_LINE_MAPS
-        buffer[bufferindex++] = '\t';
-        #endif
-        memcpy(&buffer[bufferindex], key->chars, tin_string_getlength(key));
-        bufferindex += tin_string_getlength(key);
-        memcpy(&buffer[bufferindex], " = ", 3);
-        bufferindex += 3;
-        memcpy(&buffer[bufferindex], value->chars, tin_string_getlength(value));
-        bufferindex += tin_string_getlength(value);
-        if(hasmore && i == valueamount - 1)
-        {
-            #ifdef SINGLE_LINE_MAPS
-            memcpy(&buffer[bufferindex], ", ... }", 7);
-            #else
-            memcpy(&buffer[bufferindex], ",\n\t...\n}", 8);
-            #endif
-            bufferindex += 8;
-        }
-        else
-        {
-            #ifdef SINGLE_LINE_MAPS
-            memcpy(&buffer[bufferindex], (i == valueamount - 1) ? " }" : ", ", 2);
-            #else
-            memcpy(&buffer[bufferindex], (i == valueamount - 1) ? "\n}" : ",\n", 2);
-            #endif
-            bufferindex += 2;
-        }
-        tin_state_poproot(state);
-    }
-    buffer[olength] = '\0';
-    TIN_FREE(vm->state, sizeof(TinString*), keys);
-    TIN_FREE(vm->state, sizeof(TinString*), valuesconverted);
-    return tin_value_fromobject(tin_string_take(vm->state, buffer, olength, false));
+    tin_writer_init_string(vm->state, &wr);
+    tin_towriter_map(vm->state, &wr, map, map->values.count);
+    return tin_value_fromobject(tin_writer_get_string(&wr));
 }
 
 static TinValue objfn_map_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)

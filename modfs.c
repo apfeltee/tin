@@ -653,9 +653,25 @@ static TinValue objmethod_file_writestring(TinVM* vm, TinValue instance, size_t 
 }
 
 /*
- * ==
- * File reading
- */
+* ==
+* File reading
+*/
+
+static long tin_util_filesize(FILE* fh)
+{
+    int fd;
+    struct stat sb;
+    fd = fileno(fh);
+    if(fd == -1)
+    {
+        return -1;
+    }
+    if(fstat(fd, &sb) == -1)
+    {
+        return -1;
+    }
+    return sb.st_size;
+}
 
 static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
@@ -663,8 +679,8 @@ static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc
     (void)argc;
     (void)argv;
     char c;
-    long length;
-    long actuallength;
+    long filelen;
+    long actuallen;
     TinFileData* data;
     TinString* result;
     data = (TinFileData*)tin_util_instancedataget(vm, instance);
@@ -674,26 +690,80 @@ static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc
         * cannot seek, must read each byte.
         */
         result = tin_string_makeempty(vm->state, 0, false);
-        actuallength = 0;
+        actuallen = 0;
         while((c = fgetc(data->handle)) != EOF)
         {
             result->chars = sdscatlen(result->chars, &c, 1);
-            actuallength++;
+            actuallen++;
         }
     }
     else
     {
-        length = ftell(data->handle);
+        filelen = ftell(data->handle);
         fseek(data->handle, 0, SEEK_SET);
-        result = tin_string_makeempty(vm->state, length, false);
-        actuallength = fread(result->chars, sizeof(char), length, data->handle);
+        result = tin_string_makeempty(vm->state, filelen, false);
+        actuallen = fread(result->chars, sizeof(char), filelen, data->handle);
         /*
         * after reading, THIS actually sets the correct length.
         * before that, it would be 0.
         */
-        sdsIncrLen(result->chars, actuallength);
+        sdsIncrLen(result->chars, actuallen);
     }
-    result->hash = tin_util_hashstring(result->chars, actuallength);
+    result->hash = tin_util_hashstring(result->chars, actuallen);
+    tin_state_regstring(vm->state, result);
+    return tin_value_fromobject(result);
+}
+
+static TinValue objmethod_file_readamount(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    (void)instance;
+    (void)argc;
+    (void)argv;
+    long wantlen;
+    long storelen;
+    long filelen;
+    long actuallen;
+    TinFileData* data;
+    TinString* result;
+    /* if no arguments given, just forward to readAll() */
+    if(argc == 0)
+    {
+        return objmethod_file_readall(vm, instance, argc, argv);
+    }
+    data = (TinFileData*)tin_util_instancedataget(vm, instance);
+    wantlen = tin_value_checknumber(vm, argv, argc, 0);
+    /* storelen is the amount that is ultimately allocated */
+    storelen = wantlen;
+    /* try to get filesize (WITHOUT seeking, as that could deadlock) */
+    filelen = tin_util_filesize(data->handle);
+    /* if that succeeded, try to calculate size to avoid allocating too much  ... */
+    if(filelen > 0)
+    {
+        /* if wanted amount is more than is actually available .... */
+        if(wantlen > filelen)
+        {
+            /* re-calculate the amount to fit how much is actually available */
+            storelen = filelen % wantlen;
+            if(storelen == 0)
+            {
+                storelen = wantlen;
+            }
+        }
+    }
+    /* make room for NUL. this will still be overriden by fread() */
+    storelen = storelen + 1;
+    result = tin_string_makeempty(vm->state, storelen + 1, false);
+    actuallen = fread(result->chars, sizeof(char), storelen, data->handle);
+    /* if that didn't work, it's an error */
+    if(actuallen == 0)
+    {
+        tin_state_raiseerror(vm->state, RUNTIME_ERROR, "fread failed");
+        return NULL_VALUE;
+    }
+    /* important: until sdsIncrLen is called, the string is zero-length. */
+    sdsIncrLen(result->chars, actuallen);
+    /* insert string into the gc matrix. */
+    result->hash = tin_util_hashstring(result->chars, actuallen);
     tin_state_regstring(vm->state, result);
     return tin_value_fromobject(result);
 }
@@ -936,6 +1006,7 @@ void tin_open_file_library(TinState* state)
             tin_class_bindmethod(state, klass, "writeNumber", objmethod_file_writenumber);
             tin_class_bindmethod(state, klass, "writeBool", objmethod_file_writebool);
             tin_class_bindmethod(state, klass, "writeString", objmethod_file_writestring);
+            tin_class_bindmethod(state, klass, "read", objmethod_file_readamount);
             tin_class_bindmethod(state, klass, "readAll", objmethod_file_readall);
             tin_class_bindmethod(state, klass, "readLine", objmethod_file_readline);
             tin_class_bindmethod(state, klass, "readByte", objmethod_file_readbyte);
@@ -943,6 +1014,7 @@ void tin_open_file_library(TinState* state)
             tin_class_bindmethod(state, klass, "readNumber", objmethod_file_readnumber);
             tin_class_bindmethod(state, klass, "readBool", objmethod_file_readbool);
             tin_class_bindmethod(state, klass, "readString", objmethod_file_readstring);
+
             tin_class_bindmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
             tin_class_bindgetset(state, klass, "exists", objmethod_file_exists, NULL, false);
         }

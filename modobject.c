@@ -312,14 +312,14 @@ TinValue tin_function_getname(TinVM* vm, TinValue instance)
     return tin_string_format(vm->state, "function @", tin_value_fromobject(name));
 }
 
-static TinValue objfn_object_class(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objfn_instance_class(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
     return tin_value_fromobject(tin_state_getclassfor(vm->state, instance));
 }
 
-static TinValue objfn_object_super(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objfn_instance_super(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
@@ -332,11 +332,19 @@ static TinValue objfn_object_super(TinVM* vm, TinValue instance, size_t argc, Ti
     return tin_value_fromobject(cl);
 }
 
-static TinValue objfn_object_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objfn_instance_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+
+    TinWriter wr;
     (void)argc;
     (void)argv;
-    return tin_string_format(vm->state, "@ instance", tin_value_fromobject(tin_state_getclassfor(vm->state, instance)->name));
+    #if 0
+        return tin_string_format(vm->state, "@ instance", tin_value_fromobject(tin_state_getclassfor(vm->state, instance)->name));
+    #else
+        tin_writer_init_string(vm->state, &wr);
+        tin_towriter_value(vm->state, &wr, instance, true);
+        return tin_value_fromobject(tin_writer_get_string(&wr));
+    #endif
 }
 
 static void fillmap(TinState* state, TinMap* destmap, TinTable* fromtbl, bool includenullkeys)
@@ -356,7 +364,7 @@ static void fillmap(TinState* state, TinMap* destmap, TinTable* fromtbl, bool in
     }
 }
 
-static TinValue objfn_object_tomap(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objfn_instance_tomap(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
@@ -395,7 +403,7 @@ static TinValue objfn_object_tomap(TinVM* vm, TinValue instance, size_t argc, Ti
     return tin_value_fromobject(map);
 }
 
-static TinValue objfn_object_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objfn_instance_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
     (void)argv;
@@ -435,7 +443,7 @@ static TinValue objfn_object_subscript(TinVM* vm, TinValue instance, size_t argc
     return NULL_VALUE;
 }
 
-static TinValue objfn_object_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objfn_instance_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
     (void)argc;
@@ -455,7 +463,7 @@ static TinValue objfn_object_iterator(TinVM* vm, TinValue instance, size_t argc,
 }
 
 
-static TinValue objfn_object_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objfn_instance_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t index;
     TinInstance* self;
@@ -470,16 +478,16 @@ void tin_state_openobjectlibrary(TinState* state)
     klass = tin_create_classobject(state, "Object");
     {
         tin_class_inheritfrom(state, klass, state->primclassclass);
-        tin_class_bindgetset(state, klass, "class", objfn_object_class, NULL, false);
-        tin_class_bindgetset(state, klass, "super", objfn_object_super, NULL, false);
-        tin_class_bindmethod(state, klass, "[]", objfn_object_subscript);
+        tin_class_bindgetset(state, klass, "class", objfn_instance_class, NULL, false);
+        tin_class_bindgetset(state, klass, "super", objfn_instance_super, NULL, false);
+        tin_class_bindmethod(state, klass, "[]", objfn_instance_subscript);
         #if 0
-        tin_class_bindmethod(state, klass, "hasMethod", objfn_object_hasmethod);
+        tin_class_bindmethod(state, klass, "hasMethod", objfn_instance_hasmethod);
         #endif
-        tin_class_bindmethod(state, klass, "toString", objfn_object_tostring);
-        tin_class_bindmethod(state, klass, "toMap", objfn_object_tomap);
-        tin_class_bindmethod(state, klass, "iterator", objfn_object_iterator);
-        tin_class_bindmethod(state, klass, "iteratorValue", objfn_object_iteratorvalue);
+        tin_class_bindmethod(state, klass, "toString", objfn_instance_tostring);
+        tin_class_bindmethod(state, klass, "toMap", objfn_instance_tomap);
+        tin_class_bindmethod(state, klass, "iterator", objfn_instance_iterator);
+        tin_class_bindmethod(state, klass, "iteratorValue", objfn_instance_iteratorvalue);
         state->primobjectclass = klass;
         state->primobjectclass->super = state->primclassclass;
     }

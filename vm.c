@@ -150,7 +150,8 @@
 #define vm_binaryop(op, opstring) \
     TinValue a = tin_vmexec_peek(fiber, 1); \
     TinValue b = tin_vmexec_peek(fiber, 0); \
-    if(tin_value_isnumber(a)) \
+    /* implicitly converts NULL to numeric 0 */ \
+    if(tin_value_isnumber(a) || tin_value_isnull(a)) \
     { \
         if(!tin_value_isnumber(b)) \
         { \
@@ -174,7 +175,7 @@
         } \
         else \
         { \
-            vmexec_raiseerrorfmt("Attempt to use op %s on a null value", opstring); \
+            vmexec_raiseerrorfmt("cannot use op %s on a null value", opstring); \
             *(fiber->stack_top - 1) = FALSE_VALUE;\
         } \
     } \
@@ -261,7 +262,6 @@ TinInterpretResult tin_vm_execmodule(TinState *state, TinModule *module);
 TinInterpretResult tin_vm_execfiber(TinState *state, TinFiber *fiber);
 void tin_vmutil_callexitjump(void);
 bool tin_vmutil_setexitjump(void);
-
 
 
 TIN_VM_INLINE uint16_t tin_vmexec_readshort(TinExecState* est)
@@ -991,17 +991,7 @@ static inline bool vm_binaryop_actual(TinVM* vm, TinFiber* fiber, int op, TinVal
                 int ires;
                 int uleft;
                 unsigned int uright;
-                /*
-                    ApeFloat rightval = ape_object_value_asnumber(right);
-                    ApeFloat leftval = ape_object_value_asnumber(left);
-                    int uleft = ape_util_numbertoint32(leftval);
-                    unsigned int uright = ape_util_numbertouint32(rightval);
-                    resfixed = (uleft << (uright & 0x1F));
-                */
-            
-                //uleft = tin_util_numbertoint32(tin_value_asfloatnumber(a));
                 uleft = vmutil_numtoint32(a);
-                //uright = tin_util_numbertouint32(tin_value_asfloatnumber(b));
                 uright = vmutil_numtouint32(b);
                 if(!b.isfixednumber)
                 {
@@ -1019,17 +1009,7 @@ static inline bool vm_binaryop_actual(TinVM* vm, TinFiber* fiber, int op, TinVal
                 int ires;
                 int uleft;
                 unsigned int uright;
-                /*
-                    ApeFloat rightval = ape_object_value_asnumber(right);
-                    ApeFloat leftval = ape_object_value_asnumber(left);
-                    int uleft = ape_util_numbertoint32(leftval);
-                    unsigned int uright = ape_util_numbertouint32(rightval);
-                    resfixed = (uleft >> (uright & 0x1F));
-                    isfixed = true;
-                */
-                //uleft = tin_util_numbertoint32(tin_value_asfloatnumber(a));
                 uleft = vmutil_numtoint32(a);
-                //uright = tin_util_numbertouint32(tin_value_asfloatnumber(b));
                 uright = vmutil_numtouint32(b);
                 if(!b.isfixednumber)
                 {
@@ -1040,7 +1020,6 @@ static inline bool vm_binaryop_actual(TinVM* vm, TinFiber* fiber, int op, TinVal
                     ires = uleft >> uright;
                 }
                 *(fiber->stack_top - 1) = tin_value_makefixednumber(vm->state, ires);
-                //abort();
             }
             break;
         case OP_EQUAL:
@@ -1099,8 +1078,6 @@ TinInterpretResult tin_vm_execfiber(TinState* state, TinFiber* fiber)
     TinValList* values;
     TinExecState est;
     TinVM* vm;
-
-    (void)instruction;
     vm = state->vm;
     vm_pushgc(state, true);
     vm->fiber = fiber;

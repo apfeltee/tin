@@ -259,7 +259,8 @@ void tin_towriter_map(TinState* state, TinWriter* wr, TinMap* map, size_t size)
                 {
                     tin_writer_writestring(wr, " ");
                 }
-                tin_writer_writeformat(wr, "%s = ", entry->key->chars);
+                tin_writer_writeescapedstring(wr, entry->key->chars, tin_string_getlength(entry->key), true);
+                tin_writer_writestring(wr, ": ");
                 if(tin_value_ismap(entry->value) && (map == tin_value_asmap(entry->value)))
                 {
                     tin_writer_writestring(wr, "(recursion)");
@@ -282,6 +283,16 @@ void tin_towriter_map(TinState* state, TinWriter* wr, TinMap* map, size_t size)
     }
 }
 
+void tin_towriter_functail(TinState* state, TinWriter* wr, TinString* name, TinModule* mod, const char* suffix)
+{
+    (void)state;
+    (void)mod;
+    tin_writer_writestring(wr, "<function ");
+    tin_writer_writeescapedstring(wr, name->chars, tin_string_getlength(name), true);
+    tin_writer_writeformat(wr, " %s>", suffix);
+}
+
+
 void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool withquot)
 {
     size_t size;
@@ -291,7 +302,6 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
     TinValue* slot;
     TinObject* obj;
     TinUpvalue* upvalue;
-    TinString* s;
     obj = tin_value_asobject(value);
     if(obj != NULL)
     {
@@ -299,48 +309,63 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
         {
             case TINTYPE_STRING:
                 {
+                    TinString* s;
                     s = tin_value_asstring(value);
                     tin_writer_writeescapedstring(wr, s->chars, tin_string_getlength(s), withquot);
                 }
                 break;
             case TINTYPE_FUNCTION:
                 {
-                    tin_writer_writeformat(wr, "function %s", tin_value_asfunction(value)->name->chars);
+                    TinFunction* fn;
+                    fn = tin_value_asfunction(value);
+                    tin_towriter_functail(state, wr, fn->name, fn->module, "script");
                 }
                 break;
             case TINTYPE_CLOSURE:
                 {
-                    tin_writer_writeformat(wr, "closure %s", tin_value_asclosure(value)->function->name->chars);
+                    tin_writer_writeformat(wr, "<closure %s>", tin_value_asclosure(value)->function->name->chars);
                 }
                 break;
             case TINTYPE_NATIVE_PRIMITIVE:
                 {
-                    tin_writer_writeformat(wr, "function %s", tin_value_asnativeprimitive(value)->name->chars);
+                    TinNativePrimFunction* fn;
+                    fn = tin_value_asnativeprimitive(value);
+                    tin_towriter_functail(state, wr, fn->name, NULL, "natprimitive");
                 }
                 break;
             case TINTYPE_NATIVE_FUNCTION:
                 {
-                    tin_writer_writeformat(wr, "function %s", tin_value_asnativefunction(value)->name->chars);
+                    TinNativeFunction* fn;
+                    fn = tin_value_asnativefunction(value);
+                    tin_towriter_functail(state, wr, fn->name, NULL, "native");
                 }
                 break;
             case TINTYPE_PRIMITIVE_METHOD:
                 {
-                    tin_writer_writeformat(wr, "function %s", tin_value_asprimitivemethod(value)->name->chars);
+                    TinPrimitiveMethod* fn;
+                    fn = tin_value_asprimitivemethod(value);
+                    tin_towriter_functail(state, wr, fn->name, NULL, "primmethod");
                 }
                 break;
             case TINTYPE_NATIVE_METHOD:
                 {
-                    tin_writer_writeformat(wr, "function %s", tin_value_asnativemethod(value)->name->chars);
+                    TinNativeMethod* fn;
+                    fn = tin_value_asnativemethod(value);
+                    tin_towriter_functail(state, wr, fn->name, NULL, "natmethod");
                 }
                 break;
             case TINTYPE_FIBER:
                 {
-                    tin_writer_writeformat(wr, "fiber");
+                    tin_writer_writeformat(wr, "<fiber>");
                 }
                 break;
             case TINTYPE_MODULE:
                 {
-                    tin_writer_writeformat(wr, "module %s", tin_value_asmodule(value)->name->chars);
+                    TinModule* mod;
+                    mod = tin_value_asmodule(value);
+                    tin_writer_writestring(wr, "<module ");
+                    tin_writer_writeescapedstring(wr, mod->name->chars, tin_string_getlength(mod->name), true);
+                    tin_writer_writestring(wr, ">");
                 }
                 break;
 
@@ -359,22 +384,19 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                 break;
             case TINTYPE_CLASS:
                 {
-                    tin_writer_writeformat(wr, "class %s", tin_value_asclass(value)->name->chars);
+                    TinClass* klass;
+                    klass = tin_value_asclass(value);
+                    tin_writer_writeformat(wr, "<class ");
+                    tin_writer_writeescapedstring(wr, klass->name->chars, tin_string_getlength(klass->name), true);
+                    tin_writer_writestring(wr, ">");
                 }
                 break;
             case TINTYPE_INSTANCE:
                 {
-                    /*
-                    if(tin_value_asinstance(value)->klass->object.type == TINTYPE_MAP)
-                    {
-                        fprintf(stderr, "instance is a map\n");
-                    }
-                    printf("%s instance", tin_value_asinstance(value)->klass->name->chars);
-                    */
-                    tin_writer_writeformat(wr, "<instance '%s' ", tin_value_asinstance(value)->klass->name->chars);
-                    map = tin_value_asmap(value);
-                    size = map->values.count;
-                    tin_towriter_map(state, wr, map, size);
+                    TinInstance* inst;
+                    inst = tin_value_asinstance(value);
+                    tin_writer_writestring(wr, "<instance ");
+                    tin_writer_writeescapedstring(wr, inst->klass->name->chars, tin_string_getlength(inst->klass->name), true);
                     tin_writer_writestring(wr, ">");
                 }
                 break;
@@ -387,7 +409,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
             case TINTYPE_ARRAY:
                 {
                     #ifdef TIN_MINIMIZE_CONTAINERS
-                        tin_writer_writestring(wr, "array");
+                        tin_writer_writestring(wr, "<array>");
                     #else
                         array = tin_value_asarray(value);
                         size = tin_vallist_count(&array->list);
@@ -398,7 +420,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
             case TINTYPE_MAP:
                 {
                     #ifdef TIN_MINIMIZE_CONTAINERS
-                        tin_writer_writeformat(wr, "map");
+                        tin_writer_writeformat(wr, "<map>");
                     #else
                         map = tin_value_asmap(value);
                         size = map->values.count;
@@ -408,23 +430,23 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                 break;
             case TINTYPE_USERDATA:
                 {
-                    tin_writer_writeformat(wr, "userdata");
+                    tin_writer_writeformat(wr, "<userdata>");
                 }
                 break;
             case TINTYPE_RANGE:
                 {
                     range = tin_value_asrange(value);
-                    tin_writer_writeformat(wr, "%g .. %g", range->from, range->to);
+                    tin_writer_writeformat(wr, "<range %g .. %g>", range->from, range->to);
                 }
                 break;
             case TINTYPE_FIELD:
                 {
-                    tin_writer_writeformat(wr, "field");
+                    tin_writer_writeformat(wr, "<field>");
                 }
                 break;
             case TINTYPE_REFERENCE:
                 {
-                    tin_writer_writeformat(wr, "reference => ");
+                    tin_writer_writeformat(wr, "<reference => ");
                     slot = tin_value_asreference(value)->slot;
                     if(slot == NULL)
                     {
@@ -434,6 +456,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                     {
                         tin_towriter_value(state, wr, *slot, withquot);
                     }
+                    tin_writer_writestring(wr, ">");
                 }
                 break;
             default:
@@ -448,8 +471,6 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
     }
 }
 
-//TinInterpretResult tin_call_instance_method(TinState* state, TinInstance* instance, TinString* mthname, TinValue* argv, size_t argc)
-//
 void tin_towriter_value(TinState* state, TinWriter* wr, TinValue value, bool withquot)
 {
     if(tin_value_isbool(value))

@@ -152,9 +152,12 @@ void tin_class_inheritfrom(TinState* state, TinClass* current, TinClass* other)
 
 static TinValue objfn_class_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinWriter wr;
     (void)argc;
     (void)argv;
-    return tin_string_format(vm->state, "class @", tin_value_fromobject(tin_value_asclass(instance)->name));
+    tin_writer_init_string(vm->state, &wr);
+    tin_towriter_value(vm->state, &wr, instance, true);
+    return tin_value_fromobject(tin_writer_get_string(&wr));
 }
 
 static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)

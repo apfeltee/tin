@@ -182,10 +182,11 @@ function str2binb(str)
     for(var i = 0; i < len * K_CHARSIZE; i += K_CHARSIZE)
     {
         aidx = (i >> 5);
-        if(bin[aidx] == null)
+        /*if(bin[aidx] == null)
         {
             bin[aidx] = 0
         }
+        */
         bin[aidx] = bin[aidx] | (str.charCodeAt(i / K_CHARSIZE) & mask) << (24 - i%32);
     }
     return bin;
@@ -199,9 +200,9 @@ function core_hmac_sha1(key, data)
     {
         bkey = core_sha1(bkey, key.length * K_CHARSIZE);
     }
-    var ipad = []
-    var opad = []
-    for(var i = 0; i < 16; i++) 
+    var ipad = [];
+    var opad = [];
+    for(var i = 0; i < 16; i++)
     {
         ipad[i] = bkey[i] ^ 0x36363636;
         opad[i] = bkey[i] ^ 0x5C5C5C5C;

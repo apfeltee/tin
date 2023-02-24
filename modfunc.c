@@ -101,9 +101,12 @@ bool tin_value_iscallablefunction(TinValue value)
 
 static TinValue objfn_function_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinWriter wr;
     (void)argc;
     (void)argv;
-    return tin_function_getname(vm, instance);
+    tin_writer_init_string(vm->state, &wr);
+    tin_towriter_value(vm->state, &wr, instance, false);
+    return tin_value_fromobject(tin_writer_get_string(&wr));
 }
 
 

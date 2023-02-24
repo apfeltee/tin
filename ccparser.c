@@ -860,17 +860,36 @@ static TinAstExpression* tin_astparser_ruleinterpolation(TinAstParser* parser, b
 
 static TinAstExpression* tin_astparser_ruleobject(TinAstParser* parser, bool canassign)
 {
-    (void)canassign;
+    TinString* ts;
+    TinValue tv;
+    TinAstExpression* expr;
     TinAstObjectExpr* object;
+    (void)canassign;
+
     object = tin_ast_make_objectexpr(parser->state, parser->previous.line);
     tin_astparser_ignorenewlines(parser, true);
     while(!tin_astparser_check(parser, TINTOK_RIGHT_BRACE))
     {
         tin_astparser_ignorenewlines(parser, true);
-        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "key string after '{'");
-        tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, parser->previous.start, parser->previous.length)));
+        if(tin_astparser_check(parser, TINTOK_IDENTIFIER))
+        {
+            tin_astparser_consume(parser, TINTOK_IDENTIFIER, "key string after '{'");
+            tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, parser->previous.start, parser->previous.length)));
+        }
+        else if(tin_astparser_check(parser, TINTOK_STRING))
+        {
+            expr = tin_astparser_parseexpression(parser, true);
+            tv = parser->previous.value;
+            ts = tin_value_asstring(tv);
+            tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, ts->chars, tin_string_getlength(ts))));
+            tin_ast_destroyexpression(parser->state, expr);
+        }
+        else
+        {
+            tin_astparser_raiseerror(parser, "expect identifier or string as object key");
+        }
         tin_astparser_ignorenewlines(parser, true);
-        tin_astparser_consume(parser, TINTOK_EQUAL, "'=' after key string");
+        tin_astparser_consume(parser, TINTOK_COLON, "':' after key string");
         tin_astparser_ignorenewlines(parser, true);
         tin_exprlist_push(parser->state, &object->values, tin_astparser_parseexpression(parser, true));
         if(!tin_astparser_match(parser, TINTOK_COMMA))
