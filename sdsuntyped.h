@@ -50,10 +50,7 @@
 
 #define SDS_MAX_PREALLOC (1024 * 1024)
 
-#define SDS_TYPE_5 0
-#define SDS_TYPE_8 1
-#define SDS_TYPE_16 2
-#define SDS_TYPE_32 3
+
 #define SDS_TYPE_64 4
 #define SDS_TYPE_MASK 7
 #define SDS_TYPE_BITS 3
@@ -64,48 +61,13 @@
 static const char* SDS_NOINIT = "SDS_NOINIT";
 
 typedef char* sdstring_t;
-typedef struct sdshead5_t sdshead5_t;
-typedef struct sdshead8_t sdshead8_t;
-typedef struct sdshead16_t sdshead16_t;
-typedef struct sdshead32_t sdshead32_t;
 typedef struct sdshead64_t sdshead64_t;
 
-/* Note: sdshead5_t is never used, we just access the flags byte directly.
- * However is here to document the layout of type 5 SDS strings. */
-struct __attribute__((__packed__)) sdshead5_t
-{
-    unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
-    char buf[];
-};
-
-struct __attribute__((__packed__)) sdshead8_t
-{
-    uint8_t len; /* used */
-    uint8_t alloc; /* excluding the header and null terminator */
-    unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char buf[];
-};
-
-struct __attribute__((__packed__)) sdshead16_t
-{
-    uint16_t len; /* used */
-    uint16_t alloc; /* excluding the header and null terminator */
-    unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char buf[];
-};
-
-struct __attribute__((__packed__)) sdshead32_t
-{
-    uint32_t len; /* used */
-    uint32_t alloc; /* excluding the header and null terminator */
-    unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char buf[];
-};
 
 struct __attribute__((__packed__)) sdshead64_t
 {
-    uint64_t len; /* used */
-    uint64_t alloc; /* excluding the header and null terminator */
+    uint32_t len; /* used */
+    uint32_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
@@ -163,217 +125,46 @@ static inline void sds_memfree(void* ptr);
 
 static inline size_t sds_getlength(const sdstring_t s)
 {
-    unsigned char flags = s[-1];
-    switch(flags & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-            {
-                return SDS_TYPE_5_LEN(flags);
-            }
-            break;
-        case SDS_TYPE_8:
-            {
-                return SDS_HDR(sdshead8_t, s)->len;
-            }
-            break;
-        case SDS_TYPE_16:
-            {
-                return SDS_HDR(sdshead16_t, s)->len;
-            }
-            break;
-        case SDS_TYPE_32:
-            {
-                return SDS_HDR(sdshead32_t, s)->len;
-            }
-            break;
-        case SDS_TYPE_64:
-            {
-                return SDS_HDR(sdshead64_t, s)->len;
-            }
-            break;
-    }
-    return 0;
+    return SDS_HDR(sdshead64_t, s)->len;
 }
 
 static inline size_t sds_getcapacity(const sdstring_t s)
 {
-    unsigned char flags = s[-1];
-    switch(flags & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-            {
-                return 0;
-            }
-            break;
-        case SDS_TYPE_8:
-            {
-                SDS_HDR_VAR(sdshead8_t, s);
-                return sh->alloc - sh->len;
-            }
-            break;
-        case SDS_TYPE_16:
-            {
-                SDS_HDR_VAR(sdshead16_t, s);
-                return sh->alloc - sh->len;
-            }
-            break;
-        case SDS_TYPE_32:
-            {
-                SDS_HDR_VAR(sdshead32_t, s);
-                return sh->alloc - sh->len;
-            }
-            break;
-        case SDS_TYPE_64:
-            {
-                SDS_HDR_VAR(sdshead64_t, s);
-                return sh->alloc - sh->len;
-            }
-            break;
-    }
-    return 0;
+    SDS_HDR_VAR(sdshead64_t, s);
+    return sh->alloc - sh->len;
 }
 
 static inline void sds_setlength(sdstring_t s, size_t newlen)
 {
-    unsigned char flags = s[-1];
-    switch(flags & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-        {
-            unsigned char* fp = ((unsigned char*)s) - 1;
-            *fp = SDS_TYPE_5 | (newlen << SDS_TYPE_BITS);
-        }
-        break;
-        case SDS_TYPE_8:
-            SDS_HDR(sdshead8_t, s)->len = newlen;
-            break;
-        case SDS_TYPE_16:
-            SDS_HDR(sdshead16_t, s)->len = newlen;
-            break;
-        case SDS_TYPE_32:
-            SDS_HDR(sdshead32_t, s)->len = newlen;
-            break;
-        case SDS_TYPE_64:
-            SDS_HDR(sdshead64_t, s)->len = newlen;
-            break;
-    }
+    SDS_HDR(sdshead64_t, s)->len = newlen;
 }
 
 static inline void sds_increaselength(sdstring_t s, size_t inc)
 {
-    unsigned char* fp;
-    unsigned char flags;
-    unsigned char newlen;
-    flags = s[-1];
-    switch(flags & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-        {
-            fp = ((unsigned char*)s) - 1;
-            newlen = SDS_TYPE_5_LEN(flags) + inc;
-            *fp = SDS_TYPE_5 | (newlen << SDS_TYPE_BITS);
-        }
-        break;
-        case SDS_TYPE_8:
-            SDS_HDR(sdshead8_t, s)->len += inc;
-            break;
-        case SDS_TYPE_16:
-            SDS_HDR(sdshead16_t, s)->len += inc;
-            break;
-        case SDS_TYPE_32:
-            SDS_HDR(sdshead32_t, s)->len += inc;
-            break;
-        case SDS_TYPE_64:
-            SDS_HDR(sdshead64_t, s)->len += inc;
-            break;
-    }
+    SDS_HDR(sdshead64_t, s)->len += inc;
 }
 
 /* sds_alloc() = sds_getcapacity() + sds_getlength() */
 static inline size_t sds_alloc(const sdstring_t s)
 {
-    unsigned char flags;
-    flags = s[-1];
-    switch(flags & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-            return SDS_TYPE_5_LEN(flags);
-        case SDS_TYPE_8:
-            return SDS_HDR(sdshead8_t, s)->alloc;
-        case SDS_TYPE_16:
-            return SDS_HDR(sdshead16_t, s)->alloc;
-        case SDS_TYPE_32:
-            return SDS_HDR(sdshead32_t, s)->alloc;
-        case SDS_TYPE_64:
-            return SDS_HDR(sdshead64_t, s)->alloc;
-    }
-    return 0;
+    return SDS_HDR(sdshead64_t, s)->alloc;
 }
 
 static inline void sds_setalloc(sdstring_t s, size_t newlen)
 {
-    unsigned char flags = s[-1];
-    switch(flags & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-            /* Nothing to do, this type has no total allocation info. */
-            break;
-        case SDS_TYPE_8:
-            SDS_HDR(sdshead8_t, s)->alloc = newlen;
-            break;
-        case SDS_TYPE_16:
-            SDS_HDR(sdshead16_t, s)->alloc = newlen;
-            break;
-        case SDS_TYPE_32:
-            SDS_HDR(sdshead32_t, s)->alloc = newlen;
-            break;
-        case SDS_TYPE_64:
-            SDS_HDR(sdshead64_t, s)->alloc = newlen;
-            break;
-    }
+    SDS_HDR(sdshead64_t, s)->alloc = newlen;
 }
 
 static inline int sds_getheadersize(char type)
 {
-    switch(type & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-            return sizeof(sdshead5_t);
-        case SDS_TYPE_8:
-            return sizeof(sdshead8_t);
-        case SDS_TYPE_16:
-            return sizeof(sdshead16_t);
-        case SDS_TYPE_32:
-            return sizeof(sdshead32_t);
-        case SDS_TYPE_64:
-            return sizeof(sdshead64_t);
-    }
-    return 0;
+    (void)type;
+    return sizeof(sdshead64_t);
 }
 
 static inline char sds_reqtype(size_t string_size)
 {
-    if(string_size < 1 << 5)
-    {
-        return SDS_TYPE_5;
-    }
-    if(string_size < 1 << 8)
-    {
-        return SDS_TYPE_8;
-    }
-    if(string_size < 1 << 16)
-    {
-        return SDS_TYPE_16;
-    }
-#if(LONG_MAX == LLONG_MAX)
-    if(string_size < 1ll << 32)
-    {
-        return SDS_TYPE_32;
-    }
+    (void)string_size;
     return SDS_TYPE_64;
-#else
-    return SDS_TYPE_32;
-#endif
 }
 
 /* Create a new sds string with the content specified by the 'init' pointer
@@ -397,12 +188,6 @@ static inline sdstring_t sds_makelength(const void* init, size_t initlen)
     char type;
     int hdrlen;
     type = sds_reqtype(initlen);
-    /* Empty strings are usually created in order to append. Use type 8
-     * since type 5 is not good at this. */
-    if(type == SDS_TYPE_5 && initlen == 0)
-    {
-        type = SDS_TYPE_8;
-    }
     hdrlen = sds_getheadersize(type);
     headbuf = s_malloc(hdrlen + initlen + 1);
     if(headbuf == NULL)
@@ -419,45 +204,11 @@ static inline sdstring_t sds_makelength(const void* init, size_t initlen)
     }
     s = (char*)headbuf + hdrlen;
     fp = ((unsigned char*)s) - 1;
-    switch(type)
     {
-        case SDS_TYPE_5:
-            {
-                *fp = type | (initlen << SDS_TYPE_BITS);
-            }
-            break;
-        case SDS_TYPE_8:
-            {
-                SDS_HDR_VAR(sdshead8_t, s);
-                sh->len = initlen;
-                sh->alloc = initlen;
-                *fp = type;
-            }
-            break;
-        case SDS_TYPE_16:
-            {
-                SDS_HDR_VAR(sdshead16_t, s);
-                sh->len = initlen;
-                sh->alloc = initlen;
-                *fp = type;
-            }
-            break;
-        case SDS_TYPE_32:
-            {
-                SDS_HDR_VAR(sdshead32_t, s);
-                sh->len = initlen;
-                sh->alloc = initlen;
-                *fp = type;
-            }
-            break;
-        case SDS_TYPE_64:
-            {
-                SDS_HDR_VAR(sdshead64_t, s);
-                sh->len = initlen;
-                sh->alloc = initlen;
-                *fp = type;
-            }
-            break;
+        SDS_HDR_VAR(sdshead64_t, s);
+        sh->len = initlen;
+        sh->alloc = initlen;
+        *fp = type;
     }
     if(initlen && init)
     {
@@ -536,7 +287,9 @@ static inline sdstring_t sds_allocroomfor(sdstring_t s, size_t addlen)
     void *sh, *newsh;
     size_t avail = sds_getcapacity(s);
     size_t len, newlen, reqlen;
-    char type, oldtype = s[-1] & SDS_TYPE_MASK;
+    char type;
+    char oldtype;
+    oldtype = s[-1] & SDS_TYPE_MASK;
     int hdrlen;
 
     /* Return ASAP if there is enough space left. */
@@ -553,11 +306,7 @@ static inline sdstring_t sds_allocroomfor(sdstring_t s, size_t addlen)
 
     type = sds_reqtype(newlen);
 
-    /* Don't use type 5: the user is appending to the string and type 5 is
-     * not able to remember empty space, so sds_allocroomfor() must be called
-     * at every appending operation. */
-    if(type == SDS_TYPE_5)
-        type = SDS_TYPE_8;
+
 
     hdrlen = sds_getheadersize(type);
     assert(hdrlen + newlen + 1 > reqlen); /* Catch size_t overflow */
@@ -594,8 +343,8 @@ static inline sdstring_t sds_allocroomfor(sdstring_t s, size_t addlen)
 static inline sdstring_t sds_removefreespace(sdstring_t s)
 {
     void *sh, *newsh;
-    char type, oldtype = s[-1] & SDS_TYPE_MASK;
-    int hdrlen, oldhdrlen = sds_getheadersize(oldtype);
+    char oldtype = s[-1] & SDS_TYPE_MASK;
+    int oldhdrlen = sds_getheadersize(oldtype);
     size_t len = sds_getlength(s);
     size_t avail = sds_getcapacity(s);
     sh = (char*)s - oldhdrlen;
@@ -606,30 +355,12 @@ static inline sdstring_t sds_removefreespace(sdstring_t s)
 
     /* Check what would be the minimum SDS header that is just good enough to
      * fit this string. */
-    type = sds_reqtype(len);
-    hdrlen = sds_getheadersize(type);
 
-    /* If the type is the same, or at least a large enough type is still
-     * required, we just realloc(), letting the allocator to do the copy
-     * only if really needed. Otherwise if the change is huge, we manually
-     * reallocate the string to use the different header type. */
-    if(oldtype == type || type > SDS_TYPE_8)
     {
         newsh = s_realloc(sh, oldhdrlen + len + 1);
         if(newsh == NULL)
             return NULL;
         s = (char*)newsh + oldhdrlen;
-    }
-    else
-    {
-        newsh = s_malloc(hdrlen + len + 1);
-        if(newsh == NULL)
-            return NULL;
-        memcpy((char*)newsh + hdrlen, s, len + 1);
-        s_free(sh);
-        s = (char*)newsh + hdrlen;
-        s[-1] = type;
-        sds_setlength(s, len);
     }
     sds_setalloc(s, len);
     return s;
@@ -680,50 +411,10 @@ static inline void* sds_allocptr(sdstring_t s)
  */
 static inline void sds_internincrlength(sdstring_t s, ssize_t incr)
 {
-    unsigned char flags = s[-1];
     size_t len;
-    switch(flags & SDS_TYPE_MASK)
-    {
-        case SDS_TYPE_5:
-        {
-            unsigned char* fp = ((unsigned char*)s) - 1;
-            unsigned char oldlen = SDS_TYPE_5_LEN(flags);
-            assert((incr > 0 && oldlen + incr < 32) || (incr < 0 && oldlen >= (unsigned int)(-incr)));
-            *fp = SDS_TYPE_5 | ((oldlen + incr) << SDS_TYPE_BITS);
-            len = oldlen + incr;
-            break;
-        }
-        case SDS_TYPE_8:
-        {
-            SDS_HDR_VAR(sdshead8_t, s);
-            assert((incr >= 0 && sh->alloc - sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
-            len = (sh->len += incr);
-            break;
-        }
-        case SDS_TYPE_16:
-        {
-            SDS_HDR_VAR(sdshead16_t, s);
-            assert((incr >= 0 && sh->alloc - sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
-            len = (sh->len += incr);
-            break;
-        }
-        case SDS_TYPE_32:
-        {
-            SDS_HDR_VAR(sdshead32_t, s);
-            assert((incr >= 0 && sh->alloc - sh->len >= (unsigned int)incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
-            len = (sh->len += incr);
-            break;
-        }
-        case SDS_TYPE_64:
-        {
-            SDS_HDR_VAR(sdshead64_t, s);
-            assert((incr >= 0 && sh->alloc - sh->len >= (uint64_t)incr) || (incr < 0 && sh->len >= (uint64_t)(-incr)));
-            len = (sh->len += incr);
-            break;
-        }
-        default:
-            len = 0; /* Just to avoid compilation warnings. */
-    }
+    SDS_HDR_VAR(sdshead64_t, s);
+    assert((incr >= 0 && sh->alloc - sh->len >= (uint64_t)incr) || (incr < 0 && sh->len >= (uint64_t)(-incr)));
+    len = (sh->len += incr);
     s[len] = '\0';
 }
 
@@ -734,14 +425,18 @@ static inline void sds_internincrlength(sdstring_t s, ssize_t incr)
  * is performed. */
 static inline sdstring_t sds_growzero(sdstring_t s, size_t len)
 {
-    size_t curlen = sds_getlength(s);
+    size_t curlen;
+    curlen = sds_getlength(s);
 
     if(len <= curlen)
+    {
         return s;
+    }
     s = sds_allocroomfor(s, len - curlen);
     if(s == NULL)
+    {
         return NULL;
-
+    }
     /* Make sure added region doesn't contain garbage */
     memset(s + curlen, 0, (len - curlen + 1)); /* also set trailing \0 byte */
     sds_setlength(s, len);
@@ -755,11 +450,13 @@ static inline sdstring_t sds_growzero(sdstring_t s, size_t len)
  * references must be substituted with the new pointer returned by the call. */
 static inline sdstring_t sds_appendlen(sdstring_t s, const void* t, size_t len)
 {
-    size_t curlen = sds_getlength(s);
-
+    size_t curlen;
+    curlen = sds_getlength(s);
     s = sds_allocroomfor(s, len);
     if(s == NULL)
+    {
         return NULL;
+    }
     memcpy(s + curlen, t, len);
     sds_setlength(s, curlen + len);
     s[curlen + len] = '\0';

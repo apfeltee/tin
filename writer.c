@@ -680,7 +680,6 @@ const char* tin_tostring_optok(TinAstTokType t)
 #define as_type(varname, fromname, tname) \
     tname* varname = (tname*)fromname
 
-typedef struct TinAstWriterState TinAstWriterState;
 
 struct TinAstWriterState
 {

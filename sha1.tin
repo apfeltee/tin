@@ -179,6 +179,7 @@ function str2binb(str)
     var bin = [];
     var mask = (1 << K_CHARSIZE) - 1;
     var len = str.length;
+    
     for(var i = 0; i < len * K_CHARSIZE; i += K_CHARSIZE)
     {
         aidx = (i >> 5);

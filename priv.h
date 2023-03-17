@@ -481,12 +481,16 @@ struct TinVariable
 
 struct TinExecState
 {
+    TinState* state;
+    TinVM* vm;
+    TinFiber* fiber;
     TinValue* slots;
     TinValue* privates;
     TinUpvalue** upvalues;
     uint8_t* ip;
     TinCallFrame* frame;
     TinChunk* currentchunk;
+    bool wasallowed;
 };
 
 struct TinAstToken
