@@ -225,7 +225,7 @@ static TinAstToken tin_astlex_scanstring(TinAstScanner* scanner, bool interpolat
             {
                 return tin_astlex_makeerrortoken(scanner, "interpolation nesting is too deep, maximum is %i", TIN_MAX_INTERPOLATION_NESTING);
             }
-            stringtype = TINTOK_INTERPOLATION;
+            stringtype = TINTOK_STRINTERPOL;
             scanner->braces[scanner->numbraces++] = 1;
             break;
         }
@@ -434,7 +434,7 @@ static TinAstTokType tin_astlex_checkkeyword(TinAstScanner* scanner, int start, 
     {
         return type;
     }
-    return TINTOK_IDENTIFIER;
+    return TINTOK_IDENT;
 }
 
 static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
@@ -442,7 +442,7 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
     switch(scanner->start[0])
     {
         case 'b':
-            return tin_astlex_checkkeyword(scanner, 1, 4, "reak", TINTOK_BREAK);
+            return tin_astlex_checkkeyword(scanner, 1, 4, "reak", TINTOK_KWBREAK);
 
         case 'c':
             {
@@ -451,7 +451,7 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 'l':
-                            return tin_astlex_checkkeyword(scanner, 2, 3, "ass", TINTOK_CLASS);
+                            return tin_astlex_checkkeyword(scanner, 2, 3, "ass", TINTOK_KWCLASS);
                         case 'o':
                         {
                             if(scanner->current - scanner->start > 3)
@@ -459,9 +459,9 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                                 switch(scanner->start[3])
                                 {
                                     case 's':
-                                        return tin_astlex_checkkeyword(scanner, 2, 3, "nst", TINTOK_CONST);
+                                        return tin_astlex_checkkeyword(scanner, 2, 3, "nst", TINTOK_KWCONST);
                                     case 't':
-                                        return tin_astlex_checkkeyword(scanner, 2, 6, "ntinue", TINTOK_CONTINUE);
+                                        return tin_astlex_checkkeyword(scanner, 2, 6, "ntinue", TINTOK_KWCONTINUE);
                                 }
                             }
                         }
@@ -476,9 +476,9 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 'l':
-                            return tin_astlex_checkkeyword(scanner, 2, 2, "se", TINTOK_ELSE);
+                            return tin_astlex_checkkeyword(scanner, 2, 2, "se", TINTOK_KWELSE);
                         case 'x':
-                            return tin_astlex_checkkeyword(scanner, 2, 4, "port", TINTOK_EXPORT);
+                            return tin_astlex_checkkeyword(scanner, 2, 4, "port", TINTOK_KWEXPORT);
                     }
                 }
             }
@@ -490,11 +490,11 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 'a':
-                            return tin_astlex_checkkeyword(scanner, 2, 3, "lse", TINTOK_FALSE);
+                            return tin_astlex_checkkeyword(scanner, 2, 3, "lse", TINTOK_KWFALSE);
                         case 'o':
-                            return tin_astlex_checkkeyword(scanner, 2, 1, "r", TINTOK_FOR);
+                            return tin_astlex_checkkeyword(scanner, 2, 1, "r", TINTOK_KWFOR);
                         case 'u':
-                            return tin_astlex_checkkeyword(scanner, 2, 6, "nction", TINTOK_FUNCTION);
+                            return tin_astlex_checkkeyword(scanner, 2, 6, "nction", TINTOK_KWFUNCTION);
                     }
                 }
             }
@@ -506,11 +506,11 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                     switch(scanner->start[1])
                     {
                         case 's':
-                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_IS);
+                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_KWIS);
                         case 'f':
-                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_IF);
+                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_KWIF);
                         case 'n':
-                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_IN);
+                            return tin_astlex_checkkeyword(scanner, 2, 0, "", TINTOK_KWIN);
                     }
                 }
             }
@@ -522,9 +522,9 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                 switch(scanner->start[1])
                 {
                     case 'u':
-                        return tin_astlex_checkkeyword(scanner, 2, 2, "ll", TINTOK_NULL);
+                        return tin_astlex_checkkeyword(scanner, 2, 2, "ll", TINTOK_KWNULL);
                     case 'e':
-                        return tin_astlex_checkkeyword(scanner, 2, 1, "w", TINTOK_NEW);
+                        return tin_astlex_checkkeyword(scanner, 2, 1, "w", TINTOK_KWNEW);
                 }
             }
 
@@ -538,9 +538,9 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                 switch(scanner->start[2])
                 {
                     case 'f':
-                        return tin_astlex_checkkeyword(scanner, 3, 0, "", TINTOK_REF);
+                        return tin_astlex_checkkeyword(scanner, 3, 0, "", TINTOK_KWREF);
                     case 't':
-                        return tin_astlex_checkkeyword(scanner, 3, 3, "urn", TINTOK_RETURN);
+                        return tin_astlex_checkkeyword(scanner, 3, 3, "urn", TINTOK_KWRETURN);
                 }
             }
 
@@ -548,7 +548,7 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
         }
 
         case 'o':
-            return tin_astlex_checkkeyword(scanner, 1, 7, "perator", TINTOK_OPERATOR);
+            return tin_astlex_checkkeyword(scanner, 1, 7, "perator", TINTOK_KWOPERATOR);
 
         case 's':
         {
@@ -557,11 +557,11 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                 switch(scanner->start[1])
                 {
                     case 'u':
-                        return tin_astlex_checkkeyword(scanner, 2, 3, "per", TINTOK_SUPER);
+                        return tin_astlex_checkkeyword(scanner, 2, 3, "per", TINTOK_KWSUPER);
                     case 't':
-                        return tin_astlex_checkkeyword(scanner, 2, 4, "atic", TINTOK_STATIC);
+                        return tin_astlex_checkkeyword(scanner, 2, 4, "atic", TINTOK_KWSTATIC);
                     case 'e':
-                        return tin_astlex_checkkeyword(scanner, 2, 1, "t", TINTOK_SET);
+                        return tin_astlex_checkkeyword(scanner, 2, 1, "t", TINTOK_KWSET);
                 }
             }
 
@@ -575,9 +575,9 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
                 switch(scanner->start[1])
                 {
                     case 'h':
-                        return tin_astlex_checkkeyword(scanner, 2, 2, "is", TINTOK_THIS);
+                        return tin_astlex_checkkeyword(scanner, 2, 2, "is", TINTOK_KWTHIS);
                     case 'r':
-                        return tin_astlex_checkkeyword(scanner, 2, 2, "ue", TINTOK_TRUE);
+                        return tin_astlex_checkkeyword(scanner, 2, 2, "ue", TINTOK_KWTRUE);
                 }
             }
 
@@ -585,14 +585,14 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scanner)
         }
 
         case 'v':
-            return tin_astlex_checkkeyword(scanner, 1, 2, "ar", TINTOK_VAR);
+            return tin_astlex_checkkeyword(scanner, 1, 2, "ar", TINTOK_KWVAR);
         case 'w':
-            return tin_astlex_checkkeyword(scanner, 1, 4, "hile", TINTOK_WHILE);
+            return tin_astlex_checkkeyword(scanner, 1, 4, "hile", TINTOK_KWWHILE);
         case 'g':
-            return tin_astlex_checkkeyword(scanner, 1, 2, "et", TINTOK_GET);
+            return tin_astlex_checkkeyword(scanner, 1, 2, "et", TINTOK_KWGET);
     }
 
-    return TINTOK_IDENTIFIER;
+    return TINTOK_IDENT;
 }
 
 static TinAstToken tin_astlex_scanidentifier(TinAstScanner* scanner)
@@ -610,7 +610,7 @@ TinAstToken tin_astlex_scantoken(TinAstScanner* scanner)
     TinAstToken token;
     if(tin_astlex_skipspace(scanner))
     {
-        token = tin_astlex_maketoken(scanner, TINTOK_NEW_LINE);
+        token = tin_astlex_maketoken(scanner, TINTOK_NEWLINE);
         scanner->line++;
         return token;
     }
@@ -631,16 +631,16 @@ TinAstToken tin_astlex_scantoken(TinAstScanner* scanner)
     switch(c)
     {
         case '(':
-            return tin_astlex_maketoken(scanner, TINTOK_LEFT_PAREN);
+            return tin_astlex_maketoken(scanner, TINTOK_PARENOPEN);
         case ')':
-            return tin_astlex_maketoken(scanner, TINTOK_RIGHT_PAREN);
+            return tin_astlex_maketoken(scanner, TINTOK_PARENCLOSE);
         case '{':
             {
                 if(scanner->numbraces > 0)
                 {
                     scanner->braces[scanner->numbraces - 1]++;
                 }
-                return tin_astlex_maketoken(scanner, TINTOK_LEFT_BRACE);
+                return tin_astlex_maketoken(scanner, TINTOK_BRACEOPEN);
             }
             break;
         case '}':
@@ -650,13 +650,13 @@ TinAstToken tin_astlex_scantoken(TinAstScanner* scanner)
                     scanner->numbraces--;
                     return tin_astlex_scanstring(scanner, true);
                 }
-                return tin_astlex_maketoken(scanner, TINTOK_RIGHT_BRACE);
+                return tin_astlex_maketoken(scanner, TINTOK_BRACECLOSE);
             }
             break;
         case '[':
-            return tin_astlex_maketoken(scanner, TINTOK_LEFT_BRACKET);
+            return tin_astlex_maketoken(scanner, TINTOK_BRACKETOPEN);
         case ']':
-            return tin_astlex_maketoken(scanner, TINTOK_RIGHT_BRACKET);
+            return tin_astlex_maketoken(scanner, TINTOK_BRACKETCLOSE);
         case ';':
             return tin_astlex_maketoken(scanner, TINTOK_SEMICOLON);
         case ',':
@@ -666,41 +666,41 @@ TinAstToken tin_astlex_scantoken(TinAstScanner* scanner)
         case '~':
             return tin_astlex_maketoken(scanner, TINTOK_TILDE);
         case '+':
-            return tin_astlex_matchntoken(scanner, '=', '+', TINTOK_PLUS_EQUAL, TINTOK_PLUS_PLUS, TINTOK_PLUS);
+            return tin_astlex_matchntoken(scanner, '=', '+', TINTOK_PLUSEQUAL, TINTOK_DOUBLEPLUS, TINTOK_PLUS);
         case '-':
             {
                 if(tin_astlex_matchchar(scanner, '>'))
                 {
-                    return tin_astlex_maketoken(scanner, TINTOK_SMALL_ARROW);
+                    return tin_astlex_maketoken(scanner, TINTOK_SMALLARROW);
                 }
-                return tin_astlex_matchntoken(scanner, '=', '-', TINTOK_MINUS_EQUAL, TINTOK_MINUS_MINUS, TINTOK_MINUS);
+                return tin_astlex_matchntoken(scanner, '=', '-', TINTOK_MINUSEQUAL, TINTOK_DOUBLEMINUS, TINTOK_MINUS);
             }
+            break;
         case '/':
-            return tin_astlex_matchtoken(scanner, '=', TINTOK_SLASH_EQUAL, TINTOK_SLASH);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_SLASHEQUAL, TINTOK_SLASH);
         case '#':
-            return tin_astlex_matchtoken(scanner, '=', TINTOK_SHARP_EQUAL, TINTOK_SHARP);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_SHARPEQUAL, TINTOK_SHARP);
         case '!':
-            return tin_astlex_matchtoken(scanner, '=', TINTOK_BANG_EQUAL, TINTOK_BANG);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_BANGEQUAL, TINTOK_BANG);
         case '?':
-            return tin_astlex_matchtoken(scanner, '?', TINTOK_QUESTION_QUESTION, TINTOK_QUESTION);
+            return tin_astlex_matchtoken(scanner, '?', TINTOK_DOUBLEQUESTION, TINTOK_QUESTION);
         case '%':
-            return tin_astlex_matchtoken(scanner, '=', TINTOK_PERCENT_EQUAL, TINTOK_PERCENT);
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_PERCENTEQUAL, TINTOK_PERCENT);
         case '^':
-            return tin_astlex_matchtoken(scanner, '=', TINTOK_CARET_EQUAL, TINTOK_CARET);
-
+            return tin_astlex_matchtoken(scanner, '=', TINTOK_CARETEQUAL, TINTOK_CARET);
         case '>':
-            return tin_astlex_matchntoken(scanner, '=', '>', TINTOK_GREATER_EQUAL, TINTOK_GREATER_GREATER, TINTOK_GREATER);
+            return tin_astlex_matchntoken(scanner, '=', '>', TINTOK_GREATEREQUAL, TINTOK_SHIFTRIGHT, TINTOK_GREATERTHAN);
         case '<':
-            return tin_astlex_matchntoken(scanner, '=', '<', TINTOK_LESS_EQUAL, TINTOK_LESS_LESS, TINTOK_LESS);
+            return tin_astlex_matchntoken(scanner, '=', '<', TINTOK_LESSEQUAL, TINTOK_SHIFTLEFT, TINTOK_LESSTHAN);
         case '*':
-            return tin_astlex_matchntoken(scanner, '=', '*', TINTOK_STAR_EQUAL, TINTOK_STAR_STAR, TINTOK_STAR);
+            return tin_astlex_matchntoken(scanner, '=', '*', TINTOK_STAREQUAL, TINTOK_DOUBLESTAR, TINTOK_STAR);
         case '=':
-            return tin_astlex_matchntoken(scanner, '=', '>', TINTOK_EQUAL_EQUAL, TINTOK_ARROW, TINTOK_EQUAL);
+            return tin_astlex_matchntoken(scanner, '=', '>', TINTOK_EQUAL, TINTOK_ARROW, TINTOK_ASSIGN);
         case '|':
-            return tin_astlex_matchntoken(scanner, '=', '|', TINTOK_BAR_EQUAL, TINTOK_BAR_BAR, TINTOK_BAR);
+            return tin_astlex_matchntoken(scanner, '=', '|', TINTOK_ASSIGNEQUAL, TINTOK_DOUBLEBAR, TINTOK_BAR);
         case '&':
             {
-                return tin_astlex_matchntoken(scanner, '=', '&', TINTOK_AMPERSAND_EQUAL, TINTOK_AMPERSAND_AMPERSAND, TINTOK_AMPERSAND);
+                return tin_astlex_matchntoken(scanner, '=', '&', TINTOK_AMPERSANDEQUAL, TINTOK_DOUBLEAMPERSAND, TINTOK_AMPERSAND);
             }
             break;
         case '.':
@@ -709,7 +709,7 @@ TinAstToken tin_astlex_scantoken(TinAstScanner* scanner)
                 {
                     return tin_astlex_maketoken(scanner, TINTOK_DOT);
                 }
-                return tin_astlex_matchtoken(scanner, '.', TINTOK_DOT_DOT_DOT, TINTOK_DOT_DOT);
+                return tin_astlex_matchtoken(scanner, '.', TINTOK_TRIPLEDOT, TINTOK_DOUBLEDOT);
             }
             break;
         case '$':

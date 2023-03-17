@@ -373,7 +373,7 @@ static TinValue objfn_array_compare(TinVM* vm, TinValue instance, size_t argc, T
     TinArray* self;
     TinArray* other;
     (void)argc;
-    fprintf(stderr, "tin_vm_callcallable to objfn_array_compare\n");
+    //fprintf(stderr, "tin_vm_callcallable to objfn_array_compare\n");
     self = tin_value_asarray(instance);
     if(tin_value_isarray(argv[0]))
     {
@@ -578,8 +578,8 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
     }
     jlen = 0;
     index = 0;
-    chars = sdsempty();
-    chars = sdsMakeRoomFor(chars, length + 1);
+    chars = sds_makeempty();
+    chars = sds_allocroomfor(chars, length + 1);
     if(joinee != NULL)
     {
         jlen = tin_string_getlength(joinee);
@@ -588,14 +588,14 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
     {
         string = strings[i];
         memcpy(chars + index, string->chars, tin_string_getlength(string));
-        chars = sdscatlen(chars, string->chars, tin_string_getlength(string));
+        chars = sds_appendlen(chars, string->chars, tin_string_getlength(string));
         index += tin_string_getlength(string);
         if(joinee != NULL)
         {
             
             //if((i+1) < vl->count)
             {
-                chars = sdscatlen(chars, joinee->chars, jlen);
+                chars = sds_appendlen(chars, joinee->chars, jlen);
             }
             index += jlen;
         }

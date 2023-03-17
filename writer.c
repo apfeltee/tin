@@ -38,7 +38,7 @@ static void litwr_cb_writeformat(TinWriter* wr, const char* fmt, va_list va)
     if(wr->stringmode)
     {
         ds = (TinString*)wr->uptr;
-        ds->chars = sdscatvprintf(ds->chars, fmt, va);
+        ds->chars = sds_appendvprintf(ds->chars, fmt, va);
     }
     else
     {
@@ -184,29 +184,6 @@ TinString* tin_writer_get_string(TinWriter* wr)
     return NULL;
 }
 
-static const char* tin_object_type_names[] =
-{
-    "string",
-    "function",
-    "nativefunction",
-    "nativeprimitive",
-    "nativemethod",
-    "primitivemethod",
-    "fiber",
-    "module",
-    "closure",
-    "upvalue",
-    "class",
-    "instance",
-    "boundmethod",
-    "array",
-    "map",
-    "userdata",
-    "range",
-    "field",
-    "reference"
-};
-
 void tin_towriter_array(TinState* state, TinWriter* wr, TinArray* array, size_t size)
 {
     size_t i;
@@ -326,28 +303,28 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                     tin_writer_writeformat(wr, "<closure %s>", tin_value_asclosure(value)->function->name->chars);
                 }
                 break;
-            case TINTYPE_NATIVE_PRIMITIVE:
+            case TINTYPE_NATIVEPRIMITIVE:
                 {
                     TinNativePrimFunction* fn;
                     fn = tin_value_asnativeprimitive(value);
                     tin_towriter_functail(state, wr, fn->name, NULL, "natprimitive");
                 }
                 break;
-            case TINTYPE_NATIVE_FUNCTION:
+            case TINTYPE_NATIVEFUNCTION:
                 {
                     TinNativeFunction* fn;
                     fn = tin_value_asnativefunction(value);
                     tin_towriter_functail(state, wr, fn->name, NULL, "native");
                 }
                 break;
-            case TINTYPE_PRIMITIVE_METHOD:
+            case TINTYPE_PRIMITIVEMETHOD:
                 {
                     TinPrimitiveMethod* fn;
                     fn = tin_value_asprimitivemethod(value);
                     tin_towriter_functail(state, wr, fn->name, NULL, "primmethod");
                 }
                 break;
-            case TINTYPE_NATIVE_METHOD:
+            case TINTYPE_NATIVEMETHOD:
                 {
                     TinNativeMethod* fn;
                     fn = tin_value_asnativemethod(value);
@@ -400,7 +377,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                     tin_writer_writestring(wr, ">");
                 }
                 break;
-            case TINTYPE_BOUND_METHOD:
+            case TINTYPE_BOUNDMETHOD:
                 {
                     tin_towriter_value(state, wr, tin_value_asboundmethod(value)->method, withquot);
                     return;
@@ -514,7 +491,55 @@ const char* tin_tostring_typename(TinValue value)
     }
     else if(tin_value_isobject(value))
     {
-        return tin_object_type_names[tin_value_type(value)];
+        switch(tin_value_type(value))
+        {
+            case TINTYPE_NULL:
+                return "null";
+            case TINTYPE_BOOL:
+                return "bool";
+            case TINTYPE_NUMBER:
+                return "number";
+            case TINTYPE_UNDEFINED:
+                return "undefined";
+            case TINTYPE_STRING:
+                return "string";
+            case TINTYPE_FUNCTION:
+                return "function";
+            case TINTYPE_NATIVEFUNCTION:
+                return "nativefunction";
+            case TINTYPE_NATIVEPRIMITIVE:
+                return "nativeprimitive";
+            case TINTYPE_NATIVEMETHOD:
+                return "nativemethod";
+            case TINTYPE_PRIMITIVEMETHOD:
+                return "primitivemethod";
+            case TINTYPE_FIBER:
+                return "fiber";
+            case TINTYPE_MODULE:
+                return "module";
+            case TINTYPE_CLOSURE:
+                return "closure";
+            case TINTYPE_UPVALUE:
+                return "upvalue";
+            case TINTYPE_CLASS:
+                return "class";
+            case TINTYPE_INSTANCE:
+                return "instance";
+            case TINTYPE_BOUNDMETHOD:
+                return "boundmethod";
+            case TINTYPE_ARRAY:
+                return "array";
+            case TINTYPE_MAP:
+                return "map";
+            case TINTYPE_USERDATA:
+                return "userdata";
+            case TINTYPE_RANGE:
+                return "range";
+            case TINTYPE_FIELD:
+                return "field";
+            case TINTYPE_REFERENCE:
+                return "reference";
+        }
     }
     return "unknown";
 }
@@ -523,7 +548,7 @@ const char* tin_tostring_exprtype(TinAstExprType t)
 {
     switch(t)
     {
-        case TINEXPR_LITERAL: return "TINERAL";
+        case TINEXPR_LITERAL: return "LITERAL";
         case TINEXPR_BINARY: return "BINARY";
         case TINEXPR_UNARY: return "UNARY";
         case TINEXPR_VAREXPR: return "VAREXPR";
@@ -564,86 +589,86 @@ const char* tin_tostring_optok(TinAstTokType t)
 {
     switch(t)
     {
-        case TINTOK_NEW_LINE: return "NEW_LINE";
-        case TINTOK_LEFT_PAREN: return "(";
-        case TINTOK_RIGHT_PAREN: return ")";
-        case TINTOK_LEFT_BRACE: return "{";
-        case TINTOK_RIGHT_BRACE: return "}";
-        case TINTOK_LEFT_BRACKET: return "[";
-        case TINTOK_RIGHT_BRACKET: return "]";
+        case TINTOK_NEWLINE: return "NEW_LINE";
+        case TINTOK_PARENOPEN: return "(";
+        case TINTOK_PARENCLOSE: return ")";
+        case TINTOK_BRACEOPEN: return "{";
+        case TINTOK_BRACECLOSE: return "}";
+        case TINTOK_BRACKETOPEN: return "[";
+        case TINTOK_BRACKETCLOSE: return "]";
         case TINTOK_COMMA: return ",";
         case TINTOK_SEMICOLON: return ";";
         case TINTOK_COLON: return ":";
-        case TINTOK_BAR_EQUAL: return "|=";
+        case TINTOK_ASSIGNEQUAL: return "|=";
         case TINTOK_BAR: return "|";
-        case TINTOK_BAR_BAR: return "||";
-        case TINTOK_AMPERSAND_EQUAL: return "&=";
+        case TINTOK_DOUBLEBAR: return "||";
+        case TINTOK_AMPERSANDEQUAL: return "&=";
         case TINTOK_AMPERSAND: return "&";
-        case TINTOK_AMPERSAND_AMPERSAND: return "&&";
+        case TINTOK_DOUBLEAMPERSAND: return "&&";
         case TINTOK_BANG: return "!";
-        case TINTOK_BANG_EQUAL: return "!=";
-        case TINTOK_EQUAL: return "=";
-        case TINTOK_EQUAL_EQUAL: return "==";
-        case TINTOK_GREATER: return ">";
-        case TINTOK_GREATER_EQUAL: return ">=";
-        case TINTOK_GREATER_GREATER: return ">>";
-        case TINTOK_LESS: return "<";
-        case TINTOK_LESS_EQUAL: return "<=";
-        case TINTOK_LESS_LESS: return "<<";
+        case TINTOK_BANGEQUAL: return "!=";
+        case TINTOK_ASSIGN: return "=";
+        case TINTOK_EQUAL: return "==";
+        case TINTOK_GREATERTHAN: return ">";
+        case TINTOK_GREATEREQUAL: return ">=";
+        case TINTOK_SHIFTRIGHT: return ">>";
+        case TINTOK_LESSTHAN: return "<";
+        case TINTOK_LESSEQUAL: return "<=";
+        case TINTOK_SHIFTLEFT: return "<<";
         case TINTOK_PLUS: return "+";
-        case TINTOK_PLUS_EQUAL: return "+=";
-        case TINTOK_PLUS_PLUS: return "++";
+        case TINTOK_PLUSEQUAL: return "+=";
+        case TINTOK_DOUBLEPLUS: return "++";
         case TINTOK_MINUS: return "-";
-        case TINTOK_MINUS_EQUAL: return "-=";
-        case TINTOK_MINUS_MINUS: return "--";
+        case TINTOK_MINUSEQUAL: return "-=";
+        case TINTOK_DOUBLEMINUS: return "--";
         case TINTOK_STAR: return "*";
-        case TINTOK_STAR_EQUAL: return "*=";
-        case TINTOK_STAR_STAR: return "**";
+        case TINTOK_STAREQUAL: return "*=";
+        case TINTOK_DOUBLESTAR: return "**";
         case TINTOK_SLASH: return "/";
-        case TINTOK_SLASH_EQUAL: return "/=";
+        case TINTOK_SLASHEQUAL: return "/=";
         case TINTOK_QUESTION: return "?";
-        case TINTOK_QUESTION_QUESTION: return "??";
+        case TINTOK_DOUBLEQUESTION: return "??";
         case TINTOK_PERCENT: return "%";
-        case TINTOK_PERCENT_EQUAL: return "%=";
+        case TINTOK_PERCENTEQUAL: return "%=";
         case TINTOK_ARROW: return "=>";
-        case TINTOK_SMALL_ARROW: return "->";
+        case TINTOK_SMALLARROW: return "->";
         case TINTOK_TILDE: return "~";
         case TINTOK_CARET: return "^";
-        case TINTOK_CARET_EQUAL: return "^=";
+        case TINTOK_CARETEQUAL: return "^=";
         case TINTOK_DOT: return ".";
-        case TINTOK_DOT_DOT: return "..";
-        case TINTOK_DOT_DOT_DOT: return "...";
+        case TINTOK_DOUBLEDOT: return "..";
+        case TINTOK_TRIPLEDOT: return "...";
         case TINTOK_SHARP: return "#";
-        case TINTOK_SHARP_EQUAL: return "#=";
-        case TINTOK_IDENTIFIER: return "IDENTIFIER";
+        case TINTOK_SHARPEQUAL: return "#=";
+        case TINTOK_IDENT: return "IDENTIFIER";
         case TINTOK_STRING: return "STRING";
-        case TINTOK_INTERPOLATION: return "INTERPOLATION";
+        case TINTOK_STRINTERPOL: return "INTERPOLATION";
         case TINTOK_NUMBER: return "NUMBER";
-        case TINTOK_CLASS: return "CLASS";
-        case TINTOK_ELSE: return "ELSE";
-        case TINTOK_FALSE: return "FALSE";
-        case TINTOK_FOR: return "FOR";
-        case TINTOK_FUNCTION: return "FUNCTION";
-        case TINTOK_IF: return "IF";
-        case TINTOK_NULL: return "NULL";
-        case TINTOK_RETURN: return "RETURN";
-        case TINTOK_SUPER: return "SUPER";
-        case TINTOK_THIS: return "THIS";
-        case TINTOK_TRUE: return "TRUE";
-        case TINTOK_VAR: return "VAR";
-        case TINTOK_WHILE: return "WHILE";
-        case TINTOK_CONTINUE: return "CONTINUE";
-        case TINTOK_BREAK: return "BREAK";
-        case TINTOK_NEW: return "NEW";
-        case TINTOK_EXPORT: return "EXPORT";
-        case TINTOK_IS: return "IS";
-        case TINTOK_STATIC: return "STATIC";
-        case TINTOK_OPERATOR: return "OPERATOR";
-        case TINTOK_GET: return "GET";
-        case TINTOK_SET: return "SET";
-        case TINTOK_IN: return "IN";
-        case TINTOK_CONST: return "CONST";
-        case TINTOK_REF: return "REF";
+        case TINTOK_KWCLASS: return "CLASS";
+        case TINTOK_KWELSE: return "ELSE";
+        case TINTOK_KWFALSE: return "FALSE";
+        case TINTOK_KWFOR: return "FOR";
+        case TINTOK_KWFUNCTION: return "FUNCTION";
+        case TINTOK_KWIF: return "IF";
+        case TINTOK_KWNULL: return "NULL";
+        case TINTOK_KWRETURN: return "RETURN";
+        case TINTOK_KWSUPER: return "SUPER";
+        case TINTOK_KWTHIS: return "THIS";
+        case TINTOK_KWTRUE: return "TRUE";
+        case TINTOK_KWVAR: return "VAR";
+        case TINTOK_KWWHILE: return "WHILE";
+        case TINTOK_KWCONTINUE: return "CONTINUE";
+        case TINTOK_KWBREAK: return "BREAK";
+        case TINTOK_KWNEW: return "NEW";
+        case TINTOK_KWEXPORT: return "EXPORT";
+        case TINTOK_KWIS: return "IS";
+        case TINTOK_KWSTATIC: return "STATIC";
+        case TINTOK_KWOPERATOR: return "OPERATOR";
+        case TINTOK_KWGET: return "GET";
+        case TINTOK_KWSET: return "SET";
+        case TINTOK_KWIN: return "IN";
+        case TINTOK_KWCONST: return "CONST";
+        case TINTOK_KWREF: return "REF";
         case TINTOK_ERROR: return "ERROR";
         case TINTOK_EOF: return "EOF";
         default:
@@ -737,7 +762,7 @@ void tin_astwriter_expr(TinAstWriterState* aw, TinAstExpression* expr)
         case TINEXPR_BINARY:
             {
                 as_type(exbin, expr, TinAstBinaryExpr);
-                if(!exbin->ignore_left)
+                //if(!exbin->ignore_left)
                 {
                     tin_astwriter_expr(aw, exbin->left);
                 }
@@ -827,12 +852,12 @@ void tin_astwriter_expr(TinAstWriterState* aw, TinAstExpression* expr)
             {
                 as_type(exobj, expr, TinAstObjectExpr);
                 tin_writer_writeformat(wr, "{");
-                for(i=0; i<tin_vallist_count(&exobj->keys); i++)
+                for(i=0; i<tin_exprlist_count(&exobj->keys); i++)
                 {
-                    tin_towriter_value(state, wr, tin_vallist_get(&exobj->keys, i), true);
+                    tin_astwriter_expr(aw, tin_exprlist_get(&exobj->keys, i));
                     tin_writer_writeformat(wr, ": ");
                     tin_astwriter_expr(aw, exobj->values.values[i]);
-                    if((i+1) < tin_vallist_count(&exobj->keys))
+                    if((i+1) < tin_exprlist_count(&exobj->keys))
                     {
                         tin_writer_writeformat(wr, ", ");
                     }

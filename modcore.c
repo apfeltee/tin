@@ -28,7 +28,7 @@ void tin_open_libraries(TinState* state)
         argv[0] = a; \
         argv[1] = b; \
         TinInterpretResult r = tin_state_callvalue(state, callee, argv, 2, false); \
-        if(r.type != TINRESULT_OK) \
+        if(r.type != TINSTATE_OK) \
         { \
             return; \
         } \
@@ -67,7 +67,7 @@ void util_custom_quick_sort(TinVM* vm, TinValue* l, int length, TinValue callee)
         //while(i < pivotindex && COMPARE(state, callee, l[i], pivot))
         while(i < pivotindex)
         {
-            if((rt = COMPARE(state, callee, l[i], pivot)).type != TINRESULT_OK)
+            if((rt = COMPARE(state, callee, l[i], pivot)).type != TINSTATE_OK)
             {
                 return;
             }
@@ -80,7 +80,7 @@ void util_custom_quick_sort(TinVM* vm, TinValue* l, int length, TinValue callee)
         //while(j > pivotindex && COMPARE(state, callee, pivot, l[j]))
         while(j > pivotindex)
         {
-            if((rt = COMPARE(state, callee, pivot, l[j])).type != TINRESULT_OK)
+            if((rt = COMPARE(state, callee, pivot, l[j])).type != TINSTATE_OK)
             {
                 return;
             }

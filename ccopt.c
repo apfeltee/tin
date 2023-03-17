@@ -119,7 +119,7 @@ static void tin_astopt_endscope(TinAstOptimizer* optimizer)
     TinVarList* variables;
     optimizer->depth--;
     variables = &optimizer->variables;
-    remove_unused = tin_astopt_isoptenabled(TINOPTSTATE_UNUSED_VAR);
+    remove_unused = tin_astopt_isoptenabled(TINOPTSTATE_UNUSEDVAR);
     while(variables->count > 0 && variables->values[variables->count - 1].depth > optimizer->depth)
     {
         if(remove_unused && !variables->values[variables->count - 1].used)
@@ -222,7 +222,7 @@ static TinValue tin_astopt_evalbinaryop(TinAstOptimizer* optimizer, TinValue a, 
                 optc_do_binary_op(/);
             }
             break;
-        case TINTOK_STAR_STAR:
+        case TINTOK_DOUBLESTAR:
             {
                 optc_do_fn_op(pow, "**");
             }
@@ -232,32 +232,32 @@ static TinValue tin_astopt_evalbinaryop(TinAstOptimizer* optimizer, TinValue a, 
                 optc_do_fn_op(fmod, "%");
             }
             break;
-        case TINTOK_GREATER:
+        case TINTOK_GREATERTHAN:
             {
                 optc_do_binary_op(>);
             }
             break;
-        case TINTOK_GREATER_EQUAL:
+        case TINTOK_GREATEREQUAL:
             {
                 optc_do_binary_op(>=);
             }
             break;
-        case TINTOK_LESS:
+        case TINTOK_LESSTHAN:
             {
                 optc_do_binary_op(<);
             }
             break;
-        case TINTOK_LESS_EQUAL:
+        case TINTOK_LESSEQUAL:
             {
                 optc_do_binary_op(<=);
             }
             break;
-        case TINTOK_LESS_LESS:
+        case TINTOK_SHIFTLEFT:
             {
                 optc_do_bitwise_op(<<);
             }
             break;
-        case TINTOK_GREATER_GREATER:
+        case TINTOK_SHIFTRIGHT:
             {
                 optc_do_bitwise_op(>>);
             }
@@ -286,17 +286,17 @@ static TinValue tin_astopt_evalbinaryop(TinAstOptimizer* optimizer, TinValue a, 
                 return NULL_VALUE;
             }
             break;
-        case TINTOK_EQUAL_EQUAL:
+        case TINTOK_EQUAL:
             {
                 return tin_value_makebool(optimizer->state, tin_value_compare(optimizer->state, a, b));
             }
             break;
-        case TINTOK_BANG_EQUAL:
+        case TINTOK_BANGEQUAL:
             {
                 return tin_value_makebool(optimizer->state, !tin_value_compare(optimizer->state, a, b));
             }
             break;
-        case TINTOK_IS:
+        case TINTOK_KWIS:
         default:
             {
             }
@@ -337,7 +337,7 @@ static TinValue tin_astopt_attemptoptbinary(TinAstOptimizer* optimizer, TinAstBi
             expression->left = branch;
             expression->right = NULL;
         }
-        else if(((left && op == TINTOK_SLASH) || op == TINTOK_STAR_STAR) && number == 1)
+        else if(((left && op == TINTOK_SLASH) || op == TINTOK_DOUBLESTAR) && number == 1)
         {
             tin_astopt_optdbg("reducing expression that would result in '1' to literal '1'");
             tin_ast_destroyexpression(optimizer->state, left ? expression->right : expression->left);
@@ -425,13 +425,13 @@ static void tin_astopt_optforstmt(TinState* state, TinAstOptimizer* optimizer, T
     optimizer->mark_used = false;
     tin_astopt_optexpression(optimizer, &stmt->body);
     tin_astopt_endscope(optimizer);
-    if(tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY) && tin_astopt_isemptyexpr(stmt->body))
+    if(tin_astopt_isoptenabled(TINOPTSTATE_EMPTYBODY) && tin_astopt_isemptyexpr(stmt->body))
     {
         tin_ast_destroyexpression(optimizer->state, expression);
         *slot = NULL;
         return;
     }
-    if(stmt->cstyle || !tin_astopt_isoptenabled(TINOPTSTATE_C_FOR) || stmt->condition->type != TINEXPR_RANGE)
+    if(stmt->cstyle || !tin_astopt_isoptenabled(TINOPTSTATE_CFOR) || stmt->condition->type != TINEXPR_RANGE)
     {
         return;
     }
@@ -449,12 +449,12 @@ static void tin_astopt_optforstmt(TinState* state, TinAstOptimizer* optimizer, T
     var->init = range->from;
     // i <= to
     stmt->condition = (TinAstExpression*)tin_ast_make_binaryexpr(
-    state, line, (TinAstExpression*)tin_ast_make_varexpr(state, line, var->name, var->length), range->to, TINTOK_LESS_EQUAL);
+    state, line, (TinAstExpression*)tin_ast_make_varexpr(state, line, var->name, var->length), range->to, TINTOK_LESSEQUAL);
     // i++ (or i--)
     TinAstExpression* var_get = (TinAstExpression*)tin_ast_make_varexpr(state, line, var->name, var->length);
     TinAstBinaryExpr* assign_value = tin_ast_make_binaryexpr(
     state, line, var_get, (TinAstExpression*)tin_ast_make_literalexpr(state, line, tin_value_makenumber(optimizer->state, 1)),
-    reverse ? TINTOK_MINUS_MINUS : TINTOK_PLUS);
+    reverse ? TINTOK_DOUBLEMINUS : TINTOK_PLUS);
     assign_value->ignore_left = true;
     TinAstExpression* increment
     = (TinAstExpression*)tin_ast_make_assignexpr(state, line, var_get, (TinAstExpression*)assign_value);
@@ -472,7 +472,7 @@ static void tin_astopt_optwhilestmt(TinState* state, TinAstOptimizer* optimizer,
     (void)state;
     stmt = (TinAstWhileExpr*)expression;
     tin_astopt_optexpression(optimizer, &stmt->condition);
-    if(tin_astopt_isoptenabled(TINOPTSTATE_UNREACHABLE_CODE))
+    if(tin_astopt_isoptenabled(TINOPTSTATE_UNREACHABLECODE))
     {
         optimized = tin_astopt_evalexpr(optimizer, stmt->condition);
         if(!tin_value_isnull(optimized) && tin_value_isfalsey(optimized))
@@ -483,7 +483,7 @@ static void tin_astopt_optwhilestmt(TinState* state, TinAstOptimizer* optimizer,
         }
     }
     tin_astopt_optexpression(optimizer, &stmt->body);
-    if(tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY) && tin_astopt_isemptyexpr(stmt->body))
+    if(tin_astopt_isoptenabled(TINOPTSTATE_EMPTYBODY) && tin_astopt_isemptyexpr(stmt->body))
     {
         tin_ast_destroyexpression(optimizer->state, expression);
         *slot = NULL;
@@ -503,8 +503,8 @@ static void tin_astopt_optifstmt(TinState* state, TinAstOptimizer* optimizer, Ti
     stmt = (TinAstIfExpr*)expression;
     tin_astopt_optexpression(optimizer, &stmt->condition);
     tin_astopt_optexpression(optimizer, &stmt->ifbranch);
-    empty = tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY);
-    dead = tin_astopt_isoptenabled(TINOPTSTATE_UNREACHABLE_CODE);
+    empty = tin_astopt_isoptenabled(TINOPTSTATE_EMPTYBODY);
+    dead = tin_astopt_isoptenabled(TINOPTSTATE_UNREACHABLECODE);
     optimized = empty ? tin_astopt_evalexpr(optimizer, stmt->condition) : NULL_VALUE;
     if((!tin_value_isnull(optimized) && tin_value_isfalsey(optimized)) || (dead && tin_astopt_isemptyexpr(stmt->ifbranch)))
     {
@@ -588,7 +588,7 @@ static void tin_astopt_optblockstmt(TinState* state, TinAstOptimizer* optimizer,
             }
         }
     }
-    if(!found && tin_astopt_isoptenabled(TINOPTSTATE_EMPTY_BODY))
+    if(!found && tin_astopt_isoptenabled(TINOPTSTATE_EMPTYBODY))
     {
         tin_ast_destroyexpression(optimizer->state, expression);
         *slot = NULL;
@@ -604,7 +604,7 @@ static void tin_astopt_optvarstmt(TinState* state, TinAstOptimizer* optimizer, T
     stmt = (TinAstAssignVarExpr*)expression;
     variable = tin_astopt_addvar(optimizer, stmt->name, stmt->length, stmt->constant, slot);
     tin_astopt_optexpression(optimizer, &stmt->init);
-    if(stmt->constant && tin_astopt_isoptenabled(TINOPTSTATE_CONSTANT_FOLDING))
+    if(stmt->constant && tin_astopt_isoptenabled(TINOPTSTATE_CONSTANTFOLDING))
     {
         value = tin_astopt_evalexpr(optimizer, stmt->init);
         if(!tin_value_isnull(value))
@@ -635,7 +635,7 @@ static void tin_astopt_optexpression(TinAstOptimizer* optimizer, TinAstExpressio
         case TINEXPR_UNARY:
         case TINEXPR_BINARY:
             {
-                if(tin_astopt_isoptenabled(TINOPTSTATE_LITERAL_FOLDING))
+                if(tin_astopt_isoptenabled(TINOPTSTATE_LITERALFOLDING))
                 {
                     optimized = tin_astopt_evalexpr(optimizer, expression);
                     if(!tin_value_isnull(optimized))
@@ -958,25 +958,25 @@ void tin_astopt_setoptlevel(TinAstOptLevel level)
         case TINOPTLEVEL_REPL:
             {
                 tin_astopt_setalloptenabled(true);
-                tin_astopt_setoptenabled(TINOPTSTATE_UNUSED_VAR, false);
-                tin_astopt_setoptenabled(TINOPTSTATE_UNREACHABLE_CODE, false);
-                tin_astopt_setoptenabled(TINOPTSTATE_EMPTY_BODY, false);
-                tin_astopt_setoptenabled(TINOPTSTATE_LINE_INFO, false);
-                tin_astopt_setoptenabled(TINOPTSTATE_PRIVATE_NAMES, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_UNUSEDVAR, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_UNREACHABLECODE, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_EMPTYBODY, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_LINEINFO, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_PRIVATENAMES, false);
             }
             break;
         case TINOPTLEVEL_DEBUG:
             {
                 tin_astopt_setalloptenabled(true);
-                tin_astopt_setoptenabled(TINOPTSTATE_UNUSED_VAR, false);
-                tin_astopt_setoptenabled(TINOPTSTATE_LINE_INFO, false);
-                tin_astopt_setoptenabled(TINOPTSTATE_PRIVATE_NAMES, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_UNUSEDVAR, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_LINEINFO, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_PRIVATENAMES, false);
             }
             break;
         case TINOPTLEVEL_RELEASE:
             {
                 tin_astopt_setalloptenabled(true);
-                tin_astopt_setoptenabled(TINOPTSTATE_LINE_INFO, false);
+                tin_astopt_setoptenabled(TINOPTSTATE_LINEINFO, false);
             }
             break;
         case TINOPTLEVEL_EXTREME:

@@ -410,7 +410,7 @@ void tin_ioutil_writemodule(TinModule* module, FILE* file)
     size_t i;
     bool disabled;
     TinTable* privates;
-    disabled = tin_astopt_isoptenabled(TINOPTSTATE_PRIVATE_NAMES);
+    disabled = tin_astopt_isoptenabled(TINOPTSTATE_PRIVATENAMES);
     tin_ioutil_writestring(file, module->name);
     tin_ioutil_writeuint16(file, module->private_count);
     tin_ioutil_writeuint8(file, (uint8_t)disabled);
@@ -529,7 +529,7 @@ static TinValue objmethod_file_constructor(TinVM* vm, TinValue instance, size_t 
         {
             hstd = (TinStdioHandle*)(tin_value_asuserdata(argv[0])->data);
             hnd = hstd->handle;
-            fprintf(stderr, "FILE: hnd=%p name=%s\n", hstd->handle, hstd->name);
+            //fprintf(stderr, "FILE: hnd=%p name=%s\n", hstd->handle, hstd->name);
             data = (TinFileData*)tin_util_instancedataset(vm, instance, sizeof(TinFileData), NULL);
             data->path = NULL;
             data->handle = hnd;
@@ -693,7 +693,7 @@ static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc
         actuallen = 0;
         while((c = fgetc(data->handle)) != EOF)
         {
-            result->chars = sdscatlen(result->chars, &c, 1);
+            result->chars = sds_appendlen(result->chars, &c, 1);
             actuallen++;
         }
     }
@@ -707,7 +707,7 @@ static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc
         * after reading, THIS actually sets the correct length.
         * before that, it would be 0.
         */
-        sdsIncrLen(result->chars, actuallen);
+        sds_internincrlength(result->chars, actuallen);
     }
     result->hash = tin_util_hashstring(result->chars, actuallen);
     tin_state_regstring(vm->state, result);
@@ -760,8 +760,8 @@ static TinValue objmethod_file_readamount(TinVM* vm, TinValue instance, size_t a
         tin_state_raiseerror(vm->state, RUNTIME_ERROR, "fread failed");
         return NULL_VALUE;
     }
-    /* important: until sdsIncrLen is called, the string is zero-length. */
-    sdsIncrLen(result->chars, actuallen);
+    /* important: until sds_internincrlength is called, the string is zero-length. */
+    sds_internincrlength(result->chars, actuallen);
     /* insert string into the gc matrix. */
     result->hash = tin_util_hashstring(result->chars, actuallen);
     tin_state_regstring(vm->state, result);
@@ -982,7 +982,7 @@ static void tin_userfile_makestdhandles(TinState* state)
 {
     TinValue fileval;
     fileval = tin_state_getglobalvalue(state, tin_string_copyconst(state, "File"));
-    fprintf(stderr, "fileval=%s\n", tin_tostring_typename(fileval));
+    //fprintf(stderr, "fileval=%s\n", tin_tostring_typename(fileval));
     {
         tin_userfile_makehandle(state, fileval, "STDIN", stdin, true, false);
         tin_userfile_makehandle(state, fileval, "STDOUT", stdout, false, true);

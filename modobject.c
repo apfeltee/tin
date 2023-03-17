@@ -95,7 +95,7 @@ void tin_object_destroy(TinState* state, TinObject* object)
             {
                 string = (TinString*)object;
                 //TIN_FREE_ARRAY(state, sizeof(char), string->chars, string->length + 1);
-                sdsfree(string->chars);
+                sds_destroy(string->chars);
                 string->chars = NULL;
                 TIN_FREE(state, sizeof(TinString), object);
             }
@@ -108,22 +108,22 @@ void tin_object_destroy(TinState* state, TinObject* object)
                 TIN_FREE(state, sizeof(TinFunction), object);
             }
             break;
-        case TINTYPE_NATIVE_FUNCTION:
+        case TINTYPE_NATIVEFUNCTION:
             {
                 TIN_FREE(state, sizeof(TinNativeFunction), object);
             }
             break;
-        case TINTYPE_NATIVE_PRIMITIVE:
+        case TINTYPE_NATIVEPRIMITIVE:
             {
                 TIN_FREE(state, sizeof(TinNativePrimFunction), object);
             }
             break;
-        case TINTYPE_NATIVE_METHOD:
+        case TINTYPE_NATIVEMETHOD:
             {
                 TIN_FREE(state, sizeof(TinNativeMethod), object);
             }
             break;
-        case TINTYPE_PRIMITIVE_METHOD:
+        case TINTYPE_PRIMITIVEMETHOD:
             {
                 TIN_FREE(state, sizeof(TinPrimitiveMethod), object);
             }
@@ -170,7 +170,7 @@ void tin_object_destroy(TinState* state, TinObject* object)
                 TIN_FREE(state, sizeof(TinInstance), object);
             }
             break;
-        case TINTYPE_BOUND_METHOD:
+        case TINTYPE_BOUNDMETHOD:
             {
                 TIN_FREE(state, sizeof(TinBoundMethod), object);
             }
@@ -271,27 +271,27 @@ TinValue tin_function_getname(TinVM* vm, TinValue instance)
                 return tin_function_getname(vm, tin_value_fromobject(field->setter));
             }
             break;
-        case TINTYPE_NATIVE_PRIMITIVE:
+        case TINTYPE_NATIVEPRIMITIVE:
             {
                 name = tin_value_asnativeprimitive(instance)->name;
             }
             break;
-        case TINTYPE_NATIVE_FUNCTION:
+        case TINTYPE_NATIVEFUNCTION:
             {
                 name = tin_value_asnativefunction(instance)->name;
             }
             break;
-        case TINTYPE_NATIVE_METHOD:
+        case TINTYPE_NATIVEMETHOD:
             {
                 name = tin_value_asnativemethod(instance)->name;
             }
             break;
-        case TINTYPE_PRIMITIVE_METHOD:
+        case TINTYPE_PRIMITIVEMETHOD:
             {
                 name = tin_value_asprimitivemethod(instance)->name;
             }
             break;
-        case TINTYPE_BOUND_METHOD:
+        case TINTYPE_BOUNDMETHOD:
             {
                 return tin_function_getname(vm, tin_value_asboundmethod(instance)->method);
             }

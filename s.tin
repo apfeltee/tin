@@ -7,15 +7,19 @@ class foo
     }
 }
 
+/*
 f = new foo()
 f["barb"] = "dork"
 
-println(f)
+println(f.toMap())
 
 String["awooga"] = function()
 {
     
 };
+*/
 
-println("".awooga);
+s = " shit up"
+b = {"awooga": "dorks", ("fuck"+s): "foo"}
+println(b);
 

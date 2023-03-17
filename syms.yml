@@ -1,0 +1,147 @@
+  # static inline size_t sdslen(const sdstring_t s);
+  "sdslen": "sds_getlength"
+
+  # static inline size_t sdsavail(const sdstring_t s);
+  "sdsavail": "sds_getcapacity"
+
+  # static inline void sdssetlen(sdstring_t s, size_t newlen);
+  "sdssetlen": "sds_setlength"
+
+  # static inline void sdsinclen(sdstring_t s, size_t inc);
+  "sdsinclen": "sds_increaselength"
+
+  # static inline size_t sdsalloc(const sdstring_t s);
+  "sdsalloc": "sds_alloc"
+
+  # static inline void sdssetalloc(sdstring_t s, size_t newlen);
+  "sdssetalloc": "sds_setalloc"
+
+  # static inline int sdsHdrSize(char type);
+  "sdsHdrSize": "sds_getheadersize"
+
+  # static inline char sdsReqType(size_t string_size);
+  "sdsReqType": "sds_reqtype"
+
+  # static inline sdstring_t sdsnewlen(const void *init, size_t initlen);
+  "sdsnewlen": "sds_makelength"
+
+  # static inline sdstring_t sdsempty(void);
+  "sdsempty": "sds_makeempty"
+
+  # static inline sdstring_t sdsnew(const char *init);
+  "sdsnew": "sds_make"
+
+  # static inline sdstring_t sdsdup(const sdstring_t s);
+  "sdsdup": "sds_duplicate"
+
+  # static inline void sdsfree(sdstring_t s);
+  "sdsfree": "sds_destroy"
+
+  # static inline void sdsupdatelen(sdstring_t s);
+  "sdsupdatelen": "sds_updatelength"
+
+  # static inline void sdsclear(sdstring_t s);
+  "sdsclear": "sds_clear"
+
+  # static inline sdstring_t sdsMakeRoomFor(sdstring_t s, size_t addlen);
+  "sdsMakeRoomFor": "sds_allocroomfor"
+
+  # static inline sdstring_t sdsRemoveFreeSpace(sdstring_t s);
+  "sdsRemoveFreeSpace": "sds_removefreespace"
+
+  # static inline size_t sdsAllocSize(sdstring_t s);
+  "sdsAllocSize": "sds_internallocsize"
+
+  # static inline void * sdsAllocPtr(sdstring_t s);
+  "sdsAllocPtr": "sds_allocptr"
+
+  # static inline void sdsIncrLen(sdstring_t s, ssize_t incr);
+  "sdsIncrLen": "sds_internincrlength"
+
+  # static inline sdstring_t sdsgrowzero(sdstring_t s, size_t len);
+  "sdsgrowzero": "sds_growzero"
+
+  # static inline sdstring_t sdscatlen(sdstring_t s, const void *t, size_t len);
+  "sdscatlen": "sds_appendlen"
+
+  # static inline sdstring_t sdscat(sdstring_t s, const char *t);
+  "sdscat": "sds_append"
+
+  # static inline sdstring_t sdscatsds(sdstring_t s, const sdstring_t t);
+  "sdscatsds": "sds_appendsds"
+
+  # static inline sdstring_t sdscpylen(sdstring_t s, const char *t, size_t len);
+  "sdscpylen": "sds_copylength"
+
+  # static inline sdstring_t sdscpy(sdstring_t s, const char *t);
+  "sdscpy": "sds_copy"
+
+  # static inline int sdsll2str(char *s, long long value);
+  "sdsll2str": "sdsutil_ll2str"
+
+  # static inline int sdsull2str(char *s, unsigned long long v);
+  "sdsull2str": "sdsutil_ull2str"
+
+  # static inline sdstring_t sdsfromlonglong(long long value);
+  "sdsfromlonglong": "sds_fromlonglong"
+
+  # static inline sdstring_t sdscatvprintf(sdstring_t s, const char *fmt, va_list ap);
+  "sdscatvprintf": "sds_appendvprintf"
+
+  # static inline sdstring_t sdscatprintf(sdstring_t s, const char *fmt, ...);
+  "sdscatprintf": "sds_appendprintf"
+
+  # static inline sdstring_t sdscatfmt(sdstring_t s, char const *fmt, ...);
+  "sdscatfmt": "sds_appendfmt"
+
+  # static inline sdstring_t sdstrim(sdstring_t s, const char *cset);
+  "sdstrim": "sds_trim"
+
+  # static inline void sdsrange(sdstring_t s, ssize_t start, ssize_t end);
+  "sdsrange": "sds_range"
+
+  # static inline void sdstolower(sdstring_t s);
+  "sdstolower": "sds_tolower"
+
+  # static inline void sdstoupper(sdstring_t s);
+  "sdstoupper": "sds_toupper"
+
+  # static inline int sdscmp(const sdstring_t s1, const sdstring_t s2);
+  "sdscmp": "sds_compare"
+
+  # static inline sdstring_t * sdssplitlen(const char *s, ssize_t len, const char *sep, int seplen, int *count);
+  "sdssplitlen": "sds_splitlen"
+
+  # static inline void sdsfreesplitres(sdstring_t *tokens, int count);
+  "sdsfreesplitres": "sds_freesplitres"
+
+  # static inline sdstring_t sdscatrepr(sdstring_t s, const char *p, size_t len);
+  "sdscatrepr": "sds_appendrepr"
+
+  # static inline int is_hex_digit(char c);
+  "is_hex_digit": "sdsutil_ishexdigit"
+
+  # static inline int hex_digit_to_int(char c);
+  "hex_digit_to_int": "sdsutil_hexdigittoint"
+
+  # static inline sdstring_t * sdssplitargs(const char *line, int *argc);
+  "sdssplitargs": "sds_splitargs"
+
+  # static inline sdstring_t sdsmapchars(sdstring_t s, const char *from, const char *to, size_t setlen);
+  "sdsmapchars": "sds_mapchars"
+
+  # static inline sdstring_t sdsjoin(char **argv, int argc, char *sep);
+  "sdsjoin": "sds_join"
+
+  # static inline sdstring_t sdsjoinsds(sdstring_t *argv, int argc, const char *sep, size_t seplen);
+  "sdsjoinsds": "sds_joinsds"
+
+  # static inline void * sds_malloc(size_t size);
+  "sds_malloc": "sds_memmalloc"
+
+  # static inline void * sds_realloc(void *ptr, size_t size);
+  "sds_realloc": "sds_memrealloc"
+
+  # static inline void sds_free(void *ptr);
+  "sds_free": "sds_memfree"
+

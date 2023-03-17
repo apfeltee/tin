@@ -426,7 +426,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
     TinValue mthval;
     TinValue result;
     lir.result = tin_value_makenull(state);
-    lir.type = TINRESULT_OK;
+    lir.type = TINSTATE_OK;
     vm = state->vm;
     if(tin_value_isobject(callee))
     {
@@ -471,21 +471,21 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
         }
         switch(type)
         {
-            case TINTYPE_NATIVE_FUNCTION:
+            case TINTYPE_NATIVEFUNCTION:
                 {
                     result = tin_value_asnativefunction(callee)->function(vm, argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
                     RETURN_OK(result);
                 }
                 break;
-            case TINTYPE_NATIVE_PRIMITIVE:
+            case TINTYPE_NATIVEPRIMITIVE:
                 {
                     tin_value_asnativeprimitive(callee)->function(vm, argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
                     RETURN_OK(tin_value_makenull(state));
                 }
                 break;
-            case TINTYPE_NATIVE_METHOD:
+            case TINTYPE_NATIVEMETHOD:
                 {
                     natmethod = tin_value_asnativemethod(callee);
                     result = natmethod->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
@@ -507,7 +507,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
                     return lir;
                 }
                 break;
-            case TINTYPE_BOUND_METHOD:
+            case TINTYPE_BOUNDMETHOD:
                 {
                     boundmethod = tin_value_asboundmethod(callee);
                     mthval = boundmethod->method;
@@ -532,7 +532,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
                     }
                 }
                 break;
-            case TINTYPE_PRIMITIVE_METHOD:
+            case TINTYPE_PRIMITIVEMETHOD:
                 {
                     tin_value_asprimitivemethod(callee)->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
                     fiber->stack_top = slot;
@@ -583,7 +583,7 @@ TinInterpretResult tin_state_findandcallmethod(TinState* state, TinValue callee,
     {
         return tin_state_callmethod(state, callee, mthval, argv, argc, ignfiber);
     }
-    return (TinInterpretResult){ TINRESULT_INVALID, tin_value_makenull(state) };
+    return (TinInterpretResult){ TINSTATE_INVALID, tin_value_makenull(state) };
 }
 
 void tin_state_pushroot(TinState* state, TinObject* object)
@@ -643,11 +643,11 @@ TinClass* tin_state_getclassfor(TinState* state, TinValue value)
             case TINTYPE_FIELD:
             case TINTYPE_FUNCTION:
             case TINTYPE_CLOSURE:
-            case TINTYPE_NATIVE_FUNCTION:
-            case TINTYPE_NATIVE_PRIMITIVE:
-            case TINTYPE_BOUND_METHOD:
-            case TINTYPE_PRIMITIVE_METHOD:
-            case TINTYPE_NATIVE_METHOD:
+            case TINTYPE_NATIVEFUNCTION:
+            case TINTYPE_NATIVEPRIMITIVE:
+            case TINTYPE_BOUNDMETHOD:
+            case TINTYPE_PRIMITIVEMETHOD:
+            case TINTYPE_NATIVEMETHOD:
                 {
                     return state->primfunctionclass;
                 }
@@ -822,7 +822,7 @@ TinInterpretResult tin_state_internexecsource(TinState* state, TinString* module
     module = tin_state_compilemodule(state, module_name, code, len);
     if(module == NULL)
     {
-        return (TinInterpretResult){ TINRESULT_COMPILE_ERROR, tin_value_makenull(state) };
+        return (TinInterpretResult){ TINSTATE_COMPILEERROR, tin_value_makenull(state) };
     }
     
     result = tin_vm_execmodule(state, module);
@@ -957,7 +957,7 @@ TinInterpretResult tin_state_dumpfile(TinState* state, const char* file)
     else
     {
         tin_disassemble_module(state, module, source);
-        result = (TinInterpretResult){ TINRESULT_OK, tin_value_makenull(state) };
+        result = (TinInterpretResult){ TINSTATE_OK, tin_value_makenull(state) };
     }
     free((void*)source);
     free((void*)patchedfilename);

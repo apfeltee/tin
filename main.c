@@ -9,7 +9,7 @@
     #include <dirent.h>
 #endif
 
-#ifndef __TINYC__
+#if !defined(__TINYC__) && !defined(__cppcheck__)
     #if __has_include(<readline/readline.h>)
         #include <readline/readline.h>
         #include <readline/history.h>
@@ -154,20 +154,20 @@ static void show_optimization_help()
     }
 }
 
-int exitstate(TinState* state, TinResult result)
+int exitstate(TinState* state, TinStatus result)
 {
     int64_t amount;
     amount = tin_destroy_state(state);
-    if((result != TINRESULT_COMPILE_ERROR) && amount != 0)
+    if((result != TINSTATE_COMPILEERROR) && amount != 0)
     {
         fprintf(stderr, "gc: freed residual %i bytes\n", (int)amount);
         //return TIN_EXIT_CODE_MEM_LEAK;
         return 0;
     }
-    if(result != TINRESULT_OK)
+    if(result != TINSTATE_OK)
     {
         /*
-        if(result == TINRESULT_RUNTIME_ERROR)
+        if(result == TINSTATE_RUNTIMEERROR)
         {
             return TIN_EXIT_CODE_RUNTIME_ERROR;
         }
@@ -257,7 +257,7 @@ static int run_repl(TinState* state)
             }
             add_history(line);
             TinInterpretResult result = tin_state_execsource(state, "repl", line, strlen(line));
-            if(result.type == TINRESULT_OK && !tin_value_isnull(result.result))
+            if(result.type == TINSTATE_OK && !tin_value_isnull(result.result))
             {
                 printf("%s%s%s\n", COLOR_GREEN, tin_string_getdata(tin_value_tostring(state, result.result)), COLOR_RESET);
             }
@@ -278,9 +278,9 @@ int main(int argc, char* argv[])
     TinState* state;
     FlagContext_t fx;
     Options_t opts;
-    TinResult result;
+    TinStatus result;
     cmdfailed = false;
-    result = TINRESULT_OK;
+    result = TINSTATE_OK;
     populate_flags(argc, 1, argv, "ed", &fx);
     state = tin_make_state();
     tin_open_libraries(state);

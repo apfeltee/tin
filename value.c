@@ -28,8 +28,6 @@ TinValue tin_value_makebool(TinState* state, bool b)
     return TRUE_VALUE;
 }
 
-
-
 TinObjType tin_value_type(TinValue v)
 {
     TinObject* o;
@@ -96,7 +94,7 @@ bool tin_value_compare(TinState* state, const TinValue a, const TinValue b)
     {
         args[0] = b;
         inret = tin_state_callinstancemethod(state, a, tin_string_copyconst(state, "=="), args, 1);
-        if(inret.type == TINRESULT_OK)
+        if(inret.type == TINSTATE_OK)
         {
             /*
             if(tin_value_makebool(state, inret.result.) == TRUE_VALUE)
@@ -109,7 +107,7 @@ bool tin_value_compare(TinState* state, const TinValue a, const TinValue b)
     }
     t1 = a.type;
     t2 = b.type;
-    fprintf(stderr, "compare: t1=%d t2=%d\n", t1, t2);
+    //fprintf(stderr, "compare: t1=%d t2=%d\n", t1, t2);
     if(t1 == t2)
     {
         switch(t1)
@@ -217,7 +215,7 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
     PUSH(tin_value_fromobject(function));
     PUSH(object);
     result = tin_vm_execfiber(state, fiber);
-    if(result.type != TINRESULT_OK)
+    if(result.type != TINSTATE_OK)
     {
         return tin_string_copyconst(state, "null");
     }
@@ -252,7 +250,6 @@ bool tin_value_checkbool(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t i
         tin_vm_raiseexitingerror(vm, "expected a boolean as argument #%i, got a %s", (int)id,
                                   id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
-
     return tin_value_asbool(args[id]);
 }
 
@@ -273,7 +270,6 @@ const char* tin_value_checkstring(TinVM* vm, TinValue* args, uint8_t arg_count, 
         tin_vm_raiseexitingerror(vm, "expected a string as argument #%i, got a %s", (int)id,
                                   id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
-
     return tin_value_asstring(args[id])->chars;
 }
 
@@ -284,7 +280,6 @@ const char* tin_value_getstring(TinVM* vm, TinValue* args, uint8_t arg_count, ui
     {
         return def;
     }
-
     return tin_value_asstring(args[id])->chars;
 }
 
@@ -317,7 +312,6 @@ TinValue* tin_value_checkreference(TinVM* vm, TinValue* args, uint8_t arg_count,
         tin_vm_raiseexitingerror(vm, "expected a reference as argument #%i, got a %s", (int)id,
                                   id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
-
     return tin_value_asreference(args[id])->slot;
 }
 

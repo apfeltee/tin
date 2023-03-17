@@ -82,6 +82,7 @@ class GenRep
 
   def runcproto(files, opts)
     cmd = ["cproto", "-si", "-P", '/* int */ f // (a, b)', *files]
+    $stderr.printf("cproto command: %p\n", cmd)
     IO.popen(cmd, "rb") do |io|
       nlines = {}
       raw = io.read
@@ -94,9 +95,9 @@ class GenRep
         if opts.onlystatics && (not s.include?("static")) then
           next
         end
-        if !opts.alsoinline && (s.include?("inline")) then
-          next
-        end
+        #if !opts.alsoinline && (s.include?("inline")) then
+          #next
+        #end
         nlines[rawline] = s
       end
       rt = []

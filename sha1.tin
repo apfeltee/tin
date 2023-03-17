@@ -187,7 +187,14 @@ function str2binb(str)
             bin[aidx] = 0
         }
         */
-        bin[aidx] = bin[aidx] | (str.charCodeAt(i / K_CHARSIZE) & mask) << (24 - i%32);
+        //println("bin[", aidx, "] = ", bin[aidx])
+        //var right = (str.charCodeAt(i / K_CHARSIZE) & mask) << (24 - i%32);
+        //bin[aidx] = bin[aidx] | right;
+        //bin[aidx] |= right;
+
+        //bin[aidx] |= (str.charCodeAt(i / K_CHARSIZE) & mask) << (24 - i%32); 
+        bin[aidx] = bin[aidx] | (str.charCodeAt(i / K_CHARSIZE) & mask) << (24 - i%32); 
+
     }
     return bin;
 }

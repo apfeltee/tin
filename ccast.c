@@ -27,6 +27,17 @@ void tin_exprlist_push(TinState* state, TinAstExprList* array, TinAstExpression*
     array->count++;
 }
 
+size_t tin_exprlist_count(TinAstExprList* array)
+{
+    return array->count;
+}
+
+
+TinAstExpression* tin_exprlist_get(TinAstExprList* array, size_t i)
+{
+    return array->values[i];
+}
+
 void tin_paramlist_init(TinAstParamList* array)
 {
     array->values = NULL;
@@ -179,7 +190,7 @@ void tin_ast_destroyexpression(TinState* state, TinAstExpression* expression)
         case TINEXPR_OBJECT:
             {
                 TinAstObjectExpr* map = (TinAstObjectExpr*)expression;
-                tin_vallist_destroy(state, &map->keys);
+                tin_ast_destroyexprlist(state, &map->keys);
                 tin_ast_destroyexprlist(state, &map->values);
                 tin_gcmem_memrealloc(state, expression, sizeof(TinAstObjectExpr), 0);
             }
@@ -444,7 +455,7 @@ TinAstObjectExpr* tin_ast_make_objectexpr(TinState* state, size_t line)
 {
     TinAstObjectExpr* expression;
     expression = (TinAstObjectExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstObjectExpr), TINEXPR_OBJECT);
-    tin_vallist_init(&expression->keys);
+    tin_exprlist_init(&expression->keys);
     tin_exprlist_init(&expression->values);
     return expression;
 }

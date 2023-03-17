@@ -45,6 +45,7 @@ static TinTableEntry* find_entry(TinTableEntry* entries, int capacity, TinString
         }
         index = (index + 1) % capacity;
     }
+    return NULL;
 }
 
 static void adjust_capacity(TinState* state, TinTable* table, int capacity)
@@ -172,6 +173,7 @@ TinString* tin_table_find_string(TinTable* table, const char* chars, size_t leng
         }
         index = (index + 1) % table->capacity;
     }
+    return NULL;
 }
 
 void tin_table_add_all(TinState* state, TinTable* from, TinTable* to)
@@ -201,7 +203,6 @@ void tin_table_removewhite(TinTable* table)
         }
     }
 }
-
 
 int util_table_iterator(TinTable* table, int number)
 {

@@ -37,7 +37,7 @@ TinClosure* tin_object_makeclosure(TinState* state, TinFunction* function)
 TinNativeFunction* tin_object_makenativefunction(TinState* state, TinNativeFunctionFn function, TinString* name)
 {
     TinNativeFunction* native;
-    native = (TinNativeFunction*)tin_gcmem_allocobject(state, sizeof(TinNativeFunction), TINTYPE_NATIVE_FUNCTION, false);
+    native = (TinNativeFunction*)tin_gcmem_allocobject(state, sizeof(TinNativeFunction), TINTYPE_NATIVEFUNCTION, false);
     native->function = function;
     native->name = name;
     return native;
@@ -46,7 +46,7 @@ TinNativeFunction* tin_object_makenativefunction(TinState* state, TinNativeFunct
 TinNativePrimFunction* tin_object_makenativeprimitive(TinState* state, TinNativePrimitiveFn function, TinString* name)
 {
     TinNativePrimFunction* native;
-    native = (TinNativePrimFunction*)tin_gcmem_allocobject(state, sizeof(TinNativePrimFunction), TINTYPE_NATIVE_PRIMITIVE, false);
+    native = (TinNativePrimFunction*)tin_gcmem_allocobject(state, sizeof(TinNativePrimFunction), TINTYPE_NATIVEPRIMITIVE, false);
     native->function = function;
     native->name = name;
     return native;
@@ -55,7 +55,7 @@ TinNativePrimFunction* tin_object_makenativeprimitive(TinState* state, TinNative
 TinNativeMethod* tin_object_makenativemethod(TinState* state, TinNativeMethodFn method, TinString* name)
 {
     TinNativeMethod* native;
-    native = (TinNativeMethod*)tin_gcmem_allocobject(state, sizeof(TinNativeMethod), TINTYPE_NATIVE_METHOD, false);
+    native = (TinNativeMethod*)tin_gcmem_allocobject(state, sizeof(TinNativeMethod), TINTYPE_NATIVEMETHOD, false);
     native->method = method;
     native->name = name;
     return native;
@@ -64,7 +64,7 @@ TinNativeMethod* tin_object_makenativemethod(TinState* state, TinNativeMethodFn 
 TinPrimitiveMethod* tin_object_makeprimitivemethod(TinState* state, TinPrimitiveMethodFn method, TinString* name)
 {
     TinPrimitiveMethod* native;
-    native = (TinPrimitiveMethod*)tin_gcmem_allocobject(state, sizeof(TinPrimitiveMethod), TINTYPE_PRIMITIVE_METHOD, false);
+    native = (TinPrimitiveMethod*)tin_gcmem_allocobject(state, sizeof(TinPrimitiveMethod), TINTYPE_PRIMITIVEMETHOD, false);
     native->method = method;
     native->name = name;
     return native;
@@ -73,7 +73,7 @@ TinPrimitiveMethod* tin_object_makeprimitivemethod(TinState* state, TinPrimitive
 TinBoundMethod* tin_object_makeboundmethod(TinState* state, TinValue receiver, TinValue method)
 {
     TinBoundMethod* boundmethod;
-    boundmethod = (TinBoundMethod*)tin_gcmem_allocobject(state, sizeof(TinBoundMethod), TINTYPE_BOUND_METHOD, false);
+    boundmethod = (TinBoundMethod*)tin_gcmem_allocobject(state, sizeof(TinBoundMethod), TINTYPE_BOUNDMETHOD, false);
     boundmethod->receiver = receiver;
     boundmethod->method = method;
     return boundmethod;
@@ -87,11 +87,11 @@ bool tin_value_iscallablefunction(TinValue value)
         return (
             (type == TINTYPE_CLOSURE) ||
             (type == TINTYPE_FUNCTION) ||
-            (type == TINTYPE_NATIVE_FUNCTION) ||
-            (type == TINTYPE_NATIVE_PRIMITIVE) ||
-            (type == TINTYPE_NATIVE_METHOD) ||
-            (type == TINTYPE_PRIMITIVE_METHOD) ||
-            (type == TINTYPE_BOUND_METHOD)
+            (type == TINTYPE_NATIVEFUNCTION) ||
+            (type == TINTYPE_NATIVEPRIMITIVE) ||
+            (type == TINTYPE_NATIVEMETHOD) ||
+            (type == TINTYPE_PRIMITIVEMETHOD) ||
+            (type == TINTYPE_BOUNDMETHOD)
         );
     }
 

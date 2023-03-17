@@ -233,11 +233,11 @@ static void tin_compiler_compiler(TinAstEmitter* emitter, TinAstCompiler* compil
         compiler->function->name = tin_string_copy(emitter->state, name, strlen(name));
     }
     emitter->chunk = &compiler->function->chunk;
-    if(tin_astopt_isoptenabled(TINOPTSTATE_LINE_INFO))
+    if(tin_astopt_isoptenabled(TINOPTSTATE_LINEINFO))
     {
         emitter->chunk->has_line_info = false;
     }
-    if(type == TINFUNC_METHOD || type == TINFUNC_STATIC_METHOD || type == TINFUNC_CONSTRUCTOR)
+    if(type == TINFUNC_METHOD || type == TINFUNC_STATICMETHOD || type == TINFUNC_CONSTRUCTOR)
     {
         tin_loclist_push(emitter->state, &compiler->locals, (TinAstLocal){ "this", 4, -1, false, false });
     }
@@ -652,15 +652,15 @@ static bool tin_astemit_doemitbinary(TinAstEmitter* emitter, TinAstExpression* e
         return true;
     }
     op = binexpr->op;
-    if(op == TINTOK_AMPERSAND_AMPERSAND || op == TINTOK_BAR_BAR || op == TINTOK_QUESTION_QUESTION)
+    if(op == TINTOK_DOUBLEAMPERSAND || op == TINTOK_DOUBLEBAR || op == TINTOK_DOUBLEQUESTION)
     {
-        //jump = tin_astemit_emitjump(emitter, op == TINTOK_BAR_BAR ? OP_OR : (op == TINTOK_QUESTION_QUESTION ? OP_NULL_OR : OP_AND), emitter->lastline);
+        //jump = tin_astemit_emitjump(emitter, op == TINTOK_DOUBLEBAR ? OP_OR : (op == TINTOK_DOUBLEQUESTION ? OP_NULL_OR : OP_AND), emitter->lastline);
         jump = 0;
-        if(op == TINTOK_BAR_BAR)
+        if(op == TINTOK_DOUBLEBAR)
         {
             jump = tin_astemit_emitjump(emitter, OP_OR, emitter->lastline);
         }
-        else if(op == TINTOK_QUESTION_QUESTION)
+        else if(op == TINTOK_DOUBLEQUESTION)
         {
             jump = tin_astemit_emitjump(emitter, OP_NULL_OR, emitter->lastline);
         }
@@ -690,7 +690,7 @@ static bool tin_astemit_doemitbinary(TinAstEmitter* emitter, TinAstExpression* e
                 tin_astemit_emit1op(emitter, expr->line, OP_MULTIPLY);
             }
             break;
-        case TINTOK_STAR_STAR:
+        case TINTOK_DOUBLESTAR:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_POWER);
             }
@@ -710,47 +710,47 @@ static bool tin_astemit_doemitbinary(TinAstEmitter* emitter, TinAstExpression* e
                 tin_astemit_emit1op(emitter, expr->line, OP_MOD);
             }
             break;
-        case TINTOK_IS:
+        case TINTOK_KWIS:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_IS);
             }
             break;
-        case TINTOK_EQUAL_EQUAL:
+        case TINTOK_EQUAL:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_EQUAL);
             }
             break;
-        case TINTOK_BANG_EQUAL:
+        case TINTOK_BANGEQUAL:
             {
                 tin_astemit_emit2ops(emitter, expr->line, OP_EQUAL, OP_NOT);
             }
             break;
-        case TINTOK_GREATER:
+        case TINTOK_GREATERTHAN:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_GREATER);
             }
             break;
-        case TINTOK_GREATER_EQUAL:
+        case TINTOK_GREATEREQUAL:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_GREATER_EQUAL);
             }
             break;
-        case TINTOK_LESS:
+        case TINTOK_LESSTHAN:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_LESS);
             }
             break;
-        case TINTOK_LESS_EQUAL:
+        case TINTOK_LESSEQUAL:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_LESS_EQUAL);
             }
             break;
-        case TINTOK_LESS_LESS:
+        case TINTOK_SHIFTLEFT:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_LSHIFT);
             }
             break;
-        case TINTOK_GREATER_GREATER:
+        case TINTOK_SHIFTRIGHT:
             {
                 tin_astemit_emit1op(emitter, expr->line, OP_RSHIFT);
             }
@@ -1059,7 +1059,7 @@ static bool tin_astemit_doemitcall(TinAstEmitter* emitter, TinAstExpression* exp
     {
         e = init->values.values[i];
         emitter->lastline = e->line;
-        tin_astemit_emitconstant(emitter, emitter->lastline, tin_vallist_get(&init->keys, i));
+        tin_astemit_emitexpression(emitter, init->keys.values[i]);
         tin_astemit_emitexpression(emitter, e);
         tin_astemit_emit1op(emitter, emitter->lastline, OP_PUSH_OBJECT_FIELD);
     }
@@ -1179,7 +1179,7 @@ static bool tin_astemit_doemitobject(TinAstEmitter* emitter, TinAstExpression* e
     tin_astemit_emit1op(emitter, expr->line, OP_OBJECT);
     for(i = 0; i < objexpr->values.count; i++)
     {
-        tin_astemit_emitconstant(emitter, emitter->lastline, tin_vallist_get(&objexpr->keys, i));
+        tin_astemit_emitexpression(emitter, objexpr->keys.values[i]);
         tin_astemit_emitexpression(emitter, objexpr->values.values[i]);
         tin_astemit_emit1op(emitter, emitter->lastline, OP_PUSH_OBJECT_FIELD);
     }
@@ -1191,7 +1191,7 @@ static bool tin_astemit_doemitthis(TinAstEmitter* emitter, TinAstExpression* exp
     int local;
     TinAstFuncType type;
     type = emitter->compiler->type;
-    if(type == TINFUNC_STATIC_METHOD)
+    if(type == TINFUNC_STATICMETHOD)
     {
         tin_astemit_raiseerror(emitter, expr->line, "'this' cannot be used %s", "in static methods");
     }
@@ -1219,7 +1219,7 @@ static bool tin_astemit_doemitsuper(TinAstEmitter* emitter, TinAstExpression* ex
 {
     uint8_t index;
     TinAstSuperExpr* superexpr;
-    if(emitter->compiler->type == TINFUNC_STATIC_METHOD)
+    if(emitter->compiler->type == TINFUNC_STATICMETHOD)
     {
         tin_astemit_raiseerror(emitter, expr->line, "'super' cannot be used %s", "in static methods");
     }
@@ -1446,6 +1446,7 @@ static bool tin_astemit_doemitforstmt(TinAstEmitter* emitter, TinAstExpression* 
     size_t sequence;
     size_t iterator;
     size_t localcnt;
+    const char* varstr;
     TinAstExprList* statements;
     TinAstAssignVarExpr* var;
     TinAstForExpr* forstmt;
@@ -1506,14 +1507,20 @@ static bool tin_astemit_doemitforstmt(TinAstEmitter* emitter, TinAstExpression* 
     }
     else
     {
-        sequence = tin_astemit_addlocal(emitter, "seq ", 4, expr->line, false);
-        tin_astemit_marklocalinit(emitter, sequence);
-        tin_astemit_emitexpression(emitter, forstmt->condition);
-        tin_astemit_emitbyteorshort(emitter, emitter->lastline, OP_SET_LOCAL, OP_SET_LOCAL_LONG, sequence);
-        iterator = tin_astemit_addlocal(emitter, "iter ", 5, expr->line, false);
-        tin_astemit_marklocalinit(emitter, iterator);
-        tin_astemit_emit1op(emitter, emitter->lastline, OP_NULL);
-        tin_astemit_emitbyteorshort(emitter, emitter->lastline, OP_SET_LOCAL, OP_SET_LOCAL_LONG, iterator);
+        {
+            varstr = "seq ";
+            sequence = tin_astemit_addlocal(emitter, varstr, strlen(varstr), expr->line, false);
+            tin_astemit_marklocalinit(emitter, sequence);
+            tin_astemit_emitexpression(emitter, forstmt->condition);
+            tin_astemit_emitbyteorshort(emitter, emitter->lastline, OP_SET_LOCAL, OP_SET_LOCAL_LONG, sequence);
+        }
+        {
+            varstr = "iter ";
+            iterator = tin_astemit_addlocal(emitter, varstr, strlen(varstr), expr->line, false);
+            tin_astemit_marklocalinit(emitter, iterator);
+            tin_astemit_emit1op(emitter, emitter->lastline, OP_NULL);
+            tin_astemit_emitbyteorshort(emitter, emitter->lastline, OP_SET_LOCAL, OP_SET_LOCAL_LONG, iterator);
+        }
         start = emitter->chunk->count;
         emitter->loopstart = emitter->chunk->count;
         // iter = seq.iterator(iter)
@@ -1716,7 +1723,7 @@ static bool tin_astemit_doemitmethod(TinAstEmitter* emitter, TinAstExpression* e
         return false;
     }
     tin_compiler_compiler(emitter, &compiler,
-                  constructor ? TINFUNC_CONSTRUCTOR : (mthstmt->isstatic ? TINFUNC_STATIC_METHOD : TINFUNC_METHOD));
+                  constructor ? TINFUNC_CONSTRUCTOR : (mthstmt->isstatic ? TINFUNC_STATICMETHOD : TINFUNC_METHOD));
     tin_astemit_beginscope(emitter);
     vararg = tin_astemit_emitparamlist(emitter, &mthstmt->parameters, expr->line);
     tin_astemit_emitexpression(emitter, mthstmt->body);
@@ -1747,6 +1754,7 @@ static bool tin_astemit_doemitclass(TinAstEmitter* emitter, TinAstExpression* ex
 {
     size_t i;
     uint8_t superidx;
+    const char* varstr;
     TinAstExpression* s;
     TinAstClassExpr* clstmt;
     TinAstAssignVarExpr* var;
@@ -1764,8 +1772,8 @@ static bool tin_astemit_doemitclass(TinAstEmitter* emitter, TinAstExpression* ex
         tin_astemit_emit1op(emitter, emitter->lastline, OP_INHERIT);
         emitter->classisinheriting = true;
         tin_astemit_beginscope(emitter);
-        superidx = tin_astemit_addlocal(emitter, "super", 5, emitter->lastline, false);
-        
+        varstr = "super";
+        superidx = tin_astemit_addlocal(emitter, varstr, strlen(varstr), emitter->lastline, false);
         tin_astemit_marklocalinit(emitter, superidx);
     }
     for(i = 0; i < clstmt->fields.count; i++)
@@ -1797,6 +1805,7 @@ static bool tin_astemit_doemitclass(TinAstEmitter* emitter, TinAstExpression* ex
 
 static bool tin_astemit_doemitfield(TinAstEmitter* emitter, TinAstExpression* expr)
 {
+    const char* valstr;
     TinAstCompiler compiler;
     TinField* field;
     TinFunction* getter;
@@ -1807,7 +1816,7 @@ static bool tin_astemit_doemitfield(TinAstEmitter* emitter, TinAstExpression* ex
     setter = NULL;
     if(fieldstmt->getter != NULL)
     {
-        tin_compiler_compiler(emitter, &compiler, fieldstmt->isstatic ? TINFUNC_STATIC_METHOD : TINFUNC_METHOD);
+        tin_compiler_compiler(emitter, &compiler, fieldstmt->isstatic ? TINFUNC_STATICMETHOD : TINFUNC_METHOD);
         tin_astemit_beginscope(emitter);
         tin_astemit_emitexpression(emitter, fieldstmt->getter);
         tin_astemit_endscope(emitter, emitter->lastline);
@@ -1816,8 +1825,9 @@ static bool tin_astemit_doemitfield(TinAstEmitter* emitter, TinAstExpression* ex
     }
     if(fieldstmt->setter != NULL)
     {
-        tin_compiler_compiler(emitter, &compiler, fieldstmt->isstatic ? TINFUNC_STATIC_METHOD : TINFUNC_METHOD);
-        tin_astemit_marklocalinit(emitter, tin_astemit_addlocal(emitter, "value", 5, expr->line, false));
+        valstr = "value";
+        tin_compiler_compiler(emitter, &compiler, fieldstmt->isstatic ? TINFUNC_STATICMETHOD : TINFUNC_METHOD);
+        tin_astemit_marklocalinit(emitter, tin_astemit_addlocal(emitter, valstr, strlen(valstr), expr->line, false));
         tin_astemit_beginscope(emitter);
         tin_astemit_emitexpression(emitter, fieldstmt->setter);
         tin_astemit_endscope(emitter, emitter->lastline);
@@ -2200,7 +2210,7 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emitter, TinAstExprList* statement
         }
     }
     tin_privlist_destroy(emitter->state, &emitter->privates);
-    if(tin_astopt_isoptenabled(TINOPTSTATE_PRIVATE_NAMES))
+    if(tin_astopt_isoptenabled(TINOPTSTATE_PRIVATENAMES))
     {
         tin_table_destroy(emitter->state, &emitter->module->private_names->values);
     }

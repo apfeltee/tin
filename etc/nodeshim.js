@@ -52,7 +52,12 @@ function print(...args)
     for(var i=0; i<args.length; i++)
     {
         var arg = args[i];
-        process.stdout.write(arg.toString());
+        var sarg = "undefined";
+        if(arg != undefined)
+        {
+            sarg = arg.toString();
+        }
+        process.stdout.write(sarg);
     }
 }
 

@@ -169,11 +169,11 @@
 
 
 #define PUSH(value) (*fiber->stack_top++ = value)
-#define RETURN_OK(r) return (TinInterpretResult){ TINRESULT_OK, r };
+#define RETURN_OK(r) return (TinInterpretResult){ TINSTATE_OK, r };
 
-#define RETURN_RUNTIME_ERROR() return (TinInterpretResult){ TINRESULT_RUNTIME_ERROR, NULL_VALUE };
+#define RETURN_RUNTIME_ERROR() return (TinInterpretResult){ TINSTATE_RUNTIMEERROR, NULL_VALUE };
 
-#define INTERPRET_RUNTIME_FAIL ((TinInterpretResult){ TINRESULT_INVALID, NULL_VALUE })
+#define INTERPRET_RUNTIME_FAIL ((TinInterpretResult){ TINSTATE_INVALID, NULL_VALUE })
 
 
 
@@ -187,17 +187,17 @@ enum TinObjType
     TINTYPE_NULL,
     TINTYPE_STRING,
     TINTYPE_FUNCTION,
-    TINTYPE_NATIVE_FUNCTION,
-    TINTYPE_NATIVE_PRIMITIVE,
-    TINTYPE_NATIVE_METHOD,
-    TINTYPE_PRIMITIVE_METHOD,
+    TINTYPE_NATIVEFUNCTION,
+    TINTYPE_NATIVEPRIMITIVE,
+    TINTYPE_NATIVEMETHOD,
+    TINTYPE_PRIMITIVEMETHOD,
     TINTYPE_FIBER,
     TINTYPE_MODULE,
     TINTYPE_CLOSURE,
     TINTYPE_UPVALUE,
     TINTYPE_CLASS,
     TINTYPE_INSTANCE,
-    TINTYPE_BOUND_METHOD,
+    TINTYPE_BOUNDMETHOD,
     TINTYPE_ARRAY,
     TINTYPE_MAP,
     TINTYPE_USERDATA,
@@ -216,12 +216,12 @@ enum TinValType
     TINVAL_OBJECT,
 };
 
-enum TinResult
+enum TinStatus
 {
-    TINRESULT_OK,
-    TINRESULT_COMPILE_ERROR,
-    TINRESULT_RUNTIME_ERROR,
-    TINRESULT_INVALID
+    TINSTATE_OK,
+    TINSTATE_COMPILEERROR,
+    TINSTATE_RUNTIMEERROR,
+    TINSTATE_INVALID
 };
 
 enum TinErrType
@@ -237,21 +237,19 @@ enum TinAstOptLevel
     TINOPTLEVEL_DEBUG,
     TINOPTLEVEL_RELEASE,
     TINOPTLEVEL_EXTREME,
-
     TINOPTLEVEL_TOTAL
 };
 
 enum TinAstOptType
 {
-    TINOPTSTATE_CONSTANT_FOLDING,
-    TINOPTSTATE_LITERAL_FOLDING,
-    TINOPTSTATE_UNUSED_VAR,
-    TINOPTSTATE_UNREACHABLE_CODE,
-    TINOPTSTATE_EMPTY_BODY,
-    TINOPTSTATE_LINE_INFO,
-    TINOPTSTATE_PRIVATE_NAMES,
-    TINOPTSTATE_C_FOR,
-
+    TINOPTSTATE_CONSTANTFOLDING,
+    TINOPTSTATE_LITERALFOLDING,
+    TINOPTSTATE_UNUSEDVAR,
+    TINOPTSTATE_UNREACHABLECODE,
+    TINOPTSTATE_EMPTYBODY,
+    TINOPTSTATE_LINEINFO,
+    TINOPTSTATE_PRIVATENAMES,
+    TINOPTSTATE_CFOR,
     TINOPTSTATE_TOTAL
 };
 
@@ -267,7 +265,7 @@ typedef enum /**/TinAstOptLevel TinAstOptLevel;
 typedef enum /**/TinAstOptType TinAstOptType;
 typedef enum /**/TinAstPrecedence TinAstPrecedence;
 typedef enum /**/TinAstTokType TinAstTokType;
-typedef enum /**/TinResult TinResult;
+typedef enum /**/TinStatus TinStatus;
 typedef enum /**/TinErrType TinErrType;
 typedef enum /**/TinAstFuncType TinAstFuncType;
 typedef struct /**/TinAstScanner TinAstScanner;
@@ -698,7 +696,7 @@ struct TinReference
 struct TinInterpretResult
 {
     /* the result of this interpret/tin_vm_callcallable attempt */
-    TinResult type;
+    TinStatus type;
     /* the value returned from this interpret/tin_vm_callcallable attempt */
     TinValue result;
 };
@@ -807,16 +805,16 @@ struct TinVM
     tin_value_istype(value, TINTYPE_FUNCTION)
 
 #define tin_value_isnatfunction(value) \
-    tin_value_istype(value, TINTYPE_NATIVE_FUNCTION)
+    tin_value_istype(value, TINTYPE_NATIVEFUNCTION)
 
 #define tin_value_isnatprim(value) \
-    tin_value_istype(value, TINTYPE_NATIVE_PRIMITIVE)
+    tin_value_istype(value, TINTYPE_NATIVEPRIMITIVE)
 
 #define tin_value_isnatmethod(value) \
-    tin_value_istype(value, TINTYPE_NATIVE_METHOD)
+    tin_value_istype(value, TINTYPE_NATIVEMETHOD)
 
 #define tin_value_isprimmethod(value) \
-    tin_value_istype(value, TINTYPE_PRIMITIVE_METHOD)
+    tin_value_istype(value, TINTYPE_PRIMITIVEMETHOD)
 
 #define tin_value_ismodule(value) \
     tin_value_istype(value, TINTYPE_MODULE)
@@ -1055,7 +1053,7 @@ bool tin_map_delete(TinMap *map, TinString *key);
 void tin_map_add_all(TinState *state, TinMap *from, TinMap *to);
 void tin_open_map_library(TinState *state);
 /* main.c */
-int exitstate(TinState *state, TinResult result);
+int exitstate(TinState *state, TinStatus result);
 void interupt_handler(int signal_id);
 int main(int argc, char *argv[]);
 int oldmain(int argc, const char *argv[]);
@@ -1286,7 +1284,7 @@ static inline bool tin_value_ismap(TinValue value)
 
 static inline bool tin_value_isboundmethod(TinValue value)
 {
-    return tin_value_istype(value, TINTYPE_BOUND_METHOD);
+    return tin_value_istype(value, TINTYPE_BOUNDMETHOD);
 }
 
 static inline bool tin_value_isuserdata(TinValue value)

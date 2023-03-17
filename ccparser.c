@@ -10,8 +10,8 @@ static TinAstParseRule rules[TINTOK_EOF + 1];
 static TinAstTokType operators[]=
 {
     TINTOK_PLUS, TINTOK_MINUS, TINTOK_STAR, TINTOK_PERCENT, TINTOK_SLASH,
-    TINTOK_SHARP, TINTOK_BANG, TINTOK_LESS, TINTOK_LESS_EQUAL, TINTOK_GREATER,
-    TINTOK_GREATER_EQUAL, TINTOK_EQUAL_EQUAL, TINTOK_LEFT_BRACKET, TINTOK_EOF
+    TINTOK_SHARP, TINTOK_BANG, TINTOK_LESSTHAN, TINTOK_LESSEQUAL, TINTOK_GREATERTHAN,
+    TINTOK_GREATEREQUAL, TINTOK_EQUAL, TINTOK_BRACKETOPEN, TINTOK_EOF
 };
 
 
@@ -65,12 +65,12 @@ static TinAstExpression *tin_astparser_rulefunction(TinAstParser *parser, bool c
 
 static void tin_astparser_setuprules()
 {
-    rules[TINTOK_LEFT_PAREN] = (TinAstParseRule){ tin_astparser_rulegroupingorlambda, tin_astparser_rulecall, TINPREC_CALL };
+    rules[TINTOK_PARENOPEN] = (TinAstParseRule){ tin_astparser_rulegroupingorlambda, tin_astparser_rulecall, TINPREC_CALL };
     rules[TINTOK_PLUS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_TERM };
     rules[TINTOK_MINUS] = (TinAstParseRule){ tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM };
     rules[TINTOK_BANG] = (TinAstParseRule){ tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM };
     rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_STAR_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
+    rules[TINTOK_DOUBLESTAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
     rules[TINTOK_SLASH] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
     rules[TINTOK_SHARP] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
     rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
@@ -79,49 +79,49 @@ static void tin_astparser_setuprules()
     rules[TINTOK_AMPERSAND] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BAND };
     rules[TINTOK_TILDE] = (TinAstParseRule){ tin_astparser_ruleunary, NULL, TINPREC_UNARY };
     rules[TINTOK_CARET] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BOR };
-    rules[TINTOK_LESS_LESS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
-    rules[TINTOK_GREATER_GREATER] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
+    rules[TINTOK_SHIFTLEFT] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
+    rules[TINTOK_SHIFTRIGHT] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
     rules[TINTOK_PERCENT] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_IS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_IS };
+    rules[TINTOK_KWIS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_IS };
     rules[TINTOK_NUMBER] = (TinAstParseRule){ tin_astparser_rulenumber, NULL, TINPREC_NONE };
-    rules[TINTOK_TRUE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
-    rules[TINTOK_FALSE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
-    rules[TINTOK_NULL] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
-    rules[TINTOK_BANG_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
-    rules[TINTOK_EQUAL_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
-    rules[TINTOK_GREATER] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
-    rules[TINTOK_GREATER_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
-    rules[TINTOK_LESS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
-    rules[TINTOK_LESS_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_KWTRUE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
+    rules[TINTOK_KWFALSE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
+    rules[TINTOK_KWNULL] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
+    rules[TINTOK_BANGEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
+    rules[TINTOK_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
+    rules[TINTOK_GREATERTHAN] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_GREATEREQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_LESSTHAN] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
+    rules[TINTOK_LESSEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
     rules[TINTOK_STRING] = (TinAstParseRule){ tin_astparser_rulestring, NULL, TINPREC_NONE };
-    rules[TINTOK_INTERPOLATION] = (TinAstParseRule){ tin_astparser_ruleinterpolation, NULL, TINPREC_NONE };
-    rules[TINTOK_IDENTIFIER] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_NONE };
-    rules[TINTOK_NEW] = (TinAstParseRule){ tin_astparser_rulenewexpr, NULL, TINPREC_NONE };
-    rules[TINTOK_PLUS_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_MINUS_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_STAR_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_SLASH_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_SHARP_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_PERCENT_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_CARET_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_BAR_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_AMPERSAND_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_PLUS_PLUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_MINUS_MINUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_AMPERSAND_AMPERSAND] = (TinAstParseRule){ NULL, tin_astparser_ruleand, TINPREC_AND };
-    rules[TINTOK_BAR_BAR] = (TinAstParseRule){ NULL, tin_astparser_ruleor, TINPREC_AND };
-    rules[TINTOK_QUESTION_QUESTION] = (TinAstParseRule){ NULL, tin_astparser_rulenull_filter, TINPREC_NULL };
+    rules[TINTOK_STRINTERPOL] = (TinAstParseRule){ tin_astparser_ruleinterpolation, NULL, TINPREC_NONE };
+    rules[TINTOK_IDENT] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_NONE };
+    rules[TINTOK_KWNEW] = (TinAstParseRule){ tin_astparser_rulenewexpr, NULL, TINPREC_NONE };
+    rules[TINTOK_PLUSEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_MINUSEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_STAREQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_SLASHEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_SHARPEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_PERCENTEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_CARETEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_ASSIGNEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_AMPERSANDEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_DOUBLEPLUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_DOUBLEMINUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
+    rules[TINTOK_DOUBLEAMPERSAND] = (TinAstParseRule){ NULL, tin_astparser_ruleand, TINPREC_AND };
+    rules[TINTOK_DOUBLEBAR] = (TinAstParseRule){ NULL, tin_astparser_ruleor, TINPREC_AND };
+    rules[TINTOK_DOUBLEQUESTION] = (TinAstParseRule){ NULL, tin_astparser_rulenull_filter, TINPREC_NULL };
     rules[TINTOK_DOT] = (TinAstParseRule){ NULL, tin_astparser_ruledot, TINPREC_CALL };
-    rules[TINTOK_SMALL_ARROW] = (TinAstParseRule){ NULL, tin_astparser_ruledot, TINPREC_CALL };
-    rules[TINTOK_DOT_DOT] = (TinAstParseRule){ NULL, tin_astparser_rulerange, TINPREC_RANGE };
-    rules[TINTOK_DOT_DOT_DOT] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_ASSIGNMENT };
-    rules[TINTOK_LEFT_BRACKET] = (TinAstParseRule){ tin_astparser_rulearray, tin_astparser_rulesubscript, TINPREC_NONE };
-    rules[TINTOK_LEFT_BRACE] = (TinAstParseRule){ tin_astparser_ruleobject, NULL, TINPREC_NONE };
-    rules[TINTOK_THIS] = (TinAstParseRule){ tin_astparser_rulethis, NULL, TINPREC_NONE };
-    rules[TINTOK_SUPER] = (TinAstParseRule){ tin_astparser_rulesuper, NULL, TINPREC_NONE };
+    rules[TINTOK_SMALLARROW] = (TinAstParseRule){ NULL, tin_astparser_ruledot, TINPREC_CALL };
+    rules[TINTOK_DOUBLEDOT] = (TinAstParseRule){ NULL, tin_astparser_rulerange, TINPREC_RANGE };
+    rules[TINTOK_TRIPLEDOT] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_ASSIGNMENT };
+    rules[TINTOK_BRACKETOPEN] = (TinAstParseRule){ tin_astparser_rulearray, tin_astparser_rulesubscript, TINPREC_NONE };
+    rules[TINTOK_BRACEOPEN] = (TinAstParseRule){ tin_astparser_ruleobject, NULL, TINPREC_NONE };
+    rules[TINTOK_KWTHIS] = (TinAstParseRule){ tin_astparser_rulethis, NULL, TINPREC_NONE };
+    rules[TINTOK_KWSUPER] = (TinAstParseRule){ tin_astparser_rulesuper, NULL, TINPREC_NONE };
     rules[TINTOK_QUESTION] = (TinAstParseRule){ NULL, tin_astparser_ruleternary, TINPREC_EQUALITY };
-    rules[TINTOK_REF] = (TinAstParseRule){ tin_astparser_rulereference, NULL, TINPREC_NONE };
-    rules[TINTOK_FUNCTION] = (TinAstParseRule){tin_astparser_rulefunction, NULL, TINPREC_NONE};
+    rules[TINTOK_KWREF] = (TinAstParseRule){ tin_astparser_rulereference, NULL, TINPREC_NONE };
+    rules[TINTOK_KWFUNCTION] = (TinAstParseRule){tin_astparser_rulefunction, NULL, TINPREC_NONE};
     rules[TINTOK_SEMICOLON] = (TinAstParseRule){tin_astparser_rulenothing, NULL, TINPREC_NONE};
 }
 
@@ -130,86 +130,86 @@ const char* tin_astparser_token2name(int t)
 {
     switch(t)
     {
-        case TINTOK_NEW_LINE: return "TINTOK_NEW_LINE";
-        case TINTOK_LEFT_PAREN: return "TINTOK_LEFT_PAREN";
-        case TINTOK_RIGHT_PAREN: return "TINTOK_RIGHT_PAREN";
-        case TINTOK_LEFT_BRACE: return "TINTOK_LEFT_BRACE";
-        case TINTOK_RIGHT_BRACE: return "TINTOK_RIGHT_BRACE";
-        case TINTOK_LEFT_BRACKET: return "TINTOK_LEFT_BRACKET";
-        case TINTOK_RIGHT_BRACKET: return "TINTOK_RIGHT_BRACKET";
+        case TINTOK_NEWLINE: return "TINTOK_NEWLINE";
+        case TINTOK_PARENOPEN: return "TINTOK_PARENOPEN";
+        case TINTOK_PARENCLOSE: return "TINTOK_PARENCLOSE";
+        case TINTOK_BRACEOPEN: return "TINTOK_BRACEOPEN";
+        case TINTOK_BRACECLOSE: return "TINTOK_BRACECLOSE";
+        case TINTOK_BRACKETOPEN: return "TINTOK_BRACKETOPEN";
+        case TINTOK_BRACKETCLOSE: return "TINTOK_BRACKETCLOSE";
         case TINTOK_COMMA: return "TINTOK_COMMA";
         case TINTOK_SEMICOLON: return "TINTOK_SEMICOLON";
         case TINTOK_COLON: return "TINTOK_COLON";
-        case TINTOK_BAR_EQUAL: return "TINTOK_BAR_EQUAL";
+        case TINTOK_ASSIGNEQUAL: return "TINTOK_ASSIGNEQUAL";
         case TINTOK_BAR: return "TINTOK_BAR";
-        case TINTOK_BAR_BAR: return "TINTOK_BAR_BAR";
-        case TINTOK_AMPERSAND_EQUAL: return "TINTOK_AMPERSAND_EQUAL";
+        case TINTOK_DOUBLEBAR: return "TINTOK_DOUBLEBAR";
+        case TINTOK_AMPERSANDEQUAL: return "TINTOK_AMPERSANDEQUAL";
         case TINTOK_AMPERSAND: return "TINTOK_AMPERSAND";
-        case TINTOK_AMPERSAND_AMPERSAND: return "TINTOK_AMPERSAND_AMPERSAND";
+        case TINTOK_DOUBLEAMPERSAND: return "TINTOK_DOUBLEAMPERSAND";
         case TINTOK_BANG: return "TINTOK_BANG";
-        case TINTOK_BANG_EQUAL: return "TINTOK_BANG_EQUAL";
+        case TINTOK_BANGEQUAL: return "TINTOK_BANGEQUAL";
+        case TINTOK_ASSIGN: return "TINTOK_ASSIGN";
         case TINTOK_EQUAL: return "TINTOK_EQUAL";
-        case TINTOK_EQUAL_EQUAL: return "TINTOK_EQUAL_EQUAL";
-        case TINTOK_GREATER: return "TINTOK_GREATER";
-        case TINTOK_GREATER_EQUAL: return "TINTOK_GREATER_EQUAL";
-        case TINTOK_GREATER_GREATER: return "TINTOK_GREATER_GREATER";
-        case TINTOK_LESS: return "TINTOK_LESS";
-        case TINTOK_LESS_EQUAL: return "TINTOK_LESS_EQUAL";
-        case TINTOK_LESS_LESS: return "TINTOK_LESS_LESS";
+        case TINTOK_GREATERTHAN: return "TINTOK_GREATERTHAN";
+        case TINTOK_GREATEREQUAL: return "TINTOK_GREATEREQUAL";
+        case TINTOK_SHIFTRIGHT: return "TINTOK_SHIFTRIGHT";
+        case TINTOK_LESSTHAN: return "TINTOK_LESSTHAN";
+        case TINTOK_LESSEQUAL: return "TINTOK_LESSEQUAL";
+        case TINTOK_SHIFTLEFT: return "TINTOK_SHIFTLEFT";
         case TINTOK_PLUS: return "TINTOK_PLUS";
-        case TINTOK_PLUS_EQUAL: return "TINTOK_PLUS_EQUAL";
-        case TINTOK_PLUS_PLUS: return "TINTOK_PLUS_PLUS";
+        case TINTOK_PLUSEQUAL: return "TINTOK_PLUSEQUAL";
+        case TINTOK_DOUBLEPLUS: return "TINTOK_DOUBLEPLUS";
         case TINTOK_MINUS: return "TINTOK_MINUS";
-        case TINTOK_MINUS_EQUAL: return "TINTOK_MINUS_EQUAL";
-        case TINTOK_MINUS_MINUS: return "TINTOK_MINUS_MINUS";
+        case TINTOK_MINUSEQUAL: return "TINTOK_MINUSEQUAL";
+        case TINTOK_DOUBLEMINUS: return "TINTOK_DOUBLEMINUS";
         case TINTOK_STAR: return "TINTOK_STAR";
-        case TINTOK_STAR_EQUAL: return "TINTOK_STAR_EQUAL";
-        case TINTOK_STAR_STAR: return "TINTOK_STAR_STAR";
+        case TINTOK_STAREQUAL: return "TINTOK_STAREQUAL";
+        case TINTOK_DOUBLESTAR: return "TINTOK_DOUBLESTAR";
         case TINTOK_SLASH: return "TINTOK_SLASH";
-        case TINTOK_SLASH_EQUAL: return "TINTOK_SLASH_EQUAL";
+        case TINTOK_SLASHEQUAL: return "TINTOK_SLASHEQUAL";
         case TINTOK_QUESTION: return "TINTOK_QUESTION";
-        case TINTOK_QUESTION_QUESTION: return "TINTOK_QUESTION_QUESTION";
+        case TINTOK_DOUBLEQUESTION: return "TINTOK_DOUBLEQUESTION";
         case TINTOK_PERCENT: return "TINTOK_PERCENT";
-        case TINTOK_PERCENT_EQUAL: return "TINTOK_PERCENT_EQUAL";
+        case TINTOK_PERCENTEQUAL: return "TINTOK_PERCENTEQUAL";
         case TINTOK_ARROW: return "TINTOK_ARROW";
-        case TINTOK_SMALL_ARROW: return "TINTOK_SMALL_ARROW";
+        case TINTOK_SMALLARROW: return "TINTOK_SMALLARROW";
         case TINTOK_TILDE: return "TINTOK_TILDE";
         case TINTOK_CARET: return "TINTOK_CARET";
-        case TINTOK_CARET_EQUAL: return "TINTOK_CARET_EQUAL";
+        case TINTOK_CARETEQUAL: return "TINTOK_CARETEQUAL";
         case TINTOK_DOT: return "TINTOK_DOT";
-        case TINTOK_DOT_DOT: return "TINTOK_DOT_DOT";
-        case TINTOK_DOT_DOT_DOT: return "TINTOK_DOT_DOT_DOT";
+        case TINTOK_DOUBLEDOT: return "TINTOK_DOUBLEDOT";
+        case TINTOK_TRIPLEDOT: return "TINTOK_TRIPLEDOT";
         case TINTOK_SHARP: return "TINTOK_SHARP";
-        case TINTOK_SHARP_EQUAL: return "TINTOK_SHARP_EQUAL";
-        case TINTOK_IDENTIFIER: return "TINTOK_IDENTIFIER";
+        case TINTOK_SHARPEQUAL: return "TINTOK_SHARPEQUAL";
+        case TINTOK_IDENT: return "TINTOK_IDENT";
         case TINTOK_STRING: return "TINTOK_STRING";
-        case TINTOK_INTERPOLATION: return "TINTOK_INTERPOLATION";
+        case TINTOK_STRINTERPOL: return "TINTOK_STRINTERPOL";
         case TINTOK_NUMBER: return "TINTOK_NUMBER";
-        case TINTOK_CLASS: return "TINTOK_CLASS";
-        case TINTOK_ELSE: return "TINTOK_ELSE";
-        case TINTOK_FALSE: return "TINTOK_FALSE";
-        case TINTOK_FOR: return "TINTOK_FOR";
-        case TINTOK_FUNCTION: return "TINTOK_FUNCTION";
-        case TINTOK_IF: return "TINTOK_IF";
-        case TINTOK_NULL: return "TINTOK_NULL";
-        case TINTOK_RETURN: return "TINTOK_RETURN";
-        case TINTOK_SUPER: return "TINTOK_SUPER";
-        case TINTOK_THIS: return "TINTOK_THIS";
-        case TINTOK_TRUE: return "TINTOK_TRUE";
-        case TINTOK_VAR: return "TINTOK_VAR";
-        case TINTOK_WHILE: return "TINTOK_WHILE";
-        case TINTOK_CONTINUE: return "TINTOK_CONTINUE";
-        case TINTOK_BREAK: return "TINTOK_BREAK";
-        case TINTOK_NEW: return "TINTOK_NEW";
-        case TINTOK_EXPORT: return "TINTOK_EXPORT";
-        case TINTOK_IS: return "TINTOK_IS";
-        case TINTOK_STATIC: return "TINTOK_STATIC";
-        case TINTOK_OPERATOR: return "TINTOK_OPERATOR";
-        case TINTOK_GET: return "TINTOK_GET";
-        case TINTOK_SET: return "TINTOK_SET";
-        case TINTOK_IN: return "TINTOK_IN";
-        case TINTOK_CONST: return "TINTOK_CONST";
-        case TINTOK_REF: return "TINTOK_REF";
+        case TINTOK_KWCLASS: return "TINTOK_KWCLASS";
+        case TINTOK_KWELSE: return "TINTOK_KWELSE";
+        case TINTOK_KWFALSE: return "TINTOK_KWFALSE";
+        case TINTOK_KWFOR: return "TINTOK_KWFOR";
+        case TINTOK_KWFUNCTION: return "TINTOK_KWFUNCTION";
+        case TINTOK_KWIF: return "TINTOK_KWIF";
+        case TINTOK_KWNULL: return "TINTOK_KWNULL";
+        case TINTOK_KWRETURN: return "TINTOK_KWRETURN";
+        case TINTOK_KWSUPER: return "TINTOK_KWSUPER";
+        case TINTOK_KWTHIS: return "TINTOK_KWTHIS";
+        case TINTOK_KWTRUE: return "TINTOK_KWTRUE";
+        case TINTOK_KWVAR: return "TINTOK_KWVAR";
+        case TINTOK_KWWHILE: return "TINTOK_KWWHILE";
+        case TINTOK_KWCONTINUE: return "TINTOK_KWCONTINUE";
+        case TINTOK_KWBREAK: return "TINTOK_KWBREAK";
+        case TINTOK_KWNEW: return "TINTOK_KWNEW";
+        case TINTOK_KWEXPORT: return "TINTOK_KWEXPORT";
+        case TINTOK_KWIS: return "TINTOK_KWIS";
+        case TINTOK_KWSTATIC: return "TINTOK_KWSTATIC";
+        case TINTOK_KWOPERATOR: return "TINTOK_KWOPERATOR";
+        case TINTOK_KWGET: return "TINTOK_KWGET";
+        case TINTOK_KWSET: return "TINTOK_KWSET";
+        case TINTOK_KWIN: return "TINTOK_KWIN";
+        case TINTOK_KWCONST: return "TINTOK_KWCONST";
+        case TINTOK_KWREF: return "TINTOK_KWREF";
         case TINTOK_ERROR: return "TINTOK_ERROR";
         case TINTOK_EOF: return "TINTOK_EOF";
         default:
@@ -337,7 +337,7 @@ static bool tin_astparser_matchnewline(TinAstParser* parser)
 {
     while(true)
     {
-        if(!tin_astparser_match(parser, TINTOK_NEW_LINE))
+        if(!tin_astparser_match(parser, TINTOK_NEWLINE))
         {
             return false;
         }
@@ -363,7 +363,7 @@ static void tin_astparser_consume(TinAstParser* parser, TinAstTokType type, cons
         return;
     }
     //fprintf(stderr, "in tin_astparser_consume: failed?\n");
-    line = parser->previous.type == TINTOK_NEW_LINE;
+    line = parser->previous.type == TINTOK_NEWLINE;
     olen = (line ? 8 : parser->previous.length);
     otext = (line ? "new line" : parser->previous.start);
     fmt = tin_format_error(parser->state, parser->current.line, "expected %s, got '%.*s'", onerror, olen, otext)->chars;
@@ -378,7 +378,7 @@ static TinAstExpression* tin_astparser_parseblock(TinAstParser* parser)
     while(true)
     {
         tin_astparser_ignorenewlines(parser, true);
-        if(tin_astparser_check(parser, TINTOK_RIGHT_BRACE) || tin_astparser_check(parser, TINTOK_EOF))
+        if(tin_astparser_check(parser, TINTOK_BRACECLOSE) || tin_astparser_check(parser, TINTOK_EOF))
         {
             break;
         }
@@ -387,7 +387,7 @@ static TinAstExpression* tin_astparser_parseblock(TinAstParser* parser)
         tin_astparser_ignorenewlines(parser, true);
     }
     tin_astparser_ignorenewlines(parser, true);
-    tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}'");
+    tin_astparser_consume(parser, TINTOK_BRACECLOSE, "'}'");
     tin_astparser_ignorenewlines(parser, true);
     tin_astparser_endscope(parser);
     return (TinAstExpression*)statement;
@@ -433,7 +433,7 @@ static TinAstExpression* tin_astparser_parseprecedence(TinAstParser* parser, Tin
         infix_rule = tin_astparser_getrule(parser->previous.type)->infix;
         expr = infix_rule(parser, expr, canassign);
     }
-    if(err && canassign && tin_astparser_match(parser, TINTOK_EQUAL))
+    if(err && canassign && tin_astparser_match(parser, TINTOK_ASSIGN))
     {
         tin_astparser_raiseerror(parser, "invalid assigment target");
     }
@@ -459,19 +459,19 @@ static void tin_astparser_parseparameters(TinAstParser* parser, TinAstParamList*
     const char* argname;
     TinAstExpression* defexpr;
     haddefault = false;
-    while(!tin_astparser_check(parser, TINTOK_RIGHT_PAREN))
+    while(!tin_astparser_check(parser, TINTOK_PARENCLOSE))
     {
         // Vararg ...
-        if(tin_astparser_match(parser, TINTOK_DOT_DOT_DOT))
+        if(tin_astparser_match(parser, TINTOK_TRIPLEDOT))
         {
             tin_paramlist_push(parser->state, parameters, (TinAstParameter){ "...", 3, NULL });
             return;
         }
-        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "argument name");
+        tin_astparser_consume(parser, TINTOK_IDENT, "argument name");
         argname = parser->previous.start;
         arglength = parser->previous.length;
         defexpr = NULL;
-        if(tin_astparser_match(parser, TINTOK_EQUAL))
+        if(tin_astparser_match(parser, TINTOK_ASSIGN))
         {
             haddefault = true;
             defexpr = tin_astparser_parseexpression(parser, true);
@@ -511,26 +511,26 @@ static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* parser
     (void)hadarrow;
     (void)had_array;
     hadarrow = false;
-    if(tin_astparser_match(parser, TINTOK_RIGHT_PAREN))
+    if(tin_astparser_match(parser, TINTOK_PARENCLOSE))
     {
         tin_astparser_consume(parser, TINTOK_ARROW, "=> after lambda arguments");
         return tin_astparser_parselambda(parser, tin_ast_make_lambdaexpr(parser->state, parser->previous.line));
     }
     start = parser->previous.start;
     line = parser->previous.line;
-    if(tin_astparser_match(parser, TINTOK_IDENTIFIER) || tin_astparser_match(parser, TINTOK_DOT_DOT_DOT))
+    if(tin_astparser_match(parser, TINTOK_IDENT) || tin_astparser_match(parser, TINTOK_TRIPLEDOT))
     {
         TinState* state = parser->state;
         firstargstart = parser->previous.start;
         firstarglength = parser->previous.length;
-        if(tin_astparser_match(parser, TINTOK_COMMA) || (tin_astparser_match(parser, TINTOK_RIGHT_PAREN) && tin_astparser_match(parser, TINTOK_ARROW)))
+        if(tin_astparser_match(parser, TINTOK_COMMA) || (tin_astparser_match(parser, TINTOK_PARENCLOSE) && tin_astparser_match(parser, TINTOK_ARROW)))
         {
             had_array = parser->previous.type == TINTOK_ARROW;
-            hadvararg= parser->previous.type == TINTOK_DOT_DOT_DOT;
+            hadvararg= parser->previous.type == TINTOK_TRIPLEDOT;
             // This is a lambda
             TinAstFunctionExpr* lambda = tin_ast_make_lambdaexpr(state, line);
             TinAstExpression* defvalue = NULL;
-            haddefault = tin_astparser_match(parser, TINTOK_EQUAL);
+            haddefault = tin_astparser_match(parser, TINTOK_ASSIGN);
             if(haddefault)
             {
                 defvalue = tin_astparser_parseexpression(parser, true);
@@ -541,19 +541,19 @@ static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* parser
                 do
                 {
                     stop = false;
-                    if(tin_astparser_match(parser, TINTOK_DOT_DOT_DOT))
+                    if(tin_astparser_match(parser, TINTOK_TRIPLEDOT))
                     {
                         stop = true;
                     }
                     else
                     {
-                        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "argument name");
+                        tin_astparser_consume(parser, TINTOK_IDENT, "argument name");
                     }
 
                     argname = parser->previous.start;
                     arglength = parser->previous.length;
                     defexpr = NULL;
-                    if(tin_astparser_match(parser, TINTOK_EQUAL))
+                    if(tin_astparser_match(parser, TINTOK_ASSIGN))
                     {
                         defexpr = tin_astparser_parseexpression(parser, true);
                         haddefault = true;
@@ -572,7 +572,7 @@ static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* parser
             #if 0
             if(!hadarrow)
             {
-                tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after lambda parameters");
+                tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')' after lambda parameters");
                 tin_astparser_consume(parser, TINTOK_ARROW, "=> after lambda parameters");
             }
             #endif
@@ -589,7 +589,7 @@ static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* parser
         }
     }
     expression = tin_astparser_parseexpression(parser, true);
-    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after grouping expression");
+    tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')' after grouping expression");
     return expression;
 }
 
@@ -600,7 +600,7 @@ static TinAstExpression* tin_astparser_rulecall(TinAstParser* parser, TinAstExpr
     TinAstVarExpr* ee;
     TinAstCallExpr* expression;
     expression = tin_ast_make_callexpr(parser->state, parser->previous.line, prev);
-    while(!tin_astparser_check(parser, TINTOK_RIGHT_PAREN))
+    while(!tin_astparser_check(parser, TINTOK_PARENCLOSE))
     {
         e = tin_astparser_parseexpression(parser, true);
         tin_exprlist_push(parser->state, &expression->args, e);
@@ -622,7 +622,7 @@ static TinAstExpression* tin_astparser_rulecall(TinAstParser* parser, TinAstExpr
     {
         tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)expression->args.count);
     }
-    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after arguments");
+    tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')' after arguments");
     return (TinAstExpression*)expression;
 }
 
@@ -649,7 +649,7 @@ static TinAstExpression* tin_astparser_rulebinary(TinAstParser* parser, TinAstEx
     invert = parser->previous.type == TINTOK_BANG;
     if(invert)
     {
-        tin_astparser_consume(parser, TINTOK_IS, "'is' after '!'");
+        tin_astparser_consume(parser, TINTOK_KWIS, "'is' after '!'");
     }
     op = parser->previous.type;
     line = parser->previous.line;
@@ -697,57 +697,57 @@ static TinAstTokType tin_astparser_convertcompoundop(TinAstTokType op)
 {
     switch(op)
     {
-        case TINTOK_PLUS_EQUAL:
+        case TINTOK_PLUSEQUAL:
             {
                 return TINTOK_PLUS;
             }
             break;
-        case TINTOK_MINUS_EQUAL:
+        case TINTOK_MINUSEQUAL:
             {
                 return TINTOK_MINUS;
             }
             break;
-        case TINTOK_STAR_EQUAL:
+        case TINTOK_STAREQUAL:
             {
                 return TINTOK_STAR;
             }
             break;
-        case TINTOK_SLASH_EQUAL:
+        case TINTOK_SLASHEQUAL:
             {
                 return TINTOK_SLASH;
             }
             break;
-        case TINTOK_SHARP_EQUAL:
+        case TINTOK_SHARPEQUAL:
             {
                 return TINTOK_SHARP;
             }
             break;
-        case TINTOK_PERCENT_EQUAL:
+        case TINTOK_PERCENTEQUAL:
             {
                 return TINTOK_PERCENT;
             }
             break;
-        case TINTOK_CARET_EQUAL:
+        case TINTOK_CARETEQUAL:
             {
                 return TINTOK_CARET;
             }
             break;
-        case TINTOK_BAR_EQUAL:
+        case TINTOK_ASSIGNEQUAL:
             {
                 return TINTOK_BAR;
             }
             break;
-        case TINTOK_AMPERSAND_EQUAL:
+        case TINTOK_AMPERSANDEQUAL:
             {
                 return TINTOK_AMPERSAND;
             }
             break;
-        case TINTOK_PLUS_PLUS:
+        case TINTOK_DOUBLEPLUS:
             {
                 return TINTOK_PLUS;
             }
             break;
-        case TINTOK_MINUS_MINUS:
+        case TINTOK_DOUBLEMINUS:
             {
                 return TINTOK_MINUS;
             }
@@ -772,7 +772,7 @@ static TinAstExpression* tin_astparser_rulecompound(TinAstParser* parser, TinAst
     op = parser->previous.type;
     line = parser->previous.line;
     rule = tin_astparser_getrule(op);
-    if(op == TINTOK_PLUS_PLUS || op == TINTOK_MINUS_MINUS)
+    if(op == TINTOK_DOUBLEPLUS || op == TINTOK_DOUBLEMINUS)
     {
         expression = (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, tin_value_makefixednumber(parser->state, 1));
     }
@@ -793,17 +793,17 @@ static TinAstExpression* tin_astparser_ruleliteral(TinAstParser* parser, bool ca
     line = parser->previous.line;
     switch(parser->previous.type)
     {
-        case TINTOK_TRUE:
+        case TINTOK_KWTRUE:
             {
                 return (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, TRUE_VALUE);
             }
             break;
-        case TINTOK_FALSE:
+        case TINTOK_KWFALSE:
             {
                 return (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, FALSE_VALUE);
             }
             break;
-        case TINTOK_NULL:
+        case TINTOK_KWNULL:
             {
                 return (TinAstExpression*)tin_ast_make_literalexpr(parser->state, line, NULL_VALUE);
             }
@@ -822,7 +822,7 @@ static TinAstExpression* tin_astparser_rulestring(TinAstParser* parser, bool can
     (void)canassign;
     TinAstExpression* expression;
     expression = (TinAstExpression*)tin_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value);
-    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
+    if(tin_astparser_match(parser, TINTOK_BRACKETOPEN))
     {
         return tin_astparser_rulesubscript(parser, expression, canassign);
     }
@@ -843,7 +843,7 @@ static TinAstExpression* tin_astparser_ruleinterpolation(TinAstParser* parser, b
             (TinAstExpression*)tin_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value));
         }
         tin_exprlist_push(parser->state, &expression->expressions, tin_astparser_parseexpression(parser, true));
-    } while(tin_astparser_match(parser, TINTOK_INTERPOLATION));
+    } while(tin_astparser_match(parser, TINTOK_STRINTERPOL));
     tin_astparser_consume(parser, TINTOK_STRING, "end of interpolation");
     if(tin_string_getlength(tin_value_asstring(parser->previous.value)) > 0)
     {
@@ -851,7 +851,7 @@ static TinAstExpression* tin_astparser_ruleinterpolation(TinAstParser* parser, b
         parser->state, &expression->expressions,
         (TinAstExpression*)tin_ast_make_literalexpr(parser->state, parser->previous.line, parser->previous.value));
     }
-    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
+    if(tin_astparser_match(parser, TINTOK_BRACKETOPEN))
     {
         return tin_astparser_rulesubscript(parser, (TinAstExpression*)expression, canassign);
     }
@@ -868,26 +868,36 @@ static TinAstExpression* tin_astparser_ruleobject(TinAstParser* parser, bool can
 
     object = tin_ast_make_objectexpr(parser->state, parser->previous.line);
     tin_astparser_ignorenewlines(parser, true);
-    while(!tin_astparser_check(parser, TINTOK_RIGHT_BRACE))
+    while(!tin_astparser_check(parser, TINTOK_BRACECLOSE))
     {
         tin_astparser_ignorenewlines(parser, true);
-        if(tin_astparser_check(parser, TINTOK_IDENTIFIER))
+        if(tin_astparser_check(parser, TINTOK_IDENT))
         {
-            tin_astparser_consume(parser, TINTOK_IDENTIFIER, "key string after '{'");
-            tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, parser->previous.start, parser->previous.length)));
+            tin_astparser_raiseerror(parser, "cannot use bare names (for now)");
+            //tin_astparser_consume(parser, TINTOK_IDENT, "key string after '{'");
+            
+            //tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, parser->previous.start, parser->previous.length)));
+            expr = tin_astparser_parseexpression(parser, true);
+            tin_exprlist_push(parser->state, &object->keys, expr);
+
         }
         else if(tin_astparser_check(parser, TINTOK_STRING))
         {
             expr = tin_astparser_parseexpression(parser, true);
             tv = parser->previous.value;
             ts = tin_value_asstring(tv);
-            tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, ts->chars, tin_string_getlength(ts))));
-            tin_ast_destroyexpression(parser->state, expr);
+            //tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, ts->chars, tin_string_getlength(ts))));
+            //tin_vallist_push(parser->state, &object->keys, tv);
+            tin_exprlist_push(parser->state, &object->keys, expr);
+
+            //tin_ast_destroyexpression(parser->state, expr);
         }
+        
         else
         {
             tin_astparser_raiseerror(parser, "expect identifier or string as object key");
         }
+    
         tin_astparser_ignorenewlines(parser, true);
         tin_astparser_consume(parser, TINTOK_COLON, "':' after key string");
         tin_astparser_ignorenewlines(parser, true);
@@ -898,7 +908,7 @@ static TinAstExpression* tin_astparser_ruleobject(TinAstParser* parser, bool can
         }
     }
     tin_astparser_ignorenewlines(parser, true);
-    tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}' after object");
+    tin_astparser_consume(parser, TINTOK_BRACECLOSE, "'}' after object");
     return (TinAstExpression*)object;
 }
 
@@ -911,14 +921,14 @@ static TinAstExpression* tin_astparser_rulevarexprbase(TinAstParser* parser, boo
     expression = (TinAstExpression*)tin_ast_make_varexpr(parser->state, parser->previous.line, parser->previous.start, parser->previous.length);
     if(isnew)
     {
-        hadargs = tin_astparser_check(parser, TINTOK_LEFT_PAREN);
+        hadargs = tin_astparser_check(parser, TINTOK_PARENOPEN);
         callex = NULL;
         if(hadargs)
         {
             tin_astparser_advance(parser);
             callex = (TinAstCallExpr*)tin_astparser_rulecall(parser, expression, false);
         }
-        if(tin_astparser_match(parser, TINTOK_LEFT_BRACE))
+        if(tin_astparser_match(parser, TINTOK_BRACEOPEN))
         {
             if(callex == NULL)
             {
@@ -933,11 +943,11 @@ static TinAstExpression* tin_astparser_rulevarexprbase(TinAstParser* parser, boo
         }
         return (TinAstExpression*)callex;
     }
-    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
+    if(tin_astparser_match(parser, TINTOK_BRACKETOPEN))
     {
         return tin_astparser_rulesubscript(parser, expression, canassign);
     }
-    if(canassign && tin_astparser_match(parser, TINTOK_EQUAL))
+    if(canassign && tin_astparser_match(parser, TINTOK_ASSIGN))
     {
         return (TinAstExpression*)tin_ast_make_assignexpr(parser->state, parser->previous.line, expression,
                                                             tin_astparser_parseexpression(parser, true));
@@ -953,7 +963,7 @@ static TinAstExpression* tin_astparser_rulevarexpr(TinAstParser* parser, bool ca
 static TinAstExpression* tin_astparser_rulenewexpr(TinAstParser* parser, bool canassign)
 {
     (void)canassign;
-    tin_astparser_consume(parser, TINTOK_IDENTIFIER, "class name after 'new'");
+    tin_astparser_consume(parser, TINTOK_IDENT, "class name after 'new'");
     return tin_astparser_rulevarexprbase(parser, false, true);
 }
 
@@ -966,19 +976,19 @@ static TinAstExpression* tin_astparser_ruledot(TinAstParser* parser, TinAstExpre
     const char* name;
     TinAstExpression* expression;
     line = parser->previous.line;
-    ignored = parser->previous.type == TINTOK_SMALL_ARROW;
-    if(!(tin_astparser_match(parser, TINTOK_CLASS) || tin_astparser_match(parser, TINTOK_SUPER)))
+    ignored = parser->previous.type == TINTOK_SMALLARROW;
+    if(!(tin_astparser_match(parser, TINTOK_KWCLASS) || tin_astparser_match(parser, TINTOK_KWSUPER)))
     {// class and super are allowed field names
-        tin_astparser_consume(parser, TINTOK_IDENTIFIER, ignored ? "propety name after '->'" : "property name after '.'");
+        tin_astparser_consume(parser, TINTOK_IDENT, ignored ? "propety name after '->'" : "property name after '.'");
     }
     name = parser->previous.start;
     length = parser->previous.length;
-    if(!ignored && canassign && tin_astparser_match(parser, TINTOK_EQUAL))
+    if(!ignored && canassign && tin_astparser_match(parser, TINTOK_ASSIGN))
     {
         return (TinAstExpression*)tin_ast_make_setexpr(parser->state, line, previous, name, length, tin_astparser_parseexpression(parser, true));
     }
     expression = (TinAstExpression*)tin_ast_make_getexpr(parser->state, line, previous, name, length, false, ignored);
-    if(!ignored && tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
+    if(!ignored && tin_astparser_match(parser, TINTOK_BRACKETOPEN))
     {
         return tin_astparser_rulesubscript(parser, expression, canassign);
     }
@@ -1001,10 +1011,10 @@ static TinAstExpression* tin_astparser_ruleternary(TinAstParser* parser, TinAstE
     TinAstExpression* ifbranch;
     TinAstExpression* elsebranch;
     line = parser->previous.line;
-    if(tin_astparser_match(parser, TINTOK_DOT) || tin_astparser_match(parser, TINTOK_SMALL_ARROW))
+    if(tin_astparser_match(parser, TINTOK_DOT) || tin_astparser_match(parser, TINTOK_SMALLARROW))
     {
-        ignored = parser->previous.type == TINTOK_SMALL_ARROW;
-        tin_astparser_consume(parser, TINTOK_IDENTIFIER, ignored ? "property name after '->'" : "property name after '.'");
+        ignored = parser->previous.type == TINTOK_SMALLARROW;
+        tin_astparser_consume(parser, TINTOK_IDENT, ignored ? "property name after '->'" : "property name after '.'");
         return (TinAstExpression*)tin_ast_make_getexpr(parser->state, line, previous, parser->previous.start,
                                                          parser->previous.length, true, ignored);
     }
@@ -1021,7 +1031,7 @@ static TinAstExpression* tin_astparser_rulearray(TinAstParser* parser, bool cana
     TinAstArrayExpr* array;
     array = tin_ast_make_arrayexpr(parser->state, parser->previous.line);
     tin_astparser_ignorenewlines(parser, true);
-    while(!tin_astparser_check(parser, TINTOK_RIGHT_BRACKET))
+    while(!tin_astparser_check(parser, TINTOK_BRACKETCLOSE))
     {
         expr = NULL;
         tin_astparser_ignorenewlines(parser, true);
@@ -1046,8 +1056,8 @@ static TinAstExpression* tin_astparser_rulearray(TinAstParser* parser, bool cana
         tin_astparser_ignorenewlines(parser, true);
     }
     tin_astparser_ignorenewlines(parser, true);
-    tin_astparser_consume(parser, TINTOK_RIGHT_BRACKET, "']' after array");
-    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
+    tin_astparser_consume(parser, TINTOK_BRACKETCLOSE, "']' after array");
+    if(tin_astparser_match(parser, TINTOK_BRACKETOPEN))
     {
         return tin_astparser_rulesubscript(parser, (TinAstExpression*)array, canassign);
     }
@@ -1061,13 +1071,13 @@ static TinAstExpression* tin_astparser_rulesubscript(TinAstParser* parser, TinAs
     TinAstExpression* expression;
     line = parser->previous.line;
     index = tin_astparser_parseexpression(parser, true);
-    tin_astparser_consume(parser, TINTOK_RIGHT_BRACKET, "']' after subscript");
+    tin_astparser_consume(parser, TINTOK_BRACKETCLOSE, "']' after subscript");
     expression = (TinAstExpression*)tin_ast_make_subscriptexpr(parser->state, line, previous, index);
-    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
+    if(tin_astparser_match(parser, TINTOK_BRACKETOPEN))
     {
         return tin_astparser_rulesubscript(parser, expression, canassign);
     }
-    else if(canassign && tin_astparser_match(parser, TINTOK_EQUAL))
+    else if(canassign && tin_astparser_match(parser, TINTOK_ASSIGN))
     {
         return (TinAstExpression*)tin_ast_make_assignexpr(parser->state, parser->previous.line, expression, tin_astparser_parseexpression(parser, true));
     }
@@ -1078,7 +1088,7 @@ static TinAstExpression* tin_astparser_rulethis(TinAstParser* parser, bool canas
 {
     TinAstExpression* expression;
     expression = (TinAstExpression*)tin_ast_make_thisexpr(parser->state, parser->previous.line);
-    if(tin_astparser_match(parser, TINTOK_LEFT_BRACKET))
+    if(tin_astparser_match(parser, TINTOK_BRACKETOPEN))
     {
         return tin_astparser_rulesubscript(parser, expression, canassign);
     }
@@ -1092,18 +1102,18 @@ static TinAstExpression* tin_astparser_rulesuper(TinAstParser* parser, bool cana
     size_t line;
     TinAstExpression* expression;
     line = parser->previous.line;
-    if(!(tin_astparser_match(parser, TINTOK_DOT) || tin_astparser_match(parser, TINTOK_SMALL_ARROW)))
+    if(!(tin_astparser_match(parser, TINTOK_DOT) || tin_astparser_match(parser, TINTOK_SMALLARROW)))
     {
         expression = (TinAstExpression*)tin_ast_make_superexpr(
         parser->state, line, tin_string_copy(parser->state, "constructor", 11), false);
-        tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after 'super'");
+        tin_astparser_consume(parser, TINTOK_PARENOPEN, "'(' after 'super'");
         return tin_astparser_rulecall(parser, expression, false);
     }
-    ignoring = parser->previous.type == TINTOK_SMALL_ARROW;
-    tin_astparser_consume(parser, TINTOK_IDENTIFIER, ignoring ? "super method name after '->'" : "super method name after '.'");
+    ignoring = parser->previous.type == TINTOK_SMALLARROW;
+    tin_astparser_consume(parser, TINTOK_IDENT, ignoring ? "super method name after '->'" : "super method name after '.'");
     expression = (TinAstExpression*)tin_ast_make_superexpr(
     parser->state, line, tin_string_copy(parser->state, parser->previous.start, parser->previous.length), ignoring);
-    if(tin_astparser_match(parser, TINTOK_LEFT_PAREN))
+    if(tin_astparser_match(parser, TINTOK_PARENOPEN))
     {
         return tin_astparser_rulecall(parser, expression, false);
     }
@@ -1125,7 +1135,7 @@ static TinAstExpression* tin_astparser_rulereference(TinAstParser* parser, bool 
     line = parser->previous.line;
     tin_astparser_ignorenewlines(parser, true);
     expression = tin_ast_make_referenceexpr(parser->state, line, tin_astparser_parseprecedence(parser, TINPREC_CALL, false, true));
-    if(tin_astparser_match(parser, TINTOK_EQUAL))
+    if(tin_astparser_match(parser, TINTOK_ASSIGN))
     {
         return (TinAstExpression*)tin_ast_make_assignexpr(parser->state, line, (TinAstExpression*)expression, tin_astparser_parseexpression(parser, true));
     }
@@ -1142,39 +1152,39 @@ static TinAstExpression* tin_astparser_parsestatement(TinAstParser* parser)
     {
         return NULL;
     }
-    if(tin_astparser_match(parser, TINTOK_VAR) || tin_astparser_match(parser, TINTOK_CONST))
+    if(tin_astparser_match(parser, TINTOK_KWVAR) || tin_astparser_match(parser, TINTOK_KWCONST))
     {
         return tin_astparser_parsevar_declaration(parser, true);
     }
-    else if(tin_astparser_match(parser, TINTOK_IF))
+    else if(tin_astparser_match(parser, TINTOK_KWIF))
     {
         return tin_astparser_parseif(parser);
     }
-    else if(tin_astparser_match(parser, TINTOK_FOR))
+    else if(tin_astparser_match(parser, TINTOK_KWFOR))
     {
         return tin_astparser_parsefor(parser);
     }
-    else if(tin_astparser_match(parser, TINTOK_WHILE))
+    else if(tin_astparser_match(parser, TINTOK_KWWHILE))
     {
         return tin_astparser_parsewhile(parser);
     }
-    else if(tin_astparser_match(parser, TINTOK_CONTINUE))
+    else if(tin_astparser_match(parser, TINTOK_KWCONTINUE))
     {
         return (TinAstExpression*)tin_ast_make_continueexpr(parser->state, parser->previous.line);
     }
-    else if(tin_astparser_match(parser, TINTOK_BREAK))
+    else if(tin_astparser_match(parser, TINTOK_KWBREAK))
     {
         return (TinAstExpression*)tin_ast_make_breakexpr(parser->state, parser->previous.line);
     }
-    else if(tin_astparser_match(parser, TINTOK_FUNCTION) || tin_astparser_match(parser, TINTOK_EXPORT))
+    else if(tin_astparser_match(parser, TINTOK_KWFUNCTION) || tin_astparser_match(parser, TINTOK_KWEXPORT))
     {
         return tin_astparser_rulefunction(parser, false);
     }
-    else if(tin_astparser_match(parser, TINTOK_RETURN))
+    else if(tin_astparser_match(parser, TINTOK_KWRETURN))
     {
         return tin_astparser_parsereturn(parser);
     }
-    else if(tin_astparser_match(parser, TINTOK_LEFT_BRACE))
+    else if(tin_astparser_match(parser, TINTOK_BRACEOPEN))
     {
         return tin_astparser_parseblock(parser);
     }
@@ -1195,13 +1205,13 @@ static TinAstExpression* tin_astparser_parsevar_declaration(TinAstParser* parser
     size_t length;
     const char* name;
     TinAstExpression* init;
-    constant = parser->previous.type == TINTOK_CONST;
+    constant = parser->previous.type == TINTOK_KWCONST;
     line = parser->previous.line;
-    tin_astparser_consume(parser, TINTOK_IDENTIFIER, "variable name");
+    tin_astparser_consume(parser, TINTOK_IDENT, "variable name");
     name = parser->previous.start;
     length = parser->previous.length;
     init = NULL;
-    if(tin_astparser_match(parser, TINTOK_EQUAL))
+    if(tin_astparser_match(parser, TINTOK_ASSIGN))
     {
         init = tin_astparser_parseexpression(parser, ignsemi);
     }
@@ -1221,11 +1231,11 @@ static TinAstExpression* tin_astparser_parseif(TinAstParser* parser)
     TinAstExpression* e;
     line = parser->previous.line;
     invert = tin_astparser_match(parser, TINTOK_BANG);
-    hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
+    hadparen = tin_astparser_match(parser, TINTOK_PARENOPEN);
     condition = tin_astparser_parseexpression(parser, true);
     if(hadparen)
     {
-        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
+        tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')'");
     }
     if(invert)
     {
@@ -1237,11 +1247,11 @@ static TinAstExpression* tin_astparser_parseif(TinAstParser* parser)
     elseifbranches = NULL;
     elsebranch = NULL;
     tin_astparser_ignorenewlines(parser, true);
-    while(tin_astparser_match(parser, TINTOK_ELSE))
+    while(tin_astparser_match(parser, TINTOK_KWELSE))
     {
         // else if
         tin_astparser_ignorenewlines(parser, true);
-        if(tin_astparser_match(parser, TINTOK_IF))
+        if(tin_astparser_match(parser, TINTOK_KWIF))
         {
             if(elseifconds == NULL)
             {
@@ -1249,12 +1259,12 @@ static TinAstExpression* tin_astparser_parseif(TinAstParser* parser)
                 elseifbranches = tin_ast_allocate_stmtlist(parser->state);
             }
             invert = tin_astparser_match(parser, TINTOK_BANG);
-            hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
+            hadparen = tin_astparser_match(parser, TINTOK_PARENOPEN);
             tin_astparser_ignorenewlines(parser, true);
             e = tin_astparser_parseexpression(parser, true);
             if(hadparen)
             {
-                tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
+                tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')'");
             }
             tin_astparser_ignorenewlines(parser, true);
             if(invert)
@@ -1286,12 +1296,12 @@ static TinAstExpression* tin_astparser_parsefor(TinAstParser* parser)
     TinAstExpression* var;
     TinAstExpression* init;
     line= parser->previous.line;
-    hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
+    hadparen = tin_astparser_match(parser, TINTOK_PARENOPEN);
     var = NULL;
     init = NULL;
     if(!tin_astparser_check(parser, TINTOK_SEMICOLON))
     {
-        if(tin_astparser_match(parser, TINTOK_VAR))
+        if(tin_astparser_match(parser, TINTOK_KWVAR))
         {
             var = tin_astparser_parsevar_declaration(parser, false);
         }
@@ -1300,7 +1310,7 @@ static TinAstExpression* tin_astparser_parsefor(TinAstParser* parser)
             init = tin_astparser_parseexpression(parser, false);
         }
     }
-    cstyle = !tin_astparser_match(parser, TINTOK_IN);
+    cstyle = !tin_astparser_match(parser, TINTOK_KWIN);
     condition= NULL;
     increment = NULL;
     if(cstyle)
@@ -1308,7 +1318,7 @@ static TinAstExpression* tin_astparser_parsefor(TinAstParser* parser)
         tin_astparser_consume(parser, TINTOK_SEMICOLON, "';'");
         condition = tin_astparser_check(parser, TINTOK_SEMICOLON) ? NULL : tin_astparser_parseexpression(parser, false);
         tin_astparser_consume(parser, TINTOK_SEMICOLON, "';'");
-        increment = tin_astparser_check(parser, TINTOK_RIGHT_PAREN) ? NULL : tin_astparser_parseexpression(parser, false);
+        increment = tin_astparser_check(parser, TINTOK_PARENCLOSE) ? NULL : tin_astparser_parseexpression(parser, false);
     }
     else
     {
@@ -1320,7 +1330,7 @@ static TinAstExpression* tin_astparser_parsefor(TinAstParser* parser)
     }
     if(hadparen)
     {
-        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
+        tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')'");
     }
     tin_astparser_ignorenewlines(parser, true);
     return (TinAstExpression*)tin_ast_make_forexpr(parser->state, line, init, var, condition, increment,
@@ -1333,11 +1343,11 @@ static TinAstExpression* tin_astparser_parsewhile(TinAstParser* parser)
     size_t line;
     TinAstExpression* body;
     line = parser->previous.line;
-    hadparen = tin_astparser_match(parser, TINTOK_LEFT_PAREN);
+    hadparen = tin_astparser_match(parser, TINTOK_PARENOPEN);
     TinAstExpression* condition = tin_astparser_parseexpression(parser, true);
     if(hadparen)
     {
-        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')'");
+        tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')'");
     }
     tin_astparser_ignorenewlines(parser, true);
     body = tin_astparser_parsestatement(parser);
@@ -1356,17 +1366,17 @@ static TinAstExpression* tin_astparser_rulefunction(TinAstParser* parser, bool c
     TinAstFunctionExpr* lambda;
     TinAstSetExpr* to;
     islambda = canassign;
-    isexport = parser->previous.type == TINTOK_EXPORT;
+    isexport = parser->previous.type == TINTOK_KWEXPORT;
     fnamestr = "<anonymous>";
     fnamelen = strlen(fnamestr);
     if(isexport)
     {
-        tin_astparser_consume(parser, TINTOK_FUNCTION, "'function' after 'export'");
+        tin_astparser_consume(parser, TINTOK_KWFUNCTION, "'function' after 'export'");
     }
     line = parser->previous.line;
-    if(tin_astparser_check(parser, TINTOK_IDENTIFIER))
+    if(tin_astparser_check(parser, TINTOK_IDENT))
     {
-        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "function name");
+        tin_astparser_consume(parser, TINTOK_IDENT, "function name");
         fnamestr = parser->previous.start;
         fnamelen = parser->previous.length;
     }
@@ -1374,9 +1384,9 @@ static TinAstExpression* tin_astparser_rulefunction(TinAstParser* parser, bool c
     //if(tin_astparser_match(parser, TINTOK_DOT))
     {
         to = NULL;
-        if(tin_astparser_check(parser, TINTOK_IDENTIFIER))
+        if(tin_astparser_check(parser, TINTOK_IDENT))
         {
-            tin_astparser_consume(parser, TINTOK_IDENTIFIER, "function name");
+            tin_astparser_consume(parser, TINTOK_IDENT, "function name");
         }
         lambda = tin_ast_make_lambdaexpr(parser->state, line);
         //if(islambda)
@@ -1392,7 +1402,7 @@ static TinAstExpression* tin_astparser_rulefunction(TinAstParser* parser, bool c
             );
         }
         */
-        tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after function name");
+        tin_astparser_consume(parser, TINTOK_PARENOPEN, "'(' after function name");
         tin_astparser_initcompiler(parser, &compiler);
         tin_astparser_beginscope(parser);
         tin_astparser_parseparameters(parser, &lambda->parameters);
@@ -1400,7 +1410,7 @@ static TinAstExpression* tin_astparser_rulefunction(TinAstParser* parser, bool c
         {
             tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)lambda->parameters.count);
         }
-        tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after function arguments");
+        tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')' after function arguments");
         tin_astparser_ignorenewlines(parser, true);
         lambda->body = tin_astparser_parsestatement(parser);
         tin_astparser_endscope(parser);
@@ -1413,7 +1423,7 @@ static TinAstExpression* tin_astparser_rulefunction(TinAstParser* parser, bool c
     }
     function = tin_ast_make_funcexpr(parser->state, line, fnamestr, fnamelen);
     function->exported = isexport;
-    tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after function name");
+    tin_astparser_consume(parser, TINTOK_PARENOPEN, "'(' after function name");
     tin_astparser_initcompiler(parser, &compiler);
     tin_astparser_beginscope(parser);
     tin_astparser_parseparameters(parser, &function->parameters);
@@ -1421,7 +1431,7 @@ static TinAstExpression* tin_astparser_rulefunction(TinAstParser* parser, bool c
     {
         tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)function->parameters.count);
     }
-    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after function arguments");
+    tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')' after function arguments");
     function->body = tin_astparser_parsestatement(parser);
     tin_astparser_endscope(parser);
     tin_astparser_endcompiler(parser, &compiler);
@@ -1434,7 +1444,7 @@ static TinAstExpression* tin_astparser_parsereturn(TinAstParser* parser)
     TinAstExpression* expression;
     line = parser->previous.line;
     expression = NULL;
-    if(!tin_astparser_check(parser, TINTOK_NEW_LINE) && !tin_astparser_check(parser, TINTOK_RIGHT_BRACE))
+    if(!tin_astparser_check(parser, TINTOK_NEWLINE) && !tin_astparser_check(parser, TINTOK_BRACECLOSE))
     {
         expression = tin_astparser_parseexpression(parser, true);
     }
@@ -1455,15 +1465,15 @@ static TinAstExpression* tin_astparser_parsefield(TinAstParser* parser, TinStrin
     }
     else
     {
-        tin_astparser_match(parser, TINTOK_LEFT_BRACE);// Will be TINTOK_LEFT_BRACE, otherwise this method won't be called
+        tin_astparser_match(parser, TINTOK_BRACEOPEN);// Will be TINTOK_BRACEOPEN, otherwise this method won't be called
         tin_astparser_ignorenewlines(parser, true);
-        if(tin_astparser_match(parser, TINTOK_GET))
+        if(tin_astparser_match(parser, TINTOK_KWGET))
         {
             tin_astparser_match(parser, TINTOK_ARROW);// Ignore it if it's present
             getter = tin_astparser_parsestatement(parser);
         }
         tin_astparser_ignorenewlines(parser, true);
-        if(tin_astparser_match(parser, TINTOK_SET))
+        if(tin_astparser_match(parser, TINTOK_KWSET))
         {
             tin_astparser_match(parser, TINTOK_ARROW);// Ignore it if it's present
             setter = tin_astparser_parsestatement(parser);
@@ -1473,7 +1483,7 @@ static TinAstExpression* tin_astparser_parsefield(TinAstParser* parser, TinStrin
             tin_astparser_raiseerror(parser, "expected declaration of either getter or setter, got none");
         }
         tin_astparser_ignorenewlines(parser, true);
-        tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}' after field declaration");
+        tin_astparser_consume(parser, TINTOK_BRACECLOSE, "'}' after field declaration");
     }
     return (TinAstExpression*)tin_ast_make_fieldexpr(parser->state, line, name, getter, setter, isstatic);
 }
@@ -1484,12 +1494,12 @@ static TinAstExpression* tin_astparser_parsemethod(TinAstParser* parser, bool is
     TinAstCompiler compiler;
     TinAstMethodExpr* method;
     TinString* name;
-    if(tin_astparser_match(parser, TINTOK_STATIC))
+    if(tin_astparser_match(parser, TINTOK_KWSTATIC))
     {
         isstatic = true;
     }
     name = NULL;
-    if(tin_astparser_match(parser, TINTOK_OPERATOR))
+    if(tin_astparser_match(parser, TINTOK_KWOPERATOR))
     {
         if(isstatic)
         {
@@ -1504,9 +1514,9 @@ static TinAstExpression* tin_astparser_parsemethod(TinAstParser* parser, bool is
             }
             i++;
         }
-        if(parser->previous.type == TINTOK_LEFT_BRACKET)
+        if(parser->previous.type == TINTOK_BRACKETOPEN)
         {
-            tin_astparser_consume(parser, TINTOK_RIGHT_BRACKET, "']' after '[' in op method declaration");
+            tin_astparser_consume(parser, TINTOK_BRACKETCLOSE, "']' after '[' in op method declaration");
             name = tin_string_copy(parser->state, "[]", 2);
         }
         else
@@ -1516,9 +1526,9 @@ static TinAstExpression* tin_astparser_parsemethod(TinAstParser* parser, bool is
     }
     else
     {
-        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "method name");
+        tin_astparser_consume(parser, TINTOK_IDENT, "method name");
         name = tin_string_copy(parser->state, parser->previous.start, parser->previous.length);
-        if(tin_astparser_check(parser, TINTOK_LEFT_BRACE) || tin_astparser_check(parser, TINTOK_ARROW))
+        if(tin_astparser_check(parser, TINTOK_BRACEOPEN) || tin_astparser_check(parser, TINTOK_ARROW))
         {
             return tin_astparser_parsefield(parser, name, isstatic);
         }
@@ -1526,13 +1536,13 @@ static TinAstExpression* tin_astparser_parsemethod(TinAstParser* parser, bool is
     method = tin_ast_make_methodexpr(parser->state, parser->previous.line, name, isstatic);
     tin_astparser_initcompiler(parser, &compiler);
     tin_astparser_beginscope(parser);
-    tin_astparser_consume(parser, TINTOK_LEFT_PAREN, "'(' after method name");
+    tin_astparser_consume(parser, TINTOK_PARENOPEN, "'(' after method name");
     tin_astparser_parseparameters(parser, &method->parameters);
     if(method->parameters.count > 255)
     {
         tin_astparser_raiseerror(parser, "function cannot have more than 255 arguments, got %i", (int)method->parameters.count);
     }
-    tin_astparser_consume(parser, TINTOK_RIGHT_PAREN, "')' after method arguments");
+    tin_astparser_consume(parser, TINTOK_PARENCLOSE, "')' after method arguments");
     method->body = tin_astparser_parsestatement(parser);
     tin_astparser_endscope(parser);
     tin_astparser_endcompiler(parser, &compiler);
@@ -1555,17 +1565,17 @@ static TinAstExpression* tin_astparser_parseclass(TinAstParser* parser)
         return NULL;
     }
     line = parser->previous.line;
-    isstatic = parser->previous.type == TINTOK_STATIC;
+    isstatic = parser->previous.type == TINTOK_KWSTATIC;
     if(isstatic)
     {
-        tin_astparser_consume(parser, TINTOK_CLASS, "'class' after 'static'");
+        tin_astparser_consume(parser, TINTOK_KWCLASS, "'class' after 'static'");
     }
-    tin_astparser_consume(parser, TINTOK_IDENTIFIER, "class name after 'class'");
+    tin_astparser_consume(parser, TINTOK_IDENT, "class name after 'class'");
     name = tin_string_copy(parser->state, parser->previous.start, parser->previous.length);
     super = NULL;
     if(tin_astparser_match(parser, TINTOK_COLON))
     {
-        tin_astparser_consume(parser, TINTOK_IDENTIFIER, "super class name after ':'");
+        tin_astparser_consume(parser, TINTOK_IDENT, "super class name after ':'");
         super = tin_string_copy(parser->state, parser->previous.start, parser->previous.length);
         if(super == name)
         {
@@ -1574,16 +1584,16 @@ static TinAstExpression* tin_astparser_parseclass(TinAstParser* parser)
     }
     klass = tin_ast_make_classexpr(parser->state, line, name, super);
     tin_astparser_ignorenewlines(parser, true);
-    tin_astparser_consume(parser, TINTOK_LEFT_BRACE, "'{' before class body");
+    tin_astparser_consume(parser, TINTOK_BRACEOPEN, "'{' before class body");
     tin_astparser_ignorenewlines(parser, true);
     finishedparsingfields = false;
-    while(!tin_astparser_check(parser, TINTOK_RIGHT_BRACE))
+    while(!tin_astparser_check(parser, TINTOK_BRACECLOSE))
     {
         fieldisstatic = false;
-        if(tin_astparser_match(parser, TINTOK_STATIC))
+        if(tin_astparser_match(parser, TINTOK_KWSTATIC))
         {
             fieldisstatic = true;
-            if(tin_astparser_match(parser, TINTOK_VAR))
+            if(tin_astparser_match(parser, TINTOK_KWVAR))
             {
                 if(finishedparsingfields)
                 {
@@ -1609,7 +1619,7 @@ static TinAstExpression* tin_astparser_parseclass(TinAstParser* parser)
         }
         tin_astparser_ignorenewlines(parser, true);
     }
-    tin_astparser_consume(parser, TINTOK_RIGHT_BRACE, "'}' after class body");
+    tin_astparser_consume(parser, TINTOK_BRACECLOSE, "'}' after class body");
     return (TinAstExpression*)klass;
 }
 
@@ -1618,23 +1628,23 @@ static void tin_astparser_sync(TinAstParser* parser)
     parser->panic_mode = false;
     while(parser->current.type != TINTOK_EOF)
     {
-        if(parser->previous.type == TINTOK_NEW_LINE)
+        if(parser->previous.type == TINTOK_NEWLINE)
         {
             longjmp(prs_jmpbuffer, 1);
             return;
         }
         switch(parser->current.type)
         {
-            case TINTOK_CLASS:
-            case TINTOK_FUNCTION:
-            case TINTOK_EXPORT:
-            case TINTOK_VAR:
-            case TINTOK_CONST:
-            case TINTOK_FOR:
-            case TINTOK_STATIC:
-            case TINTOK_IF:
-            case TINTOK_WHILE:
-            case TINTOK_RETURN:
+            case TINTOK_KWCLASS:
+            case TINTOK_KWFUNCTION:
+            case TINTOK_KWEXPORT:
+            case TINTOK_KWVAR:
+            case TINTOK_KWCONST:
+            case TINTOK_KWFOR:
+            case TINTOK_KWSTATIC:
+            case TINTOK_KWIF:
+            case TINTOK_KWWHILE:
+            case TINTOK_KWRETURN:
             {
                 longjmp(prs_jmpbuffer, 1);
                 return;
@@ -1651,7 +1661,7 @@ static TinAstExpression* tin_astparser_parsedeclaration(TinAstParser* parser)
 {
     TinAstExpression* statement;
     statement = NULL;
-    if(tin_astparser_match(parser, TINTOK_CLASS) || tin_astparser_match(parser, TINTOK_STATIC))
+    if(tin_astparser_match(parser, TINTOK_KWCLASS) || tin_astparser_match(parser, TINTOK_KWSTATIC))
     {
         statement = tin_astparser_parseclass(parser);
     }

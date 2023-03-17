@@ -1,11 +1,15 @@
 
 
 va = [1, 2, 3, 4, 5]
+correct = va.clone()
+broken = va.clone()
 //va[0] = va[0] ^ 255
-for(var i=0; i<va.length; i++)
+for(var i=0; i<(va.length); i++)
 {
-    va[i] *= 255
-    //va[i] = va[i] * 255
+    broken[i] ^= 3
+    correct[i] = correct[i] ^ 3
 }
-println(va);
+println("correct: ", correct);
+println("broken:  ", broken);
+println("same:    ", correct == broken)
 

@@ -41,7 +41,7 @@
 
 #define vm_returnerror() \
     vm_popgc(state); \
-    return (TinInterpretResult){ TINRESULT_RUNTIME_ERROR, tin_value_makenull(state) };
+    return (TinInterpretResult){ TINSTATE_RUNTIMEERROR, tin_value_makenull(state) };
 
 #define vm_pushgc(state, allow) \
     bool wasallowed = state->gcallow; \
@@ -63,7 +63,7 @@
     fiber = vm->fiber; \
     if(fiber == NULL) \
     { \
-        return (TinInterpretResult){ TINRESULT_OK, tin_vmexec_pop(fiber) }; \
+        return (TinInterpretResult){ TINSTATE_OK, tin_vmexec_pop(fiber) }; \
     } \
     if(fiber->abort) \
     { \
@@ -655,7 +655,7 @@ bool tin_vm_callvalue(TinVM* vm, TinFiber* fiber, TinExecState* est, TinValue ca
                     return tin_vm_callcallable(vm, closure->function, closure, argc);
                 }
                 break;
-            case TINTYPE_NATIVE_FUNCTION:
+            case TINTYPE_NATIVEFUNCTION:
                 {
                     vm_pushgc(vm->state, false);
                     result = tin_value_asnativefunction(callee)->function(vm, argc, vm->fiber->stack_top - argc);
@@ -665,7 +665,7 @@ bool tin_vm_callvalue(TinVM* vm, TinFiber* fiber, TinExecState* est, TinValue ca
                     return false;
                 }
                 break;
-            case TINTYPE_NATIVE_PRIMITIVE:
+            case TINTYPE_NATIVEPRIMITIVE:
                 {
                     vm_pushgc(vm->state, false);
                     fiber = vm->fiber;
@@ -678,7 +678,7 @@ bool tin_vm_callvalue(TinVM* vm, TinFiber* fiber, TinExecState* est, TinValue ca
                     return bres;
                 }
                 break;
-            case TINTYPE_NATIVE_METHOD:
+            case TINTYPE_NATIVEMETHOD:
                 {
                     vm_pushgc(vm->state, false);
                     mthobj = tin_value_asnativemethod(callee);
@@ -696,7 +696,7 @@ bool tin_vm_callvalue(TinVM* vm, TinFiber* fiber, TinExecState* est, TinValue ca
                     return false;
                 }
                 break;
-            case TINTYPE_PRIMITIVE_METHOD:
+            case TINTYPE_PRIMITIVEMETHOD:
                 {
                     vm_pushgc(vm->state, false);
                     fiber = vm->fiber;
@@ -727,7 +727,7 @@ bool tin_vm_callvalue(TinVM* vm, TinFiber* fiber, TinExecState* est, TinValue ca
                     return false;
                 }
                 break;
-            case TINTYPE_BOUND_METHOD:
+            case TINTYPE_BOUNDMETHOD:
                 {
                     boundmethod = tin_value_asboundmethod(callee);
                     mthval = boundmethod->method;
@@ -865,6 +865,10 @@ unsigned int tin_util_numbertouint32(double n);
 
 int vmutil_numtoint32(TinValue val)
 {
+    if(tin_value_isnull(val))
+    {
+        return 0;
+    }
     if(tin_value_isbool(val))
     {
         return val.boolval;
@@ -878,6 +882,10 @@ int vmutil_numtoint32(TinValue val)
 
 unsigned int vmutil_numtouint32(TinValue val)
 {
+    if(tin_value_isnull(val))
+    {
+        return 0;
+    }
     if(tin_value_isbool(val))
     {
         return val.boolval;
@@ -1161,7 +1169,7 @@ TinInterpretResult tin_vm_execfiber(TinState* state, TinFiber* fiber)
                     est.frame->return_to_c = false;
                     fiber->module->return_value = result;
                     fiber->stack_top = est.frame->slots;
-                    return (TinInterpretResult){ TINRESULT_OK, result };
+                    return (TinInterpretResult){ TINSTATE_OK, result };
                 }
                 if(fiber->frame_count == 0)
                 {
@@ -1170,7 +1178,7 @@ TinInterpretResult tin_vm_execfiber(TinState* state, TinFiber* fiber)
                     {
                         tin_vmexec_drop(fiber);
                         state->gcallow = wasallowed;
-                        return (TinInterpretResult){ TINRESULT_OK, result };
+                        return (TinInterpretResult){ TINSTATE_OK, result };
                     }
                     argc = fiber->arg_count;
                     parent = fiber->parent;
@@ -1892,14 +1900,23 @@ TinInterpretResult tin_vm_execfiber(TinState* state, TinFiber* fiber)
             op_case(OP_PUSH_OBJECT_FIELD)
             {
                 TinValue operand;
+                TinValue peek0;
+                TinValue peek1;
+                TinMap* tmap;
+                TinInstance* tinst;
                 operand = tin_vmexec_peek(fiber, 2);
+                peek0 = tin_vmexec_peek(fiber, 0);
+                peek1 = tin_vmexec_peek(fiber, 1);
                 if(tin_value_ismap(operand))
                 {
-                    tin_table_set(state, &tin_value_asmap(operand)->values, tin_value_asstring(tin_vmexec_peek(fiber, 1)), tin_vmexec_peek(fiber, 0));
+                    tmap = tin_value_asmap(operand);
+                    fprintf(stderr, "peek1=%s\n", tin_tostring_typename(peek1));
+                    tin_table_set(state, &tmap->values, tin_value_asstring(peek1), peek0);
                 }
                 else if(tin_value_isinstance(operand))
                 {
-                    tin_table_set(state, &tin_value_asinstance(operand)->fields, tin_value_asstring(tin_vmexec_peek(fiber, 1)), tin_vmexec_peek(fiber, 0));
+                    tinst =tin_value_asinstance(operand); 
+                    tin_table_set(state, &tinst->fields, tin_value_asstring(peek1), peek0);
                 }
                 else
                 {

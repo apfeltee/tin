@@ -96,13 +96,11 @@ void tin_gcmem_markobject(TinVM* vm, TinObject* object)
     tin_towriter_value(tin_value_fromobject(object));
     printf("\n");
 #endif
-
     if(vm->gcgraycapacity < vm->gcgraycount + 1)
     {
         vm->gcgraycapacity = TIN_GROW_CAPACITY(vm->gcgraycapacity);
         vm->gcgraystack = (TinObject**)realloc(vm->gcgraystack, sizeof(TinObject*) * vm->gcgraycapacity);
     }
-
     vm->gcgraystack[vm->gcgraycount++] = object;
 }
 
@@ -154,16 +152,6 @@ void tin_gcmem_markarray(TinVM* vm, TinValList* array)
 void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
 {
     size_t i;
-    TinUserdata* data;
-    TinFunction* function;
-    TinFiber* fiber;
-    TinUpvalue* upvalue;
-    TinCallFrame* frame;
-    TinModule* module;
-    TinClosure* closure;
-    TinClass* klass;
-    TinBoundMethod* boundmethod;
-    TinField* field;
 
 #ifdef TIN_LOG_BLACKING
     printf("%p blacken ", (void*)object);
@@ -172,10 +160,10 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
 #endif
     switch(object->type)
     {
-        case TINTYPE_NATIVE_FUNCTION:
-        case TINTYPE_NATIVE_PRIMITIVE:
-        case TINTYPE_NATIVE_METHOD:
-        case TINTYPE_PRIMITIVE_METHOD:
+        case TINTYPE_NATIVEFUNCTION:
+        case TINTYPE_NATIVEPRIMITIVE:
+        case TINTYPE_NATIVEMETHOD:
+        case TINTYPE_PRIMITIVEMETHOD:
         case TINTYPE_RANGE:
         case TINTYPE_STRING:
         case TINTYPE_NUMBER:
@@ -184,6 +172,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_USERDATA:
             {
+                TinUserdata* data;
                 data = (TinUserdata*)object;
                 if(data->cleanup_fn != NULL)
                 {
@@ -193,6 +182,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_FUNCTION:
             {
+                TinFunction* function;
                 function = (TinFunction*)object;
                 tin_gcmem_markobject(vm, (TinObject*)function->name);
                 tin_gcmem_markarray(vm, &function->chunk.constants);
@@ -200,6 +190,9 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_FIBER:
             {
+                TinFiber* fiber;
+                TinCallFrame* frame;
+                TinUpvalue* upvalue;
                 fiber = (TinFiber*)object;
                 for(TinValue* slot = fiber->stack; slot < fiber->stack_top; slot++)
                 {
@@ -228,6 +221,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_MODULE:
             {
+                TinModule* module;
                 module = (TinModule*)object;
                 tin_gcmem_markvalue(vm, module->return_value);
                 tin_gcmem_markobject(vm, (TinObject*)module->name);
@@ -242,6 +236,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_CLOSURE:
             {
+                TinClosure* closure;
                 closure = (TinClosure*)object;
                 tin_gcmem_markobject(vm, (TinObject*)closure->function);
                 // Check for NULL is needed for a really specific gc-case
@@ -261,6 +256,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_CLASS:
             {
+                TinClass* klass;
                 klass = (TinClass*)object;
                 tin_gcmem_markobject(vm, (TinObject*)klass->name);
                 tin_gcmem_markobject(vm, (TinObject*)klass->super);
@@ -275,8 +271,9 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
                 tin_gcmem_marktable(vm, &instance->fields);
             }
             break;
-        case TINTYPE_BOUND_METHOD:
+        case TINTYPE_BOUNDMETHOD:
             {
+                TinBoundMethod* boundmethod;
                 boundmethod = (TinBoundMethod*)object;
                 tin_gcmem_markvalue(vm, boundmethod->receiver);
                 tin_gcmem_markvalue(vm, boundmethod->method);
@@ -284,16 +281,21 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_ARRAY:
             {
-                tin_gcmem_markarray(vm, &((TinArray*)object)->list);
+                TinArray* ta;
+                ta = (TinArray*)object;
+                tin_gcmem_markarray(vm, &ta->list);
             }
             break;
         case TINTYPE_MAP:
             {
-                tin_gcmem_marktable(vm, &((TinMap*)object)->values);
+                TinMap* tmap;
+                tmap = (TinMap*)object;
+                tin_gcmem_marktable(vm, &tmap->values);
             }
             break;
         case TINTYPE_FIELD:
             {
+                TinField* field;
                 field = (TinField*)object;
                 tin_gcmem_markobject(vm, (TinObject*)field->getter);
                 tin_gcmem_markobject(vm, (TinObject*)field->setter);
@@ -301,7 +303,9 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             break;
         case TINTYPE_REFERENCE:
             {
-                tin_gcmem_markvalue(vm, *((TinReference*)object)->slot);
+                TinReference* tref;
+                tref = (TinReference*)object;
+                tin_gcmem_markvalue(vm, *(tref->slot));
             }
             break;
         default:
@@ -365,15 +369,12 @@ uint64_t tin_gcmem_collectgarbage(TinVM* vm)
     {
         return 0;
     }
-
     vm->state->gcallow = false;
     before = vm->state->gcbytescount;
-
 #ifdef TIN_LOG_GC
     printf("-- gc begin\n");
     t = clock();
 #endif
-
     tin_gcmem_vmmarkroots(vm);
     tin_gcmem_vmtracerefs(vm);
     tin_table_removewhite(&vm->gcstrings);
@@ -381,7 +382,6 @@ uint64_t tin_gcmem_collectgarbage(TinVM* vm)
     vm->state->gcnext = vm->state->gcbytescount * TIN_GC_HEAP_GROW_FACTOR;
     vm->state->gcallow = true;
     collected = before - vm->state->gcbytescount;
-
 #ifdef TIN_LOG_GC
     printf("-- gc end. Collected %imb in %gms\n", ((int)((collected / 1024.0 + 0.5) / 10)) * 10,
            (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
@@ -414,7 +414,6 @@ static TinValue objfn_gc_trigger(TinVM* vm, TinValue instance, size_t arg_count,
     vm->state->gcallow = true;
     collected = tin_gcmem_collectgarbage(vm);
     vm->state->gcallow = false;
-
     return tin_value_makefixednumber(vm->state, collected);
 }
 
@@ -431,7 +430,7 @@ void tin_open_gc_library(TinState* state)
     if(klass->super == NULL)
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
-    };
+    }
 }
 
 

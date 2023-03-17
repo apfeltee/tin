@@ -316,9 +316,9 @@ TinString* tin_string_makeempty(TinState* state, size_t length, bool reuse)
     string = (TinString*)tin_gcmem_allocobject(state, sizeof(TinString), TINTYPE_STRING, false);
     if(!reuse)
     {
-        string->chars = sdsempty();
+        string->chars = sds_makeempty();
         /* reserving the required space may reduce number of allocations */
-        string->chars = sdsMakeRoomFor(string->chars, length);
+        string->chars = sds_allocroomfor(string->chars, length);
     }
     //string->chars = NULL;
     string->hash = 0;
@@ -346,7 +346,7 @@ TinString* tin_string_makelen(TinState* state, char* chars, size_t length, uint3
         * string->chars is initialized in tin_string_makeempty(),
         * as an empty string!
         */
-        string->chars = sdscatlen(string->chars, chars, length);
+        string->chars = sds_appendlen(string->chars, chars, length);
     }
     string->hash = hash;
     if(!wassds)
@@ -380,7 +380,7 @@ TinString* tin_string_take(TinState* state, char* chars, size_t length, bool was
         if(!wassds)
         {
             TIN_FREE(state, sizeof(char), chars);
-            //sdsfree(chars);
+            //sds_destroy(chars);
         }
         return interned;
     }
@@ -404,7 +404,7 @@ TinString* tin_string_copy(TinState* state, const char* chars, size_t length)
     memcpy(heapchars, chars, length);
     heapchars[length] = '\0';
     */
-    heapchars = sdsnewlen(chars, length);
+    heapchars = sds_makelength(chars, length);
 #ifdef TIN_LOG_ALLOCATION
     printf("Allocated new string '%s'\n", chars);
 #endif
@@ -422,7 +422,7 @@ size_t tin_string_getlength(TinString* ls)
     {
         return 0;
     }
-    return sdslen(ls->chars);
+    return sds_getlength(ls->chars);
 }
 
 void tin_string_appendlen(TinString* ls, const char* s, size_t len)
@@ -431,11 +431,11 @@ void tin_string_appendlen(TinString* ls, const char* s, size_t len)
     {
         if(ls->chars == NULL)
         {
-            ls->chars = sdsnewlen(s, len);
+            ls->chars = sds_makelength(s, len);
         }
         else
         {
-            ls->chars = sdscatlen(ls->chars, s, len);
+            ls->chars = sds_appendlen(ls->chars, s, len);
         }
     }
 }
@@ -447,7 +447,7 @@ void tin_string_appendobj(TinString* ls, TinString* other)
 
 void tin_string_appendchar(TinString* ls, char ch)
 {
-    ls->chars = sdscatlen(ls->chars, (const char*)&ch, 1);
+    ls->chars = sds_appendlen(ls->chars, (const char*)&ch, 1);
 }
 
 TinValue tin_string_numbertostring(TinState* state, double value)
@@ -505,7 +505,7 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                     if(strval != NULL)
                     {
                         length = strlen(strval);
-                        result->chars = sdscatlen(result->chars, strval, length);
+                        result->chars = sds_appendlen(result->chars, strval, length);
                     }
                     else
                     {
@@ -528,10 +528,10 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                     }
                     if(string != NULL)
                     {
-                        length = sdslen(string->chars);
+                        length = sds_getlength(string->chars);
                         if(length > 0)
                         {
-                            result->chars = sdscatlen(result->chars, string->chars, length);
+                            result->chars = sds_appendlen(result->chars, string->chars, length);
                         }
                     }
                     else
@@ -543,10 +543,10 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
             case '#':
                 {
                     string = tin_value_asstring(tin_string_numbertostring(state, va_arg(arglist, double)));
-                    length = sdslen(string->chars);
+                    length = sds_getlength(string->chars);
                     if(length > 0)
                     {
-                        result->chars = sdscatlen(result->chars, string->chars, length);
+                        result->chars = sds_appendlen(result->chars, string->chars, length);
                     }
                 }
                 break;
@@ -554,7 +554,7 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                 {
                     defaultendingcopying:
                     ch = *c;
-                    result->chars = sdscatlen(result->chars, &ch, 1);
+                    result->chars = sds_appendlen(result->chars, &ch, 1);
                 }
                 break;
         }
@@ -573,7 +573,7 @@ bool tin_string_equal(TinState* state, TinString* a, TinString* b)
     {
         return false;
     }
-    return (sdscmp(a->chars, b->chars) == 0);
+    return (sds_compare(a->chars, b->chars) == 0);
 }
 
 TinValue util_invalid_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv);
@@ -1005,7 +1005,7 @@ bool check_fmt_arg(TinVM* vm, char* buf, size_t ai, size_t argc, TinValue* argv,
     {
         return true;
     }
-    sdsfree(buf);
+    sds_destroy(buf);
     tin_vm_raiseexitingerror(vm, "too few arguments for format flag '%s' at position %d (argc=%d)", fmttext, ai, argc);
     return false;
 }
@@ -1026,8 +1026,8 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
     (void)pch;
     selfstr = tin_value_asstring(instance);
     selflen = tin_string_getlength(selfstr);
-    buf = sdsempty();
-    buf = sdsMakeRoomFor(buf, selflen + 10);
+    buf = sds_makeempty();
+    buf = sds_allocroomfor(buf, selflen + 10);
     ai = 0;
     ch = -1;
     pch = -1;
@@ -1044,7 +1044,7 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
         {
             if(nch == '%')
             {
-                buf = sdscatlen(buf, &ch, 1);
+                buf = sds_appendlen(buf, &ch, 1);
                 i += 1;
             }
             else
@@ -1058,7 +1058,7 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
                             {
                                 return NULL_VALUE;
                             }
-                            buf = sdscatlen(buf, tin_value_asstring(argv[ai])->chars, tin_string_getlength(tin_value_asstring(argv[ai])));
+                            buf = sds_appendlen(buf, tin_value_asstring(argv[ai])->chars, tin_string_getlength(tin_value_asstring(argv[ai])));
                         }
                         break;
                     case 'd':
@@ -1071,7 +1071,7 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
                             if(tin_value_isnumber(argv[ai]))
                             {
                                 iv = tin_value_checknumber(vm, argv, argc, ai);
-                                buf = sdscatfmt(buf, "%i", iv);
+                                buf = sds_appendfmt(buf, "%i", iv);
                             }
                             break;
                         }
@@ -1084,22 +1084,22 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
                             }
                             if(!tin_value_isnumber(argv[ai]))
                             {
-                                sdsfree(buf);
+                                sds_destroy(buf);
                                 tin_vm_raiseexitingerror(vm, "flag 'c' expects a number");
                             }
                             iv = tin_value_checknumber(vm, argv, argc, ai);
                             /* TODO: both of these use the same amount of memory. but which is faster? */
                             #if 0
-                                buf = sdscatfmt(buf, "%c", iv);
+                                buf = sds_appendfmt(buf, "%c", iv);
                             #else
                                 tmpch = iv;
-                                buf = sdscatlen(buf, &tmpch, 1);
+                                buf = sds_appendlen(buf, &tmpch, 1);
                             #endif
                         }
                         break;
                     default:
                         {
-                            sdsfree(buf);
+                            sds_destroy(buf);
                             tin_vm_raiseexitingerror(vm, "unrecognized formatting flag '%c'", nch);
                             return NULL_VALUE;
                         }
@@ -1110,11 +1110,11 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
         }
         else
         {
-            buf = sdscatlen(buf, &ch, 1);
+            buf = sds_appendlen(buf, &ch, 1);
         }
     }
-    rtv = tin_value_fromobject(tin_string_copy(vm->state, buf, sdslen(buf)));
-    sdsfree(buf);
+    rtv = tin_value_fromobject(tin_string_copy(vm->state, buf, sds_getlength(buf)));
+    sds_destroy(buf);
     return rtv;
 }
 
@@ -1139,6 +1139,7 @@ void tin_open_string_library(TinState* state)
             tin_class_bindmethod(state, klass, "charAt", objfn_string_subscript);
             {
                 tin_class_bindmethod(state, klass, "toNumber", objfn_string_tonumber);
+                // ruby-isms? bit of an identity crisis.
                 tin_class_bindgetset(state, klass, "to_i", objfn_string_tonumber, NULL, false);
             }
             {
