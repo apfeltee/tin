@@ -120,7 +120,7 @@ static TinValue objfn_function_name(TinVM* vm, TinValue instance, size_t argc, T
 void tin_state_openfunctionlibrary(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Function");
+    klass = tin_object_makeclassname(state, "Function");
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, util_invalid_constructor);

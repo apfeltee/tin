@@ -324,10 +324,10 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
     tin_ensure_fiber_stack(state, fiber, callee->maxslots + (int)(fiber->stack_top - fiber->stack));
     frame = &fiber->frames[fiber->frame_count++];
     frame->slots = fiber->stack_top;
-    PUSH(tin_value_fromobject(callee));
+    tin_vm_push(state->vm, tin_value_fromobject(callee));
     for(i = 0; i < argc; i++)
     {
-        PUSH(argv[i]);
+        tin_vm_push(state->vm, argv[i]);
     }
     functionargcount = callee->arg_count;
     if(argc != functionargcount)
@@ -338,16 +338,16 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
             amount = (int)functionargcount - argc - (vararg ? 1 : 0);
             for(i = 0; i < (size_t)amount; i++)
             {
-                PUSH(tin_value_makenull(state));
+                tin_vm_push(state->vm, tin_value_makenull(state));
             }
             if(vararg)
             {
-                PUSH(tin_value_fromobject(tin_create_array(vm->state)));
+                tin_vm_push(state->vm, tin_value_fromobject(tin_object_makearray(vm->state)));
             }
         }
         else if(callee->vararg)
         {
-            array = tin_create_array(vm->state);
+            array = tin_object_makearray(vm->state);
             varargc = argc - functionargcount + 1;
             tin_vallist_ensuresize(vm->state, &array->list, varargc);
             for(i = 0; i < varargc; i++)
@@ -365,7 +365,7 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
     }
     else if(callee->vararg)
     {
-        array = tin_create_array(vm->state);
+        array = tin_object_makearray(vm->state);
         varargc = argc - functionargcount + 1;
         tin_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
         *(fiber->stack_top - 1) = tin_value_fromobject(array);
@@ -430,7 +430,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
     vm = state->vm;
     if(tin_value_isobject(callee))
     {
-        if(tin_vmintern_setexitjump())
+        if(tin_vm_setexitjump(state->vm))
         {
             RETURN_RUNTIME_ERROR();
         }
@@ -461,12 +461,12 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
         }
         tin_ensure_fiber_stack(state, fiber, 3 + argc + (int)(fiber->stack_top - fiber->stack));
         slot = fiber->stack_top;
-        PUSH(instance);
+        tin_vm_push(state->vm, instance);
         if(type != TINTYPE_CLASS)
         {
             for(i = 0; i < argc; i++)
             {
-                PUSH(argv[i]);
+                tin_vm_push(state->vm, argv[i]);
             }
         }
         switch(type)
@@ -496,7 +496,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
             case TINTYPE_CLASS:
                 {
                     klass = tin_value_asclass(callee);
-                    *slot = tin_value_fromobject(tin_create_instance(vm->state, klass));
+                    *slot = tin_value_fromobject(tin_object_makeinstance(vm->state, klass));
                     if(klass->init_method != NULL)
                     {
                         lir = tin_state_callmethod(state, *slot, tin_value_fromobject(klass->init_method), argv, argc, ignfiber);

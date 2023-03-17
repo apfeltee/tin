@@ -78,7 +78,7 @@ static TinValue objfn_module_name(TinVM* vm, TinValue instance, size_t argc, Tin
 void tin_open_module_library(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Module");
+    klass = tin_object_makeclassname(state, "Module");
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, util_invalid_constructor);

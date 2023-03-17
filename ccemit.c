@@ -1836,7 +1836,7 @@ static bool tin_astemit_doemitfield(TinAstEmitter* emitter, TinAstExpression* ex
         setter->arg_count = 1;
         setter->maxslots++;
     }
-    field = tin_create_field(emitter->state, (TinObject*)getter, (TinObject*)setter);
+    field = tin_object_makefield(emitter->state, (TinObject*)getter, (TinObject*)setter);
     tin_astemit_emitconstant(emitter, expr->line, tin_value_fromobject(field));
     tin_astemit_emit1op(emitter, expr->line, fieldstmt->isstatic ? OP_FIELDSTATIC : OP_FIELDDEFINE);
     tin_astemit_emitshort(emitter, expr->line, tin_astemit_addconstant(emitter, expr->line, tin_value_fromobject(fieldstmt->name)));

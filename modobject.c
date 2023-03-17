@@ -25,7 +25,7 @@ TinModule* tin_object_makemodule(TinState* state, TinString* name)
     module->ran = false;
     module->main_fiber = NULL;
     module->private_count = 0;
-    module->private_names = tin_create_map(state);
+    module->private_names = tin_object_makemap(state);
     return module;
 }
 
@@ -380,19 +380,19 @@ static TinValue objfn_instance_tomap(TinVM* vm, TinValue instance, size_t argc, 
         tin_vm_raiseexitingerror(vm, "toMap() can only be used on instances");
     }
     inst = tin_value_asinstance(instance);
-    map = tin_create_map(vm->state);
+    map = tin_object_makemap(vm->state);
     {
-        minst = tin_create_map(vm->state);
+        minst = tin_object_makemap(vm->state);
         fillmap(vm->state, minst, &(inst->fields), true);
     }
     {
-        mclass = tin_create_map(vm->state);
+        mclass = tin_object_makemap(vm->state);
         {
-            mclstatics = tin_create_map(vm->state);
+            mclstatics = tin_object_makemap(vm->state);
             fillmap(vm->state, mclstatics, &(inst->klass->static_fields), false);
         }
         {
-            mclmethods = tin_create_map(vm->state);
+            mclmethods = tin_object_makemap(vm->state);
             fillmap(vm->state, mclmethods, &(inst->klass->methods), false);
         }
         tin_map_set(vm->state, mclass, tin_string_copyconst(vm->state, "statics"), tin_value_fromobject(mclstatics));
@@ -475,7 +475,7 @@ static TinValue objfn_instance_iteratorvalue(TinVM* vm, TinValue instance, size_
 void tin_state_openobjectlibrary(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Object");
+    klass = tin_object_makeclassname(state, "Object");
     {
         tin_class_inheritfrom(state, klass, state->primclassclass);
         tin_class_bindgetset(state, klass, "class", objfn_instance_class, NULL, false);

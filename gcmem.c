@@ -420,7 +420,7 @@ static TinValue objfn_gc_trigger(TinVM* vm, TinValue instance, size_t arg_count,
 void tin_open_gc_library(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "GC");
+    klass = tin_object_makeclassname(state, "GC");
     {
         tin_class_bindgetset(state, klass, "memoryUsed", objfn_gc_memory_used, NULL, true);
         tin_class_bindgetset(state, klass, "nextRound", objfn_gc_next_round, NULL, true);

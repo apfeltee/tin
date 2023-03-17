@@ -183,7 +183,7 @@ void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
 
 /* ---- Array object instance functions */
 
-TinArray* tin_create_array(TinState* state)
+TinArray* tin_object_makearray(TinState* state)
 {
     TinArray* array;
     array = (TinArray*)tin_gcmem_allocobject(state, sizeof(TinArray), TINTYPE_ARRAY, false);
@@ -291,7 +291,7 @@ TinArray* tin_array_splice(TinState* state, TinArray* oa, int from, int to)
     from = fmax(from, 0);
     to = fmin(to, (int)length - 1);
     length = fmin(length, to - from + 1);
-    newarr = tin_create_array(state);
+    newarr = tin_object_makearray(state);
     for(i = 0; i < length; i++)
     {
         tin_array_push(state, newarr, tin_array_get(state, oa, from + i));
@@ -304,7 +304,7 @@ static TinValue objfn_array_constructor(TinVM* vm, TinValue instance, size_t arg
     (void)instance;
     (void)argc;
     (void)argv;
-    return tin_value_fromobject(tin_create_array(vm->state));
+    return tin_value_fromobject(tin_object_makearray(vm->state));
 }
 
 static TinValue objfn_array_splice(TinVM* vm, TinArray* array, int from, int to)
@@ -637,7 +637,7 @@ static TinValue objfn_array_clone(TinVM* vm, TinValue instance, size_t argc, Tin
     TinValList* newvl;
     state = vm->state;
     vl = &tin_value_asarray(instance)->list;
-    array = tin_create_array(state);
+    array = tin_object_makearray(state);
     newvl = &array->list;
     tin_vallist_ensuresize(state, newvl, tin_vallist_count(vl));
     // tin_vallist_ensuresize sets the count to max of previous count (0 in this case) and new count, so we have to reset it
@@ -682,7 +682,7 @@ static TinValue objfn_array_length(TinVM* vm, TinValue instance, size_t argc, Ti
 void tin_open_array_library(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Array");
+    klass = tin_object_makeclassname(state, "Array");
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, objfn_array_constructor);

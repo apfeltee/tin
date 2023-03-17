@@ -18,7 +18,7 @@
 // visual studio doesn't support computed gotos, so
 // instead a switch-case is used. 
 #if !defined(_MSC_VER)
-    #define TIN_USE_COMPUTEDGOTO
+//    #define TIN_USE_COMPUTEDGOTO
 #endif
 
 #ifdef TIN_TRACE_EXECUTION
@@ -286,8 +286,8 @@ bool tin_vm_callcallable(TinVM *vm, TinFunction *function, TinClosure *closure, 
 bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc);
 TinInterpretResult tin_vm_execmodule(TinState *state, TinModule *module);
 bool tin_vmintern_execfiber(TinState* state, TinFiber* fiber, TinValue* finalresult);
-void tin_vmintern_callexitjump(void);
-bool tin_vmintern_setexitjump(void);
+void tin_vm_callexitjump(TinVM* vm);
+bool tin_vm_setexitjump(TinVM* vm);
 
 
 TIN_VM_INLINE uint16_t tin_vmintern_readshort(TinExecState* est)
@@ -393,8 +393,8 @@ void tin_vmintern_resetvm(TinState* state, TinVM* vm)
 void tin_vm_init(TinState* state, TinVM* vm)
 {
     tin_vmintern_resetvm(state, vm);
-    vm->globals = tin_create_map(state);
-    vm->modules = tin_create_map(state);
+    vm->globals = tin_object_makemap(state);
+    vm->modules = tin_object_makemap(state);
 }
 
 void tin_vm_destroy(TinVM* vm)
@@ -402,6 +402,18 @@ void tin_vm_destroy(TinVM* vm)
     tin_table_destroy(vm->state, &vm->gcstrings);
     tin_object_destroylistof(vm->state, vm->gcobjects);
     tin_vmintern_resetvm(vm->state, vm);
+}
+
+void tin_vm_callexitjump(TinVM* vm)
+{
+    (void)vm;
+    longjmp(jumpbuffer, 1);
+}
+
+bool tin_vm_setexitjump(TinVM* vm)
+{
+    (void)vm;
+    return setjmp(jumpbuffer);
 }
 
 void tin_vmintern_tracestack(TinVM* vm, TinWriter* wr)
@@ -544,7 +556,7 @@ bool tin_vm_raiseexitingerror(TinVM* vm, const char* format, ...)
     va_start(args, format);
     result = tin_vm_vraiseerror(vm, format, args);
     va_end(args);
-    tin_vmintern_callexitjump();
+    tin_vm_callexitjump(vm);
     return result;
 }
 
@@ -601,12 +613,12 @@ bool tin_vm_callcallable(TinVM* vm, TinFunction* function, TinClosure* closure, 
             }
             if(vararg)
             {
-                tin_vm_push(vm, tin_value_fromobject(tin_create_array(vm->state)));
+                tin_vm_push(vm, tin_value_fromobject(tin_object_makearray(vm->state)));
             }
         }
         else if(function->vararg)
         {
-            array = tin_create_array(vm->state);
+            array = tin_object_makearray(vm->state);
             varargcount = argc - functionargcount + 1;
             tin_state_pushroot(vm->state, (TinObject*)array);
             tin_vallist_ensuresize(vm->state, &array->list, varargcount);
@@ -625,7 +637,7 @@ bool tin_vm_callcallable(TinVM* vm, TinFunction* function, TinClosure* closure, 
     }
     else if(function->vararg)
     {
-        array = tin_create_array(vm->state);
+        array = tin_object_makearray(vm->state);
         varargcount = argc - functionargcount + 1;
         tin_state_pushroot(vm->state, (TinObject*)array);
         tin_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
@@ -664,7 +676,7 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
     (void)valfiber;
     if(tin_value_isobject(callee))
     {
-        if(tin_vmintern_setexitjump())
+        if(tin_vm_setexitjump(est->vm))
         {
             return true;
         }
@@ -738,7 +750,7 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
             case TINTYPE_CLASS:
                 {
                     klass = tin_value_asclass(callee);
-                    instance = tin_create_instance(est->vm->state, klass);
+                    instance = tin_object_makeinstance(est->vm->state, klass);
                     est->vm->fiber->stack_top[-argc - 1] = tin_value_fromobject(instance);
                     if(klass->init_method != NULL)
                     {
@@ -874,7 +886,7 @@ TinInterpretResult tin_vm_execmodule(TinState* state, TinModule* module)
     TinFiber* fiber;
     TinInterpretResult result;
     vm = state->vm;
-    fiber = tin_create_fiber(state, module, module->main_function);
+    fiber = tin_object_makefiber(state, module, module->main_function);
     vm->fiber = fiber;
     tin_vm_push(vm, tin_value_fromobject(module->main_function));
     result = tin_vm_execfiber(state, fiber);
@@ -1535,15 +1547,15 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
             }
             op_case(OP_VALARRAY)
             {
-                tin_vmintern_push(est, tin_value_fromobject(tin_create_array(est->state)));
+                tin_vmintern_push(est, tin_value_fromobject(tin_object_makearray(est->state)));
                 continue;
             }
             op_case(OP_VALOBJECT)
             {
                 // TODO: use object, or map for literal '{...}' constructs?
                 // objects would be more general-purpose, but don't implement anything map-like.
-                //tin_vmintern_push(est, tin_value_fromobject(tin_create_instance(state, state->primobjectclass)));
-                tin_vmintern_push(est, tin_value_fromobject(tin_create_map(est->state)));
+                //tin_vmintern_push(est, tin_value_fromobject(tin_object_makeinstance(state, state->primobjectclass)));
+                tin_vmintern_push(est, tin_value_fromobject(tin_object_makemap(est->state)));
                 continue;
             }
             op_case(OP_RANGE)
@@ -1923,7 +1935,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 TinString* name;
                 TinClass* klassobj;
                 name = tin_vmintern_readstringlong(est);
-                klassobj = tin_create_class(est->state, name);
+                klassobj = tin_object_makeclass(est->state, name);
                 tin_vmintern_push(est, tin_value_fromobject(klassobj));
                 klassobj->super = est->state->primobjectclass;
                 tin_table_add_all(est->state, &klassobj->super->methods, &klassobj->methods);
@@ -2240,15 +2252,4 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
     tin_vmmac_returnerror();
     return false;
 }
-
-void tin_vmintern_callexitjump()
-{
-    longjmp(jumpbuffer, 1);
-}
-
-bool tin_vmintern_setexitjump()
-{
-    return setjmp(jumpbuffer);
-}
-
 

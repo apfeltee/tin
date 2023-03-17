@@ -61,6 +61,14 @@
 #define SDS_HDR(T, s) ((T*)((s) - (sizeof(T))))
 #define SDS_TYPE_5_LEN(f) ((f) >> SDS_TYPE_BITS)
 
+#if defined(__GNUC__)
+    #define SDSSIZE_T ssize_t
+    #define SDS_ATTRIBUTE(...) __attribute__(__VA_ARGS__)
+#else
+    #define SDSSIZE_T int32_t
+    #define SDS_ATTRIBUTE(...)
+#endif
+
 static const char* SDS_NOINIT = "SDS_NOINIT";
 
 typedef char* sdstring_t;
@@ -72,13 +80,13 @@ typedef struct sdshead64_t sdshead64_t;
 
 /* Note: sdshead5_t is never used, we just access the flags byte directly.
  * However is here to document the layout of type 5 SDS strings. */
-struct __attribute__((__packed__)) sdshead5_t
+struct SDS_ATTRIBUTE((__packed__)) sdshead5_t
 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
 };
 
-struct __attribute__((__packed__)) sdshead8_t
+struct SDS_ATTRIBUTE((__packed__)) sdshead8_t
 {
     uint8_t len; /* used */
     uint8_t alloc; /* excluding the header and null terminator */
@@ -86,7 +94,7 @@ struct __attribute__((__packed__)) sdshead8_t
     char buf[];
 };
 
-struct __attribute__((__packed__)) sdshead16_t
+struct SDS_ATTRIBUTE((__packed__)) sdshead16_t
 {
     uint16_t len; /* used */
     uint16_t alloc; /* excluding the header and null terminator */
@@ -94,7 +102,7 @@ struct __attribute__((__packed__)) sdshead16_t
     char buf[];
 };
 
-struct __attribute__((__packed__)) sdshead32_t
+struct SDS_ATTRIBUTE((__packed__)) sdshead32_t
 {
     uint32_t len; /* used */
     uint32_t alloc; /* excluding the header and null terminator */
@@ -102,7 +110,7 @@ struct __attribute__((__packed__)) sdshead32_t
     char buf[];
 };
 
-struct __attribute__((__packed__)) sdshead64_t
+struct SDS_ATTRIBUTE((__packed__)) sdshead64_t
 {
     uint64_t len; /* used */
     uint64_t alloc; /* excluding the header and null terminator */
@@ -124,18 +132,18 @@ static inline sdstring_t sds_copy(sdstring_t s, const char* t);
 
 static inline sdstring_t sds_appendvprintf(sdstring_t s, const char* fmt, va_list ap);
 #ifdef __GNUC__
-static inline sdstring_t sds_appendprintf(sdstring_t s, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+static inline sdstring_t sds_appendprintf(sdstring_t s, const char* fmt, ...) SDS_ATTRIBUTE((format(printf, 2, 3)));
 #else
 static inline sdstring_t sds_appendprintf(sdstring_t s, const char* fmt, ...);
 #endif
 
 static inline sdstring_t sds_appendfmt(sdstring_t s, char const* fmt, ...);
 static inline sdstring_t sds_trim(sdstring_t s, const char* cset);
-static inline void sds_range(sdstring_t s, ssize_t start, ssize_t end);
+static inline void sds_range(sdstring_t s, SDSSIZE_T start, SDSSIZE_T end);
 static inline void sds_updatelength(sdstring_t s);
 static inline void sds_clear(sdstring_t s);
 static inline int sds_compare(const sdstring_t s1, const sdstring_t s2);
-static inline sdstring_t* sds_splitlen(const char* s, ssize_t len, const char* sep, int seplen, int* count);
+static inline sdstring_t* sds_splitlen(const char* s, SDSSIZE_T len, const char* sep, int seplen, int* count);
 static inline void sds_freesplitres(sdstring_t* tokens, int count);
 static inline void sds_tolower(sdstring_t s);
 static inline void sds_toupper(sdstring_t s);
@@ -148,7 +156,7 @@ static inline sdstring_t sds_joinsds(sdstring_t* argv, int argc, const char* sep
 
 /* Low level functions exposed to the user API */
 static inline sdstring_t sds_allocroomfor(sdstring_t s, size_t addlen);
-static inline void sds_internincrlength(sdstring_t s, ssize_t incr);
+static inline void sds_internincrlength(sdstring_t s, SDSSIZE_T incr);
 static inline sdstring_t sds_removefreespace(sdstring_t s);
 static inline size_t sds_internallocsize(sdstring_t s);
 static inline void* sds_allocptr(sdstring_t s);
@@ -678,7 +686,7 @@ static inline void* sds_allocptr(sdstring_t s)
  * ... check for nread <= 0 and handle it ...
  * sds_internincrlength(s, nread);
  */
-static inline void sds_internincrlength(sdstring_t s, ssize_t incr)
+static inline void sds_internincrlength(sdstring_t s, SDSSIZE_T incr)
 {
     unsigned char flags = s[-1];
     size_t len;
@@ -1159,7 +1167,7 @@ static inline sdstring_t sds_trim(sdstring_t s, const char* cset)
  * s = sds_make("Hello World");
  * sds_range(s,1,-1); => "ello World"
  */
-static inline void sds_range(sdstring_t s, ssize_t start, ssize_t end)
+static inline void sds_range(sdstring_t s, SDSSIZE_T start, SDSSIZE_T end)
 {
     size_t newlen, len = sds_getlength(s);
 
@@ -1180,11 +1188,11 @@ static inline void sds_range(sdstring_t s, ssize_t start, ssize_t end)
     newlen = (start > end) ? 0 : (end - start) + 1;
     if(newlen != 0)
     {
-        if(start >= (ssize_t)len)
+        if(start >= (SDSSIZE_T)len)
         {
             newlen = 0;
         }
-        else if(end >= (ssize_t)len)
+        else if(end >= (SDSSIZE_T)len)
         {
             end = len - 1;
             newlen = (end - start) + 1;
@@ -1255,7 +1263,7 @@ static inline int sds_compare(const sdstring_t s1, const sdstring_t s2)
  * requires length arguments. sdssplit() is just the
  * same function but for zero-terminated strings.
  */
-static inline sdstring_t* sds_splitlen(const char* s, ssize_t len, const char* sep, int seplen, int* count)
+static inline sdstring_t* sds_splitlen(const char* s, SDSSIZE_T len, const char* sep, int seplen, int* count)
 {
     int elements = 0, slots = 5;
     long start = 0, j;

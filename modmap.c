@@ -235,7 +235,7 @@ TinValue util_table_iterator_key(TinTable* table, int index)
     return tin_value_fromobject(table->entries[index].key);
 }
 
-TinMap* tin_create_map(TinState* state)
+TinMap* tin_object_makemap(TinState* state)
 {
     TinMap* map;
     map = (TinMap*)tin_gcmem_allocobject(state, sizeof(TinMap), TINTYPE_MAP, false);
@@ -283,7 +283,7 @@ static TinValue objfn_map_constructor(TinVM* vm, TinValue instance, size_t argc,
     (void)instance;
     (void)argc;
     (void)argv;
-    return tin_value_fromobject(tin_create_map(vm->state));
+    return tin_value_fromobject(tin_object_makemap(vm->state));
 }
 
 static TinValue objfn_map_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -369,7 +369,7 @@ static TinValue objfn_map_clone(TinVM* vm, TinValue instance, size_t argc, TinVa
     TinState* state;
     TinMap* map;
     state = vm->state;
-    map = tin_create_map(state);
+    map = tin_object_makemap(state);
     tin_table_add_all(state, &tin_value_asmap(instance)->values, &map->values);
     return tin_value_fromobject(map);
 }
@@ -397,7 +397,7 @@ static TinValue objfn_map_length(TinVM* vm, TinValue instance, size_t argc, TinV
 void tin_open_map_library(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Map");
+    klass = tin_object_makeclassname(state, "Map");
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, objfn_map_constructor);

@@ -1,7 +1,7 @@
 
 #include "priv.h"
 
-TinClass* tin_create_class(TinState* state, TinString* name)
+TinClass* tin_object_makeclass(TinState* state, TinString* name)
 {
     TinClass* klass;
     klass = (TinClass*)tin_gcmem_allocobject(state, sizeof(TinClass), TINTYPE_CLASS, false);
@@ -13,17 +13,17 @@ TinClass* tin_create_class(TinState* state, TinString* name)
     return klass;
 }
 
-TinClass* tin_create_classobject(TinState* state, const char* name)
+TinClass* tin_object_makeclassname(TinState* state, const char* name)
 {
     TinString* nm;
     TinClass* cl;
     nm = tin_string_copy(state, name, strlen(name));
-    cl = tin_create_class(state, nm);
+    cl = tin_object_makeclass(state, nm);
     cl->name = nm;
     return cl;
 }
 
-TinField* tin_create_field(TinState* state, TinObject* getter, TinObject* setter)
+TinField* tin_object_makefield(TinState* state, TinObject* getter, TinObject* setter)
 {
     TinField* field;
     field = (TinField*)tin_gcmem_allocobject(state, sizeof(TinField), TINTYPE_FIELD, false);
@@ -32,7 +32,7 @@ TinField* tin_create_field(TinState* state, TinObject* getter, TinObject* setter
     return field;
 }
 
-TinInstance* tin_create_instance(TinState* state, TinClass* klass)
+TinInstance* tin_object_makeinstance(TinState* state, TinClass* klass)
 {
     TinInstance* instance;
     instance = (TinInstance*)tin_gcmem_allocobject(state, sizeof(TinInstance), TINTYPE_INSTANCE, false);
@@ -121,7 +121,7 @@ TinField* tin_class_bindgetset(TinState* state, TinClass* cl, const char* name, 
     {
         tbl = &cl->static_fields;
     }
-    field = tin_create_field(state, (TinObject*)mthget, (TinObject*)mthset);
+    field = tin_object_makefield(state, (TinObject*)mthget, (TinObject*)mthset);
     tin_table_set(state, tbl, nm, tin_value_fromobject(field)); 
     return field;
 }
@@ -292,7 +292,7 @@ static TinValue objfn_class_name(TinVM* vm, TinValue instance, size_t argc, TinV
 void tin_open_class_library(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Class");
+    klass = tin_object_makeclassname(state, "Class");
     {
         tin_class_bindmethod(state, klass, "[]", objfn_class_subscript);
         tin_class_bindmethod(state, klass, "==", objfn_class_compare);

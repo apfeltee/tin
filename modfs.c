@@ -885,7 +885,7 @@ static TinValue objfunction_directory_listfiles(TinVM* vm, TinValue instance, si
     TinArray* array;
     (void)instance;
     state = vm->state;
-    array = tin_create_array(state);
+    array = tin_object_makearray(state);
     #if defined(__unix__) || defined(__linux__)
     {
         struct dirent* ep;
@@ -915,8 +915,7 @@ static TinValue objfunction_directory_listdirs(TinVM* vm, TinValue instance, siz
     TinDirItem ent;
     (void)instance;
     state = vm->state;
-    array = tin_create_array(state);
-
+    array = tin_object_makearray(state);
     if(tin_fs_diropen(&rd, tin_value_checkstring(vm, argv, argc, 0)))
     {
         while(true)
@@ -956,7 +955,7 @@ static void tin_userfile_makehandle(TinState* state, TinValue fileval, const cha
     TinFiber* oldfiber;
     TinStdioHandle* hstd;
     oldfiber = state->vm->fiber;
-    state->vm->fiber = tin_create_fiber(state, state->last_module, NULL);
+    state->vm->fiber = tin_object_makefiber(state, state->last_module, NULL);
     {
         hstd = TIN_ALLOCATE(state, sizeof(TinStdioHandle), 1);
         hstd->handle = hnd;
@@ -994,7 +993,7 @@ void tin_open_file_library(TinState* state)
 {
     TinClass* klass;
     {
-        klass = tin_create_classobject(state, "File");
+        klass = tin_object_makeclassname(state, "File");
         {
             tin_class_bindstaticmethod(state, klass, "exists", objmethod_file_exists);
             tin_class_bindstaticmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
@@ -1025,7 +1024,7 @@ void tin_open_file_library(TinState* state)
         };
     }
     {
-        klass = tin_create_classobject(state, "Directory");
+        klass = tin_object_makeclassname(state, "Directory");
         {
             tin_class_bindstaticmethod(state, klass, "exists", objfunction_directory_exists);
             tin_class_bindstaticmethod(state, klass, "listFiles", objfunction_directory_listfiles);

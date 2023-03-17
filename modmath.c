@@ -336,7 +336,7 @@ void tin_open_math_library(TinState* state)
 {
     TinClass* klass;
     {
-        klass = tin_create_classobject(state, "Math");
+        klass = tin_object_makeclassname(state, "Math");
         {
             tin_class_setstaticfield(state, klass, "Pi", tin_value_makefloatnumber(state, M_PI));
             tin_class_setstaticfield(state, klass, "Tau", tin_value_makefloatnumber(state, M_PI * 2));
@@ -369,7 +369,7 @@ void tin_open_math_library(TinState* state)
     srand(time(NULL));
     staticrandomdata = time(NULL);
     {
-        klass = tin_create_classobject(state, "Random");
+        klass = tin_object_makeclassname(state, "Random");
         {
             tin_class_bindconstructor(state, klass, random_constructor);
             tin_class_bindmethod(state, klass, "setSeed", random_setSeed);

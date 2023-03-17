@@ -313,7 +313,7 @@ int main(int argc, char* argv[])
     {
         if((fx.poscnt > 0) || (opts.codeline != NULL))
         {
-            argarray = tin_create_array(state);
+            argarray = tin_object_makearray(state);
             for(i=0; i<fx.poscnt; i++)
             {
                 tin_vallist_push(state, &argarray->list, tin_value_makestring(state, fx.positional[i]));

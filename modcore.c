@@ -140,7 +140,7 @@ void util_run_fiber(TinVM* vm, TinFiber* fiber, TinValue* argv, size_t argc, boo
         }
         if(vararg)
         {
-            array = tin_create_array(vm->state);
+            array = tin_object_makearray(vm->state);
             tin_vm_push(vm, tin_value_fromobject(array));
             varargcount = argc - objfn_function_arg_count + 1;
             if(varargcount > 0)
@@ -209,7 +209,7 @@ bool util_interpret(TinVM* vm, TinModule* module)
     TinFiber* fiber;
     TinCallFrame* frame;
     function = module->main_function;
-    fiber = tin_create_fiber(vm->state, module, function);
+    fiber = tin_object_makefiber(vm->state, module, function);
     fiber->parent = vm->fiber;
     vm->fiber = fiber;
     frame = &fiber->frames[fiber->frame_count - 1];
@@ -364,7 +364,7 @@ void tin_open_core_library(TinState* state)
         tin_state_openfunctionlibrary(state);
     }
     {
-        klass = tin_create_classobject(state, "Number");
+        klass = tin_object_makeclassname(state, "Number");
         {
             tin_class_inheritfrom(state, klass, state->primobjectclass);
             tin_class_bindconstructor(state, klass, util_invalid_constructor);
@@ -380,7 +380,7 @@ void tin_open_core_library(TinState* state)
         };
     }
     {
-        klass = tin_create_classobject(state, "Bool");
+        klass = tin_object_makeclassname(state, "Bool");
         {
             tin_class_inheritfrom(state, klass, state->primobjectclass);
             tin_class_bindconstructor(state, klass, util_invalid_constructor);

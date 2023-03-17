@@ -212,8 +212,8 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
     frame->slots = fiber->stack_top;
     frame->result_ignored = false;
     frame->return_to_c = true;
-    PUSH(tin_value_fromobject(function));
-    PUSH(object);
+    tin_vm_push(state->vm, tin_value_fromobject(function));
+    tin_vm_push(state->vm, object);
     result = tin_vm_execfiber(state, fiber);
     if(result.type != TINSTATE_OK)
     {
@@ -359,7 +359,7 @@ TinValue tin_value_callnew(TinVM* vm, const char* name, TinValue* args, size_t a
     klass = tin_value_asclass(value);
     if(klass->init_method == NULL)
     {
-        return tin_value_fromobject(tin_create_instance(vm->state, klass));
+        return tin_value_fromobject(tin_object_makeinstance(vm->state, klass));
     }
     return tin_state_callmethod(vm->state, value, value, args, argc, ignfiber).result;
 }

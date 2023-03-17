@@ -84,7 +84,7 @@ static TinValue objfn_range_length(TinVM* vm, TinValue instance, size_t argc, Ti
 void tin_open_range_library(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Range");
+    klass = tin_object_makeclassname(state, "Range");
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, util_invalid_constructor);

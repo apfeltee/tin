@@ -1122,7 +1122,7 @@ void tin_open_string_library(TinState* state)
 {
     {
         TinClass* klass;
-        klass = tin_create_classobject(state, "String");
+        klass = tin_object_makeclassname(state, "String");
         {
             tin_class_inheritfrom(state, klass, state->primobjectclass);
             tin_class_bindconstructor(state, klass, util_invalid_constructor);

@@ -1,7 +1,7 @@
 
 #include "priv.h"
 
-TinFiber* tin_create_fiber(TinState* state, TinModule* module, TinFunction* function)
+TinFiber* tin_object_makefiber(TinState* state, TinModule* module, TinFunction* function)
 {
     size_t stack_capacity;
     TinValue* stack;
@@ -85,7 +85,7 @@ static TinValue objfn_fiber_constructor(TinVM* vm, TinValue instance, size_t arg
 
     TinFunction* function = tin_value_asfunction(argv[0]);
     TinModule* module = vm->fiber->module;
-    TinFiber* fiber = tin_create_fiber(vm->state, module, function);
+    TinFiber* fiber = tin_object_makefiber(vm->state, module, function);
 
     fiber->parent = vm->fiber;
 
@@ -197,7 +197,7 @@ static TinValue objfn_fiber_tostring(TinVM* vm, TinValue instance, size_t argc, 
 void tin_open_fiber_library(TinState* state)
 {
     TinClass* klass;
-    klass = tin_create_classobject(state, "Fiber");
+    klass = tin_object_makeclassname(state, "Fiber");
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, objfn_fiber_constructor);
