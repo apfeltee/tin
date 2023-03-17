@@ -199,7 +199,7 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
         chunk->count = 0;
         tin_vallist_setcount(&chunk->constants, 0);
         function->maxslots = 3;
-        tin_chunk_push(state, chunk, OP_INVOKE, 1);
+        tin_chunk_push(state, chunk, OP_INVOKEMETHOD, 1);
         tin_chunk_emitbyte(state, chunk, 0);
         tin_chunk_emitshort(state, chunk, tin_chunk_addconst(state, chunk, tin_value_makestring(state, "toString")));
         tin_chunk_emitbyte(state, chunk, OP_RETURN);

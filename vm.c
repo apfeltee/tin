@@ -6,6 +6,15 @@
 #include <setjmp.h>
 #include "priv.h"
 
+/*
+* function/macro prefixes:
+*
+*   tin_vmmac_* = macros
+*   tin_vmintern_* = functions used exclusively in this file (which may be inlined)
+*   tin_vmdo_* = functions that are called in execfiber
+*   tin_vm_* = all other vm functions
+*/
+
 // visual studio doesn't support computed gotos, so
 // instead a switch-case is used. 
 #if !defined(_MSC_VER)
@@ -13,10 +22,10 @@
 #endif
 
 #ifdef TIN_TRACE_EXECUTION
-    #define vm_traceframe(fiber)\
+    #define tin_vmmac_traceframe(fiber)\
         tin_trace_frame(fiber);
 #else
-    #define vm_traceframe(fiber) \
+    #define tin_vmmac_traceframe(fiber) \
         do \
         { \
         } while(0);
@@ -38,15 +47,15 @@
         case name:
 #endif
 
-#define vm_returnerror() \
-    vm_popgc(est); \
+#define tin_vmmac_returnerror() \
+    tin_vmmac_popgc(est); \
     return false;
 
-#define vm_pushgc(est, allow) \
+#define tin_vmmac_pushgc(est, allow) \
     est->wasallowed = est->state->gcallow; \
     est->state->gcallow = allow;
 
-#define vm_popgc(est) \
+#define tin_vmmac_popgc(est) \
     est->state->gcallow = est->wasallowed;
 
 
@@ -54,9 +63,9 @@
 // tin_vm_execfiber.
 // might be possible to wrap this by using an enum to specify
 // if (and what) to return, but it'll be quite a bit of work to refactor.
-// likewise, any macro that uses vm_recoverstate can't be turned into
+// likewise, any macro that uses tin_vmmac_recoverstate can't be turned into
 // a function.
-#define vm_recoverstate(est) \
+#define tin_vmmac_recoverstate(est) \
     tin_vmintern_writeframe(est, est->ip); \
     est->fiber = est->vm->fiber; \
     if(est->fiber == NULL) \
@@ -66,46 +75,46 @@
     } \
     if(est->fiber->abort) \
     { \
-        vm_returnerror(); \
+        tin_vmmac_returnerror(); \
     } \
     tin_vmintern_readframe(est); \
-    vm_traceframe(est->fiber);
+    tin_vmmac_traceframe(est->fiber);
 
 
-#define vm_callvalue(callee, argc) \
+#define tin_vmmac_callvalue(callee, argc) \
     if(tin_vm_callvalue(est, callee, argc)) \
     { \
-        vm_recoverstate(est); \
+        tin_vmmac_recoverstate(est); \
     }
 
 
-#define vmexec_raiseerrorfmt_cont(format, ...) \
+#define tin_vmmac_raiseerrorfmtcont(format, ...) \
     if(tin_vm_raiseerror(est->vm, format, __VA_ARGS__)) \
     { \
-        vm_recoverstate(est);  \
+        tin_vmmac_recoverstate(est);  \
         continue; \
     } \
     else \
     { \
-        vm_returnerror(); \
+        tin_vmmac_returnerror(); \
     }
 
 
-#define vmexec_raiseerrorfmt_nocont(format, ...) \
+#define tin_vmmac_raiseerrorfmtnocont(format, ...) \
     if(tin_vm_raiseerror(est->vm, format, __VA_ARGS__)) \
     { \
-        vm_recoverstate(est);  \
+        tin_vmmac_recoverstate(est);  \
         return true; \
     } \
     else \
     { \
-        vm_returnerror(); \
+        tin_vmmac_returnerror(); \
     }
 
-#define vmexec_raiseerror(format) \
-    vmexec_raiseerrorfmt_cont(format, NULL);
+#define tin_vmmac_raiseerror(format) \
+    tin_vmmac_raiseerrorfmtcont(format, NULL);
 
-#define vmexec_advinvokefromclass(zklass, mthname, argc, raiseerr, stat, ignoring, callee) \
+#define tin_vmmac_advinvokefromclass(zklass, mthname, argc, raiseerr, stat, ignoring, callee) \
     TinValue mthval; \
     if((tin_value_isinstance(callee) && (tin_table_get(&tin_value_asinstance(callee)->fields, mthname, &mthval))) \
        || tin_table_get(&zklass->stat, mthname, &mthval)) \
@@ -114,7 +123,7 @@
         { \
             if(tin_vm_callvalue(est, mthval, argc)) \
             { \
-                vm_recoverstate(est); \
+                tin_vmmac_recoverstate(est); \
                 est->frame->result_ignored = true; \
             } \
             else \
@@ -124,14 +133,14 @@
         } \
         else \
         { \
-            vm_callvalue(mthval, argc); \
+            tin_vmmac_callvalue(mthval, argc); \
         } \
     } \
     else \
     { \
         if(raiseerr) \
         { \
-            vmexec_raiseerrorfmt_cont("cannot call undefined method '%s' of class '%s'", mthname->chars, \
+            tin_vmmac_raiseerrorfmtcont("cannot call undefined method '%s' of class '%s'", mthname->chars, \
                                zklass->name->chars) \
         } \
     } \
@@ -140,27 +149,27 @@
         continue; \
     }
 
-// calls vm_recoverstate
-#define vmexec_invokefromclass(klass, mthname, argc, raiseerr, stat, ignoring) \
-    vmexec_advinvokefromclass(klass, mthname, argc, raiseerr, stat, ignoring, tin_vmintern_peek(est, argc))
+// calls tin_vmmac_recoverstate
+#define tin_vmmac_invokefromclass(klass, mthname, argc, raiseerr, stat, ignoring) \
+    tin_vmmac_advinvokefromclass(klass, mthname, argc, raiseerr, stat, ignoring, tin_vmintern_peek(est, argc))
 
-// calls vm_recoverstate
-#define vm_invokemethod(instance, mthname, argc) \
+// calls tin_vmmac_recoverstate
+#define tin_vmmac_invokemethod(instance, mthname, argc) \
     if(tin_value_isnull(instance)) \
     { \
         fprintf(stderr, "mthname=<%s>\n", mthname);\
-        vmexec_raiseerrorfmt_cont("cannot call method '%s' of null-instance", mthname); \
+        tin_vmmac_raiseerrorfmtcont("cannot call method '%s' of null-instance", mthname); \
     } \
     TinClass* klass = tin_state_getclassfor(est->state, instance); \
     if(klass == NULL) \
     { \
-        vmexec_raiseerrorfmt_cont("cannot call method '%s' of a non-class", mthname); \
+        tin_vmmac_raiseerrorfmtcont("cannot call method '%s' of a non-class", mthname); \
     } \
     tin_vmintern_writeframe(est, est->ip); \
-    vmexec_advinvokefromclass(klass, tin_string_copyconst(est->state, mthname), argc, true, methods, false, instance); \
+    tin_vmmac_advinvokefromclass(klass, tin_string_copyconst(est->state, mthname), argc, true, methods, false, instance); \
     tin_vmintern_readframe(est);
 
-#define vm_binaryop(op, opstring) \
+#define tin_vmmac_binaryop(op, opstring) \
     TinValue a = tin_vmintern_peek(est, 1); \
     TinValue b = tin_vmintern_peek(est, 0); \
     /* implicitly converts NULL to numeric 0 */ \
@@ -170,7 +179,7 @@
         { \
             if(!tin_value_isnull(b)) \
             { \
-                vmexec_raiseerrorfmt_cont("cannot use op '%s' with a 'number' and a '%s'", opstring, tin_tostring_typename(b)); \
+                tin_vmmac_raiseerrorfmtcont("cannot use op '%s' with a 'number' and a '%s'", opstring, tin_tostring_typename(b)); \
             } \
         } \
         tin_vmintern_drop(est); \
@@ -188,27 +197,27 @@
         } \
         else \
         { \
-            vmexec_raiseerrorfmt_cont("cannot use op %s on a null value", opstring); \
+            tin_vmmac_raiseerrorfmtcont("cannot use op %s on a null value", opstring); \
             *(est->fiber->stack_top - 1) = FALSE_VALUE;\
         } \
     } \
     else \
     { \
-        vm_invokemethod(a, opstring, 1); \
+        tin_vmmac_invokemethod(a, opstring, 1); \
     }
 
-#define vm_invokeoperation(ignoring) \
+#define tin_vmmac_invokeoperation(ignoring) \
     uint8_t argc = tin_vmintern_readbyte(est); \
     TinString* mthname = tin_vmintern_readstringlong(est); \
     TinValue receiver = tin_vmintern_peek(est, argc); \
     if(tin_value_isnull(receiver)) \
     { \
-        vmexec_raiseerrorfmt_cont("cannot index a null value with '%s'", mthname->chars); \
+        tin_vmmac_raiseerrorfmtcont("cannot index a null value with '%s'", mthname->chars); \
     } \
     tin_vmintern_writeframe(est, est->ip); \
     if(tin_value_isclass(receiver)) \
     { \
-        vmexec_advinvokefromclass(tin_value_asclass(receiver), mthname, argc, true, static_fields, ignoring, receiver); \
+        tin_vmmac_advinvokefromclass(tin_value_asclass(receiver), mthname, argc, true, static_fields, ignoring, receiver); \
         continue; \
     } \
     else if(tin_value_isinstance(receiver)) \
@@ -218,20 +227,20 @@
         if(tin_table_get(&instance->fields, mthname, &vmmethvalue)) \
         { \
             est->fiber->stack_top[-argc - 1] = vmmethvalue; \
-            vm_callvalue(vmmethvalue, argc); \
+            tin_vmmac_callvalue(vmmethvalue, argc); \
             tin_vmintern_readframe(est); \
             continue; \
         } \
-        vmexec_advinvokefromclass(instance->klass, mthname, argc, true, methods, ignoring, receiver); \
+        tin_vmmac_advinvokefromclass(instance->klass, mthname, argc, true, methods, ignoring, receiver); \
     } \
     else \
     { \
         TinClass* type = tin_state_getclassfor(est->state, receiver); \
         if(type == NULL) \
         { \
-            vmexec_raiseerror("cannot get class"); \
+            tin_vmmac_raiseerror("cannot get class"); \
         } \
-        vmexec_advinvokefromclass(type, mthname, argc, true, methods, ignoring, receiver); \
+        tin_vmmac_advinvokefromclass(type, mthname, argc, true, methods, ignoring, receiver); \
     }
 
 enum
@@ -674,30 +683,30 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
                 break;
             case TINTYPE_NATIVEFUNCTION:
                 {
-                    vm_pushgc(est, false);
+                    tin_vmmac_pushgc(est, false);
                     result = tin_value_asnativefunction(callee)->function(est->vm, argc, est->vm->fiber->stack_top - argc);
                     est->vm->fiber->stack_top -= argc + 1;
                     tin_vm_push(est->vm, result);
-                    vm_popgc(est);
+                    tin_vmmac_popgc(est);
                     return false;
                 }
                 break;
             case TINTYPE_NATIVEPRIMITIVE:
                 {
-                    vm_pushgc(est, false);
+                    tin_vmmac_pushgc(est, false);
                     est->fiber = est->vm->fiber;
                     bres = tin_value_asnativeprimitive(callee)->function(est->vm, argc, est->fiber->stack_top - argc);
                     if(bres)
                     {
                         est->fiber->stack_top -= argc;
                     }
-                    vm_popgc(est);
+                    tin_vmmac_popgc(est);
                     return bres;
                 }
                 break;
             case TINTYPE_NATIVEMETHOD:
                 {
-                    vm_pushgc(est, false);
+                    tin_vmmac_pushgc(est, false);
                     mthobj = tin_value_asnativemethod(callee);
                     est->fiber = est->vm->fiber;
                     result = mthobj->method(est->vm, *(est->vm->fiber->stack_top - argc - 1), argc, est->vm->fiber->stack_top - argc);
@@ -709,20 +718,20 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
                             tin_vm_push(est->vm, result);
                         }
                     }
-                    vm_popgc(est);
+                    tin_vmmac_popgc(est);
                     return false;
                 }
                 break;
             case TINTYPE_PRIMITIVEMETHOD:
                 {
-                    vm_pushgc(est, false);
+                    tin_vmmac_pushgc(est, false);
                     est->fiber = est->vm->fiber;
                     bres = tin_value_asprimitivemethod(callee)->method(est->vm, *(est->fiber->stack_top - argc - 1), argc, est->fiber->stack_top - argc);
                     if(bres)
                     {
                         est->fiber->stack_top -= argc;
                     }
-                    vm_popgc(est);
+                    tin_vmmac_popgc(est);
                     return bres;
                 }
                 break;
@@ -750,23 +759,23 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
                     mthval = boundmethod->method;
                     if(tin_value_isnatmethod(mthval))
                     {
-                        vm_pushgc(est, false);
+                        tin_vmmac_pushgc(est, false);
                         result = tin_value_asnativemethod(mthval)->method(est->vm, boundmethod->receiver, argc, est->vm->fiber->stack_top - argc);
                         est->vm->fiber->stack_top -= argc + 1;
                         tin_vm_push(est->vm, result);
-                        vm_popgc(est);
+                        tin_vmmac_popgc(est);
                         return false;
                     }
                     else if(tin_value_isprimmethod(mthval))
                     {
                         est->fiber = est->vm->fiber;
-                        vm_pushgc(est, false);
+                        tin_vmmac_pushgc(est, false);
                         if(tin_value_asprimitivemethod(mthval)->method(est->vm, boundmethod->receiver, argc, est->fiber->stack_top - argc))
                         {
                             est->fiber->stack_top -= argc;
                             return true;
                         }
-                        vm_popgc(est);
+                        tin_vmmac_popgc(est);
                         return false;
                     }
                     else
@@ -922,7 +931,7 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
     TinValue res;
     switch(op)
     {
-        case OP_MOD:
+        case OP_MATHMOD:
             {
                 if(a.isfixednumber && b.isfixednumber)
                 {
@@ -940,12 +949,12 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
 
             }
             break;
-        case OP_POWER:
+        case OP_MATHPOWER:
             {
                 *(est->fiber->stack_top - 1) = tin_value_makefloatnumber(est->vm->state, pow(tin_value_asnumber(a), tin_value_asnumber(b)));
             }
             break;
-        case OP_ADD:
+        case OP_MATHADD:
             {
                 if(a.isfixednumber && b.isfixednumber)
                 {
@@ -962,7 +971,7 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 *(est->fiber->stack_top - 1) = res;
             }
             break;
-        case OP_SUBTRACT:
+        case OP_MATHSUB:
             {
                 if(a.isfixednumber && b.isfixednumber)
                 {
@@ -979,7 +988,7 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 *(est->fiber->stack_top - 1) = res;
             }
             break;
-        case OP_MULTIPLY:
+        case OP_MATHMULT:
             {
                 if(a.isfixednumber && b.isfixednumber)
                 {
@@ -996,7 +1005,7 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 *(est->fiber->stack_top - 1) = res;
             }
             break;
-        case OP_DIVIDE:
+        case OP_MATHDIV:
             {
                 if(a.isfixednumber && b.isfixednumber)
                 {
@@ -1013,28 +1022,28 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 *(est->fiber->stack_top - 1) = res;
             }
             break;
-        case OP_BAND:
+        case OP_BINAND:
             {
                 ia = tin_value_asfixednumber(a);
                 ib = tin_value_asfixednumber(b);
                 *(est->fiber->stack_top - 1) = (tin_value_makefixednumber(est->vm->state, ia & ib));
             }
             break;
-        case OP_BOR:
+        case OP_BINOR:
             {
                 ia = tin_value_asfixednumber(a);
                 ib = tin_value_asfixednumber(b);
                 *(est->fiber->stack_top - 1) = (tin_value_makefixednumber(est->vm->state, ia | ib));
             }
             break;
-        case OP_BXOR:
+        case OP_BINXOR:
             {
                 ia = tin_value_asfixednumber(a);
                 ib = tin_value_asfixednumber(b);
                 *(est->fiber->stack_top - 1) = (tin_value_makefixednumber(est->vm->state, ia ^ ib));
             }
             break;
-        case OP_LSHIFT:
+        case OP_LEFTSHIFT:
             {
                 int ires;
                 int uleft;
@@ -1052,7 +1061,7 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 *(est->fiber->stack_top - 1) = tin_value_makefixednumber(est->vm->state, ires);
             }
             break;
-        case OP_RSHIFT:
+        case OP_RIGHTSHIFT:
             {
                 int ires;
                 int uleft;
@@ -1087,29 +1096,29 @@ static inline bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 *(est->fiber->stack_top - 1) = tin_value_makebool(est->vm->state, eq);
             }
             break;
-        case OP_GREATER:
+        case OP_GREATERTHAN:
             {
                 *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) > tin_value_asnumber(b)));
             }
             break;
-        case OP_GREATER_EQUAL:
+        case OP_GREATEREQUAL:
             {
                 *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) >= tin_value_asnumber(b)));
             }
             break;
-        case OP_LESS:
+        case OP_LESSTHAN:
             {
                 *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) < tin_value_asnumber(b)));
             }
             break;
-        case OP_LESS_EQUAL:
+        case OP_LESSEQUAL:
             {
                 *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) <= tin_value_asnumber(b)));
             }
             break;
         default:
             {
-                fprintf(stderr, "unhandled instruction in vm_binaryop\n");
+                fprintf(stderr, "unhandled instruction in vm_binaryop_actual\n");
                 return false;
             }
             break;
@@ -1125,126 +1134,235 @@ bool tin_vmdo_call(TinExecState* est, TinValue* finalresult)
     argc = tin_vmintern_readbyte(est);
     tin_vmintern_writeframe(est, est->ip);
     peeked = tin_vmintern_peek(est, argc);
-    vm_callvalue(peeked, argc);
+    tin_vmmac_callvalue(peeked, argc);
     return true;
 }
 
 bool tin_vmdo_fieldget(TinExecState* est, TinValue* finalresult)
 {
-                TinValue tmpval;
-                TinValue object;
-                TinValue getval;
-                TinString* name;
-                TinClass* klassobj;
-                TinField* field;
-                TinInstance* instobj;
-                object = tin_vmintern_peek(est, 1);
-                name = tin_value_asstring(tin_vmintern_peek(est, 0));
-                if(tin_value_isnull(object))
+    TinValue tmpval;
+    TinValue object;
+    TinValue getval;
+    TinString* name;
+    TinClass* klassobj;
+    TinField* field;
+    TinInstance* instobj;
+    object = tin_vmintern_peek(est, 1);
+    name = tin_value_asstring(tin_vmintern_peek(est, 0));
+    if(tin_value_isnull(object))
+    {
+        tin_vmmac_raiseerrorfmtnocont("attempt to set field '%s' of a null value", name->chars);
+    }
+    if(tin_value_isinstance(object))
+    {
+        instobj = tin_value_asinstance(object);
+        if(!tin_table_get(&instobj->fields, name, &getval))
+        {
+            if(tin_table_get(&instobj->klass->methods, name, &getval))
+            {
+                if(tin_value_isfield(getval))
                 {
-                    vmexec_raiseerrorfmt_nocont("attempt to set field '%s' of a null value", name->chars);
-                }
-                if(tin_value_isinstance(object))
-                {
-                    instobj = tin_value_asinstance(object);
-                    if(!tin_table_get(&instobj->fields, name, &getval))
+                    field = tin_value_asfield(getval);
+                    if(field->getter == NULL)
                     {
-                        if(tin_table_get(&instobj->klass->methods, name, &getval))
-                        {
-                            if(tin_value_isfield(getval))
-                            {
-                                field = tin_value_asfield(getval);
-                                if(field->getter == NULL)
-                                {
-                                    vmexec_raiseerrorfmt_nocont("class %s does not have a getter for field '%s'",
-                                                       instobj->klass->name->chars, name->chars);
-                                }
-                                tin_vmintern_drop(est);
-                                tin_vmintern_writeframe(est, est->ip);
-                                field = tin_value_asfield(getval);
-                                tmpval =tin_value_fromobject(field->getter);
-                                vm_callvalue(tmpval, 0);
-                                tin_vmintern_readframe(est);
-                                return true;
-                            }
-                            else
-                            {
-                                getval = tin_value_fromobject(tin_object_makeboundmethod(est->state, tin_value_fromobject(instobj), getval));
-                            }
-                        }
-                        else
-                        {
-                            getval = tin_value_makenull(est->vm->state);
-                        }
+                        tin_vmmac_raiseerrorfmtnocont("class %s does not have a getter for field '%s'",
+                                           instobj->klass->name->chars, name->chars);
                     }
-                }
-                else if(tin_value_isclass(object))
-                {
-                    klassobj = tin_value_asclass(object);
-                    if(tin_table_get(&klassobj->static_fields, name, &getval))
-                    {
-                        if(tin_value_isnatmethod(getval) || tin_value_isprimmethod(getval))
-                        {
-                            getval = tin_value_fromobject(tin_object_makeboundmethod(est->state, tin_value_fromobject(klassobj), getval));
-                        }
-                        else if(tin_value_isfield(getval))
-                        {
-                            field = tin_value_asfield(getval);
-                            if(field->getter == NULL)
-                            {
-                                vmexec_raiseerrorfmt_nocont("class %s does not have a getter for field '%s'", klassobj->name->chars,
-                                                   name->chars);
-                            }
-                            tin_vmintern_drop(est);
-                            tin_vmintern_writeframe(est, est->ip);
-                            tmpval = tin_value_fromobject(field->getter);
-                            vm_callvalue(tmpval, 0);
-                            tin_vmintern_readframe(est);
-                            return true;
-                        }
-                    }
-                    else
-                    {
-                        getval = tin_value_makenull(est->vm->state);
-                    }
+                    tin_vmintern_drop(est);
+                    tin_vmintern_writeframe(est, est->ip);
+                    field = tin_value_asfield(getval);
+                    tmpval =tin_value_fromobject(field->getter);
+                    tin_vmmac_callvalue(tmpval, 0);
+                    tin_vmintern_readframe(est);
+                    return true;
                 }
                 else
                 {
-                    klassobj = tin_state_getclassfor(est->state, object);
-                    if(klassobj == NULL)
-                    {
-                        vmexec_raiseerrorfmt_nocont("GET_FIELD: cannot get class object for type '%s'", tin_tostring_typename(object));
-                    }
-                    if(tin_table_get(&klassobj->methods, name, &getval))
-                    {
-                        if(tin_value_isfield(getval))
-                        {
-                            field = tin_value_asfield(getval);
-                            if(field->getter == NULL)
-                            {
-                                vmexec_raiseerrorfmt_nocont("class %s does not have a getter for field '%s'", klassobj->name->chars,
-                                                   name->chars);
-                            }
-                            tin_vmintern_drop(est);
-                            tin_vmintern_writeframe(est, est->ip);
-                            tmpval = tin_value_fromobject(tin_value_asfield(getval)->getter);
-                            vm_callvalue(tmpval, 0);
-                            tin_vmintern_readframe(est);
-                            return true;
-                        }
-                        else if(tin_value_isnatmethod(getval) || tin_value_isprimmethod(getval))
-                        {
-                            getval = tin_value_fromobject(tin_object_makeboundmethod(est->state, object, getval));
-                        }
-                    }
-                    else
-                    {
-                        getval = tin_value_makenull(est->vm->state);
-                    }
+                    getval = tin_value_fromobject(tin_object_makeboundmethod(est->state, tin_value_fromobject(instobj), getval));
                 }
-                tin_vmintern_drop(est);// Pop field name
-                est->fiber->stack_top[-1] = getval;
+            }
+            else
+            {
+                getval = tin_value_makenull(est->vm->state);
+            }
+        }
+    }
+    else if(tin_value_isclass(object))
+    {
+        klassobj = tin_value_asclass(object);
+        if(tin_table_get(&klassobj->static_fields, name, &getval))
+        {
+            if(tin_value_isnatmethod(getval) || tin_value_isprimmethod(getval))
+            {
+                getval = tin_value_fromobject(tin_object_makeboundmethod(est->state, tin_value_fromobject(klassobj), getval));
+            }
+            else if(tin_value_isfield(getval))
+            {
+                field = tin_value_asfield(getval);
+                if(field->getter == NULL)
+                {
+                    tin_vmmac_raiseerrorfmtnocont("class %s does not have a getter for field '%s'", klassobj->name->chars,
+                                       name->chars);
+                }
+                tin_vmintern_drop(est);
+                tin_vmintern_writeframe(est, est->ip);
+                tmpval = tin_value_fromobject(field->getter);
+                tin_vmmac_callvalue(tmpval, 0);
+                tin_vmintern_readframe(est);
                 return true;
+            }
+        }
+        else
+        {
+            getval = tin_value_makenull(est->vm->state);
+        }
+    }
+    else
+    {
+        klassobj = tin_state_getclassfor(est->state, object);
+        if(klassobj == NULL)
+        {
+            tin_vmmac_raiseerrorfmtnocont("GET_FIELD: cannot get class object for type '%s'", tin_tostring_typename(object));
+        }
+        if(tin_table_get(&klassobj->methods, name, &getval))
+        {
+            if(tin_value_isfield(getval))
+            {
+                field = tin_value_asfield(getval);
+                if(field->getter == NULL)
+                {
+                    tin_vmmac_raiseerrorfmtnocont("class %s does not have a getter for field '%s'", klassobj->name->chars,
+                                       name->chars);
+                }
+                tin_vmintern_drop(est);
+                tin_vmintern_writeframe(est, est->ip);
+                tmpval = tin_value_fromobject(tin_value_asfield(getval)->getter);
+                tin_vmmac_callvalue(tmpval, 0);
+                tin_vmintern_readframe(est);
+                return true;
+            }
+            else if(tin_value_isnatmethod(getval) || tin_value_isprimmethod(getval))
+            {
+                getval = tin_value_fromobject(tin_object_makeboundmethod(est->state, object, getval));
+            }
+        }
+        else
+        {
+            getval = tin_value_makenull(est->vm->state);
+        }
+    }
+    tin_vmintern_drop(est);// Pop field name
+    est->fiber->stack_top[-1] = getval;
+    return true;
+}
+
+bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
+{
+    TinValue value;
+    TinValue tmpval;
+    TinValue setter;
+    TinValue instval;
+    TinClass* klassobj;
+    TinField* field;
+    TinString* fieldname;
+    TinInstance* instobj;
+    instval = tin_vmintern_peek(est, 2);
+    value = tin_vmintern_peek(est, 1);
+    fieldname = tin_value_asstring(tin_vmintern_peek(est, 0));
+    if(tin_value_isnull(instval))
+    {
+        tin_vmmac_raiseerrorfmtnocont("attempt to set field '%s' of a null value", fieldname->chars)
+    }
+    if(tin_value_isclass(instval))
+    {
+        klassobj = tin_value_asclass(instval);
+        if(tin_table_get(&klassobj->static_fields, fieldname, &setter) && tin_value_isfield(setter))
+        {
+            field = tin_value_asfield(setter);
+            if(field->setter == NULL)
+            {
+                tin_vmmac_raiseerrorfmtnocont("class %s does not have a setter for field '%s'", klassobj->name->chars,
+                                   fieldname->chars);
+            }
+
+            tin_vmintern_dropn(est, 2);
+            tin_vmintern_push(est, value);
+            tin_vmintern_writeframe(est, est->ip);
+            tmpval = tin_value_fromobject(field->setter);
+            tin_vmmac_callvalue(tmpval, 1);
+            tin_vmintern_readframe(est);
+            return true;
+        }
+        if(tin_value_isnull(value))
+        {
+            tin_table_delete(&klassobj->static_fields, fieldname);
+        }
+        else
+        {
+            tin_table_set(est->state, &klassobj->static_fields, fieldname, value);
+        }
+        tin_vmintern_dropn(est, 2);// Pop field name and the value
+        est->fiber->stack_top[-1] = value;
+    }
+    else if(tin_value_isinstance(instval))
+    {
+        instobj = tin_value_asinstance(instval);
+        if(tin_table_get(&instobj->klass->methods, fieldname, &setter) && tin_value_isfield(setter))
+        {
+            field = tin_value_asfield(setter);
+            if(field->setter == NULL)
+            {
+                tin_vmmac_raiseerrorfmtnocont("class %s does not have a setter for field '%s'", instobj->klass->name->chars,
+                                   fieldname->chars);
+            }
+            tin_vmintern_dropn(est, 2);
+            tin_vmintern_push(est, value);
+            tin_vmintern_writeframe(est, est->ip);
+            tmpval = tin_value_fromobject(field->setter);
+            tin_vmmac_callvalue(tmpval, 1);
+            tin_vmintern_readframe(est);
+            return true;
+        }
+        if(tin_value_isnull(value))
+        {
+            tin_table_delete(&instobj->fields, fieldname);
+        }
+        else
+        {
+            tin_table_set(est->state, &instobj->fields, fieldname, value);
+        }
+        tin_vmintern_dropn(est, 2);// Pop field name and the value
+        est->fiber->stack_top[-1] = value;
+    }
+    else
+    {
+        klassobj = tin_state_getclassfor(est->state, instval);
+        if(klassobj == NULL)
+        {
+            tin_vmmac_raiseerrorfmtnocont("SET_FIELD: only instances and classes have fields", 0);
+        }
+        if(tin_table_get(&klassobj->methods, fieldname, &setter) && tin_value_isfield(setter))
+        {
+            field = tin_value_asfield(setter);
+            if(field->setter == NULL)
+            {
+                tin_vmmac_raiseerrorfmtnocont("class '%s' does not have a setter for field '%s'", klassobj->name->chars,
+                                   fieldname->chars);
+            }
+            tin_vmintern_dropn(est, 2);
+            tin_vmintern_push(est, value);
+            tin_vmintern_writeframe(est, est->ip);
+            tmpval = tin_value_fromobject(field->setter);
+            tin_vmmac_callvalue(tmpval, 1);
+            tin_vmintern_readframe(est);
+            return true;
+        }
+        else
+        {
+            tin_vmmac_raiseerrorfmtnocont("class '%s' does not contain field '%s'", klassobj->name->chars, fieldname->chars);
+        }
+    }
+    return true;
 }
 
 TinInterpretResult tin_vm_execfiber(TinState* state, TinFiber* fiber)
@@ -1280,7 +1398,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
     est->slots = est->frame->slots;
     est->privates = est->fiber->module->privates;
     est->upvalues = est->frame->closure == NULL ? NULL : est->frame->closure->upvalues;
-    vm_pushgc(est, true);
+    tin_vmmac_pushgc(est, true);
 
     // Has to be inside of the function in order for goto to work
     #ifdef TIN_USE_COMPUTEDGOTO
@@ -1292,7 +1410,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
         };
     #endif
 #ifdef TIN_TRACE_EXECUTION
-    vm_traceframe(est->fiber);
+    tin_vmmac_traceframe(est->fiber);
 #endif
 
     while(true)
@@ -1304,7 +1422,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
 #ifdef TIN_CHECK_STACK_SIZE
         if((est->fiber->stack_top - est->frame->slots) > est->fiber->stack_capacity)
         {
-            vmexec_raiseerrorfmt_cont("fiber stack too small (%i > %i)", (int)(est->fiber->stack_top - est->frame->slots),
+            tin_vmmac_raiseerrorfmtcont("fiber stack too small (%i > %i)", (int)(est->fiber->stack_top - est->frame->slots),
                                est->fiber->stack_capacity);
         }
 #endif
@@ -1371,7 +1489,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                     est->fiber->parent = NULL;
                     est->vm->fiber = est->fiber = parent;
                     tin_vmintern_readframe(est);
-                    vm_traceframe(est->fiber);
+                    tin_vmmac_traceframe(est->fiber);
                     est->fiber->stack_top -= argc;
                     est->fiber->stack_top[-1] = result;
                     continue;
@@ -1387,7 +1505,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                     tin_vmintern_push(est, result);
                 }
                 tin_vmintern_readframe(est);
-                vm_traceframe(est->fiber);
+                tin_vmmac_traceframe(est->fiber);
                 continue;
             }
             op_case(OP_CONSTVALUE)
@@ -1436,7 +1554,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 valb = tin_vmintern_pop(est);
                 if(!tin_value_isnumber(vala) || !tin_value_isnumber(valb))
                 {
-                    vmexec_raiseerror("range fields must be numbers");
+                    tin_vmmac_raiseerror("range fields must be numbers");
                 }
                 tin_vmintern_push(est, tin_value_fromobject(tin_object_makerange(est->state, tin_value_asnumber(vala), tin_value_asnumber(valb))));
                 continue;
@@ -1447,7 +1565,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 TinValue popped;
                 if(!tin_value_isnumber(tin_vmintern_peek(est, 0)))
                 {
-                    vmexec_raiseerror("operand must be a number");
+                    tin_vmmac_raiseerror("operand must be a number");
                 }
                 popped = tin_vmintern_pop(est);
                 if(popped.isfixednumber)
@@ -1468,7 +1586,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 if(tin_value_isinstance(tin_vmintern_peek(est, 0)))
                 {
                     tin_vmintern_writeframe(est, est->ip);
-                    vmexec_invokefromclass(tin_value_asinstance(tin_vmintern_peek(est, 0))->klass, tin_string_copyconst(est->state, "!"), 0, false, methods, false);
+                    tin_vmmac_invokefromclass(tin_value_asinstance(tin_vmintern_peek(est, 0))->klass, tin_string_copyconst(est->state, "!"), 0, false, methods, false);
                     continue;
                 }
                 popped = tin_vmintern_pop(est);
@@ -1476,14 +1594,14 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 tin_vmintern_push(est, tmpval);
                 continue;
             }
-            op_case(OP_BNOT)
+            op_case(OP_BINNOT)
             {
                 int64_t ival;
                 TinValue tmpval;
                 TinValue popped;
                 if(!tin_value_isnumber(tin_vmintern_peek(est, 0)))
                 {
-                    vmexec_raiseerror("Operand must be a number");
+                    tin_vmmac_raiseerror("Operand must be a number");
                 }
                 popped = tin_vmintern_pop(est);
                 ival = (int)tin_value_asnumber(popped);
@@ -1491,27 +1609,27 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 tin_vmintern_push(est, tmpval);
                 continue;
             }
-            op_case(OP_ADD)
+            op_case(OP_MATHADD)
             {
-                vm_binaryop(nowinstr, "+");
+                tin_vmmac_binaryop(nowinstr, "+");
                 continue;
             }
-            op_case(OP_SUBTRACT)
+            op_case(OP_MATHSUB)
             {
-                vm_binaryop(nowinstr, "-");
+                tin_vmmac_binaryop(nowinstr, "-");
                 continue;
             }
-            op_case(OP_MULTIPLY)
+            op_case(OP_MATHMULT)
             {
-                vm_binaryop(nowinstr, "*");
+                tin_vmmac_binaryop(nowinstr, "*");
                 continue;
             }
-            op_case(OP_POWER)
+            op_case(OP_MATHPOWER)
             {
-                vm_binaryop(nowinstr, "**");
+                tin_vmmac_binaryop(nowinstr, "**");
                 continue;
             }
-            op_case(OP_FLOOR_DIVIDE)
+            op_case(OP_MATHFLOORDIV)
             {
                 TinValue vala;
                 TinValue valb;
@@ -1524,78 +1642,78 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 else
                 {
-                    vm_invokemethod(vala, "#", 1);
+                    tin_vmmac_invokemethod(vala, "#", 1);
                 }
                 continue;
             }
-            op_case(OP_MOD)
+            op_case(OP_MATHMOD)
             {
-                vm_binaryop(nowinstr, "%");
+                tin_vmmac_binaryop(nowinstr, "%");
                 continue;
             }
-            op_case(OP_DIVIDE)
+            op_case(OP_MATHDIV)
             {
-                vm_binaryop(nowinstr, "/");
+                tin_vmmac_binaryop(nowinstr, "/");
                 continue;
             }
-            op_case(OP_BAND)
+            op_case(OP_BINAND)
             {
-                vm_binaryop(nowinstr, "&");
+                tin_vmmac_binaryop(nowinstr, "&");
                 continue;
             }
-            op_case(OP_BOR)
+            op_case(OP_BINOR)
             {
-                vm_binaryop(nowinstr, "|");
+                tin_vmmac_binaryop(nowinstr, "|");
                 continue;
             }
-            op_case(OP_BXOR)
+            op_case(OP_BINXOR)
             {
-                vm_binaryop(nowinstr, "^");
+                tin_vmmac_binaryop(nowinstr, "^");
                 continue;
             }
-            op_case(OP_LSHIFT)
+            op_case(OP_LEFTSHIFT)
             {
-                vm_binaryop(nowinstr, "<<");
+                tin_vmmac_binaryop(nowinstr, "<<");
                 continue;
             }
-            op_case(OP_RSHIFT)
+            op_case(OP_RIGHTSHIFT)
             {
-                vm_binaryop(nowinstr, ">>");
+                tin_vmmac_binaryop(nowinstr, ">>");
                 continue;
             }
             op_case(OP_EQUAL)
             {
-                vm_binaryop(nowinstr, "==");
+                tin_vmmac_binaryop(nowinstr, "==");
                 continue;
             }
-            op_case(OP_GREATER)
+            op_case(OP_GREATERTHAN)
             {
-                vm_binaryop(nowinstr, ">");
+                tin_vmmac_binaryop(nowinstr, ">");
                 continue;
             }
-            op_case(OP_GREATER_EQUAL)
+            op_case(OP_GREATEREQUAL)
             {
-                vm_binaryop(nowinstr, ">=");
+                tin_vmmac_binaryop(nowinstr, ">=");
                 continue;
             }
-            op_case(OP_LESS)
+            op_case(OP_LESSTHAN)
             {
-                vm_binaryop(nowinstr, "<");
+                tin_vmmac_binaryop(nowinstr, "<");
                 continue;
             }
-            op_case(OP_LESS_EQUAL)
+            op_case(OP_LESSEQUAL)
             {
-                vm_binaryop(nowinstr, "<=");
+                tin_vmmac_binaryop(nowinstr, "<=");
                 continue;
             }
-            op_case(OP_SET_GLOBAL)
+            op_case(OP_GLOBALSET)
             {
                 TinString* name;
                 name = tin_vmintern_readstringlong(est);
                 tin_table_set(est->state, &est->vm->globals->values, name, tin_vmintern_peek(est, 0));
                 continue;
             }
-            op_case(OP_GET_GLOBAL)
+            op_case(OP_GLOBALGET)
             {
                 TinValue setval;
                 TinString* name;
@@ -1611,67 +1729,67 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_SET_LOCAL)
+            op_case(OP_LOCALSET)
             {
                 uint8_t index;
                 index = tin_vmintern_readbyte(est);
                 est->slots[index] = tin_vmintern_peek(est, 0);
                 continue;
             }
-            op_case(OP_GET_LOCAL)
+            op_case(OP_LOCALGET)
             {
                 tin_vmintern_push(est, est->slots[tin_vmintern_readbyte(est)]);
                 continue;
             }
-            op_case(OP_SET_LOCAL_LONG)
+            op_case(OP_LOCALLONGSET)
             {
                 uint8_t index;
                 index = tin_vmintern_readshort(est);
                 est->slots[index] = tin_vmintern_peek(est, 0);
                 continue;
             }
-            op_case(OP_GET_LOCAL_LONG)
+            op_case(OP_LOCALLONGGET)
             {
                 tin_vmintern_push(est, est->slots[tin_vmintern_readshort(est)]);
                 continue;
             }
-            op_case(OP_SET_PRIVATE)
+            op_case(OP_PRIVATESET)
             {
                 uint8_t index;
                 index = tin_vmintern_readbyte(est);
                 est->privates[index] = tin_vmintern_peek(est, 0);
                 continue;
             }
-            op_case(OP_GET_PRIVATE)
+            op_case(OP_PRIVATEGET)
             {
                 tin_vmintern_push(est, est->privates[tin_vmintern_readbyte(est)]);
                 continue;
             }
-            op_case(OP_SET_PRIVATE_LONG)
+            op_case(OP_PRIVATELONGSET)
             {
                 uint8_t index;
                 index = tin_vmintern_readshort(est);
                 est->privates[index] = tin_vmintern_peek(est, 0);
                 continue;
             }
-            op_case(OP_GET_PRIVATE_LONG)
+            op_case(OP_PRIVATELONGGET)
             {
                 tin_vmintern_push(est, est->privates[tin_vmintern_readshort(est)]);
                 continue;
             }
-            op_case(OP_SET_UPVALUE)
+            op_case(OP_UPVALSET)
             {
                 uint8_t index;
                 index = tin_vmintern_readbyte(est);
                 *est->upvalues[index]->location = tin_vmintern_peek(est, 0);
                 continue;
             }
-            op_case(OP_GET_UPVALUE)
+            op_case(OP_UPVALGET)
             {
                 tin_vmintern_push(est, *est->upvalues[tin_vmintern_readbyte(est)]->location);
                 continue;
             }
-            op_case(OP_JUMP_IF_FALSE)
+            op_case(OP_JUMPIFFALSE)
             {
                 uint16_t offset;
                 TinValue popped;
@@ -1683,7 +1801,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_JUMP_IF_NULL)
+            op_case(OP_JUMPIFNULL)
             {
                 uint16_t offset;
                 offset = tin_vmintern_readshort(est);
@@ -1693,7 +1811,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_JUMP_IF_NULL_POPPING)
+            op_case(OP_JUMPIFNULLPOP)
             {
                 uint16_t offset;
                 TinValue popped;
@@ -1705,14 +1823,14 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_JUMP)
+            op_case(OP_JUMPALWAYS)
             {
                 uint16_t offset;
                 offset = tin_vmintern_readshort(est);
                 est->ip += offset;
                 continue;
             }
-            op_case(OP_JUMP_BACK)
+            op_case(OP_JUMPBACK)
             {
                 uint16_t offset;
                 offset = tin_vmintern_readshort(est);
@@ -1747,7 +1865,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_NULL_OR)
+            op_case(OP_NULLOR)
             {
                 uint16_t offset;
                 offset = tin_vmintern_readshort(est);
@@ -1761,7 +1879,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_CALL)
+            op_case(OP_CALLFUNCTION)
             {
                 if(!tin_vmdo_call(est, finalresult))
                 {
@@ -1769,7 +1887,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_CLOSURE)
+            op_case(OP_MAKECLOSURE)
             {
                 size_t i;
                 uint8_t index;
@@ -1794,13 +1912,13 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 continue;
             }
-            op_case(OP_CLOSE_UPVALUE)
+            op_case(OP_UPVALCLOSE)
             {
                 tin_vmintern_closeupvalues(est->vm, est->fiber->stack_top - 1);
                 tin_vmintern_drop(est);
                 continue;
             }
-            op_case(OP_CLASS)
+            op_case(OP_MAKECLASS)
             {
                 TinString* name;
                 TinClass* klassobj;
@@ -1823,123 +1941,23 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
             }
             op_case(OP_FIELDSET)
             {
-                TinValue value;
-                TinValue tmpval;
-                TinValue setter;
-                TinValue instval;
-                TinClass* klassobj;
-                TinField* field;
-                TinString* fieldname;
-                TinInstance* instobj;
-                instval = tin_vmintern_peek(est, 2);
-                value = tin_vmintern_peek(est, 1);
-                fieldname = tin_value_asstring(tin_vmintern_peek(est, 0));
-                if(tin_value_isnull(instval))
+                if(!tin_vmdo_fieldset(est, finalresult))
                 {
-                    vmexec_raiseerrorfmt_cont("attempt to set field '%s' of a null value", fieldname->chars)
-                }
-                if(tin_value_isclass(instval))
-                {
-                    klassobj = tin_value_asclass(instval);
-                    if(tin_table_get(&klassobj->static_fields, fieldname, &setter) && tin_value_isfield(setter))
-                    {
-                        field = tin_value_asfield(setter);
-                        if(field->setter == NULL)
-                        {
-                            vmexec_raiseerrorfmt_cont("class %s does not have a setter for field '%s'", klassobj->name->chars,
-                                               fieldname->chars);
-                        }
-
-                        tin_vmintern_dropn(est, 2);
-                        tin_vmintern_push(est, value);
-                        tin_vmintern_writeframe(est, est->ip);
-                        tmpval = tin_value_fromobject(field->setter);
-                        vm_callvalue(tmpval, 1);
-                        tin_vmintern_readframe(est);
-                        continue;
-                    }
-                    if(tin_value_isnull(value))
-                    {
-                        tin_table_delete(&klassobj->static_fields, fieldname);
-                    }
-                    else
-                    {
-                        tin_table_set(est->state, &klassobj->static_fields, fieldname, value);
-                    }
-                    tin_vmintern_dropn(est, 2);// Pop field name and the value
-                    est->fiber->stack_top[-1] = value;
-                }
-                else if(tin_value_isinstance(instval))
-                {
-                    instobj = tin_value_asinstance(instval);
-                    if(tin_table_get(&instobj->klass->methods, fieldname, &setter) && tin_value_isfield(setter))
-                    {
-                        field = tin_value_asfield(setter);
-                        if(field->setter == NULL)
-                        {
-                            vmexec_raiseerrorfmt_cont("class %s does not have a setter for field '%s'", instobj->klass->name->chars,
-                                               fieldname->chars);
-                        }
-                        tin_vmintern_dropn(est, 2);
-                        tin_vmintern_push(est, value);
-                        tin_vmintern_writeframe(est, est->ip);
-                        tmpval = tin_value_fromobject(field->setter);
-                        vm_callvalue(tmpval, 1);
-                        tin_vmintern_readframe(est);
-                        continue;
-                    }
-                    if(tin_value_isnull(value))
-                    {
-                        tin_table_delete(&instobj->fields, fieldname);
-                    }
-                    else
-                    {
-                        tin_table_set(est->state, &instobj->fields, fieldname, value);
-                    }
-                    tin_vmintern_dropn(est, 2);// Pop field name and the value
-                    est->fiber->stack_top[-1] = value;
-                }
-                else
-                {
-                    klassobj = tin_state_getclassfor(est->state, instval);
-                    if(klassobj == NULL)
-                    {
-                        vmexec_raiseerror("SET_FIELD: only instances and classes have fields");
-                    }
-                    if(tin_table_get(&klassobj->methods, fieldname, &setter) && tin_value_isfield(setter))
-                    {
-                        field = tin_value_asfield(setter);
-                        if(field->setter == NULL)
-                        {
-                            vmexec_raiseerrorfmt_cont("class '%s' does not have a setter for field '%s'", klassobj->name->chars,
-                                               fieldname->chars);
-                        }
-                        tin_vmintern_dropn(est, 2);
-                        tin_vmintern_push(est, value);
-                        tin_vmintern_writeframe(est, est->ip);
-                        tmpval = tin_value_fromobject(field->setter);
-                        vm_callvalue(tmpval, 1);
-                        tin_vmintern_readframe(est);
-                        continue;
-                    }
-                    else
-                    {
-                        vmexec_raiseerrorfmt_cont("class '%s' does not contain field '%s'", klassobj->name->chars, fieldname->chars);
-                    }
+                    return false;
                 }
                 continue;
             }
-            op_case(OP_SUBSCRIPT_GET)
+            op_case(OP_GETINDEX)
             {
-                vm_invokemethod(tin_vmintern_peek(est, 1), "[]", 1);
+                tin_vmmac_invokemethod(tin_vmintern_peek(est, 1), "[]", 1);
                 continue;
             }
-            op_case(OP_SUBSCRIPT_SET)
+            op_case(OP_SETINDEX)
             {
-                vm_invokemethod(tin_vmintern_peek(est, 2), "[]", 2);
+                tin_vmmac_invokemethod(tin_vmintern_peek(est, 2), "[]", 2);
                 continue;
             }
-            op_case(OP_PUSH_ARRAY_ELEMENT)
+            op_case(OP_ARRAYPUSHVALUE)
             {
                 size_t arindex;
                 values = &tin_value_asarray(tin_vmintern_peek(est, 1))->list;
@@ -1949,7 +1967,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 tin_vmintern_drop(est);
                 continue;
             }
-            op_case(OP_PUSH_OBJECT_FIELD)
+            op_case(OP_OBJECTPUSHFIELD)
             {
                 TinValue operand;
                 TinValue peek0;
@@ -1972,18 +1990,18 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 else
                 {
-                    vmexec_raiseerrorfmt_cont("cannot set field '%s' on type '%s'", tin_tostring_typename(operand));
+                    tin_vmmac_raiseerrorfmtcont("cannot set field '%s' on type '%s'", tin_tostring_typename(operand));
                 }
                 tin_vmintern_dropn(est, 2);
                 continue;
             }
-            op_case(OP_STATIC_FIELD)
+            op_case(OP_FIELDSTATIC)
             {
                 tin_table_set(est->state, &tin_value_asclass(tin_vmintern_peek(est, 1))->static_fields, tin_vmintern_readstringlong(est), tin_vmintern_peek(est, 0));
                 tin_vmintern_drop(est);
                 continue;
             }
-            op_case(OP_METHOD)
+            op_case(OP_MAKEMETHOD)
             {
                 TinString* name;
                 TinClass* klassobj;
@@ -1998,37 +2016,23 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 tin_vmintern_drop(est);
                 continue;
             }
-            op_case(OP_DEFINE_FIELD)
+            op_case(OP_FIELDDEFINE)
             {
                 tin_table_set(est->state, &tin_value_asclass(tin_vmintern_peek(est, 1))->methods, tin_vmintern_readstringlong(est), tin_vmintern_peek(est, 0));
                 tin_vmintern_drop(est);
                 continue;
             }
-            op_case(OP_INVOKE)
+            op_case(OP_INVOKEMETHOD)
             {
-                vm_invokeoperation(false);
+                tin_vmmac_invokeoperation(false);
                 continue;
             }
-            op_case(OP_INVOKE_IGNORING)
+            op_case(OP_INVOKEIGNORING)
             {
-                vm_invokeoperation(true);
+                tin_vmmac_invokeoperation(true);
                 continue;
             }
-            op_case(OP_INVOKE_SUPER)
-            {
-                size_t argc;
-                TinValue popped;
-                TinClass* klassobj;
-                TinString* mthname;
-                argc = tin_vmintern_readbyte(est);
-                mthname = tin_vmintern_readstringlong(est);
-                popped = tin_vmintern_pop(est);
-                klassobj = tin_value_asclass(popped);
-                tin_vmintern_writeframe(est, est->ip);
-                vmexec_invokefromclass(klassobj, mthname, argc, true, methods, false);
-                continue;
-            }
-            op_case(OP_INVOKE_SUPER_IGNORING)
+            op_case(OP_INVOKESUPER)
             {
                 size_t argc;
                 TinValue popped;
@@ -2039,10 +2043,24 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 popped = tin_vmintern_pop(est);
                 klassobj = tin_value_asclass(popped);
                 tin_vmintern_writeframe(est, est->ip);
-                vmexec_invokefromclass(klassobj, mthname, argc, true, methods, true);
+                tin_vmmac_invokefromclass(klassobj, mthname, argc, true, methods, false);
                 continue;
             }
-            op_case(OP_GET_SUPER_METHOD)
+            op_case(OP_INVOKESUPERIGNORING)
+            {
+                size_t argc;
+                TinValue popped;
+                TinClass* klassobj;
+                TinString* mthname;
+                argc = tin_vmintern_readbyte(est);
+                mthname = tin_vmintern_readstringlong(est);
+                popped = tin_vmintern_pop(est);
+                klassobj = tin_value_asclass(popped);
+                tin_vmintern_writeframe(est, est->ip);
+                tin_vmmac_invokefromclass(klassobj, mthname, argc, true, methods, true);
+                continue;
+            }
+            op_case(OP_GETSUPERMETHOD)
             {
                 TinValue value;
                 TinValue instval;
@@ -2064,7 +2082,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 tin_vmintern_push(est, value);
                 continue;
             }
-            op_case(OP_INHERIT)
+            op_case(OP_CLASSINHERIT)
             {
                 TinValue super;
                 TinClass* superklass;
@@ -2072,7 +2090,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 super = tin_vmintern_peek(est, 1);
                 if(!tin_value_isclass(super))
                 {
-                    vmexec_raiseerror("superclass must be a class");
+                    tin_vmmac_raiseerror("superclass must be a class");
                 }
                 klassobj = tin_value_asclass(tin_vmintern_peek(est, 0));
                 superklass = tin_value_asclass(super);
@@ -2082,7 +2100,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 tin_table_add_all(est->state, &klassobj->super->static_fields, &klassobj->static_fields);
                 continue;
             }
-            op_case(OP_IS)
+            op_case(OP_ISCLASS)
             {
                 bool found;
                 TinValue klassval;
@@ -2101,7 +2119,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 klassval = tin_vmintern_peek(est, 0);
                 if(instanceklass == NULL || !tin_value_isclass(klassval))
                 {
-                    vmexec_raiseerror("operands must be an instance or a class");
+                    tin_vmmac_raiseerror("operands must be an instance or a class");
                 }            
                 type = tin_value_asclass(klassval);
                 found = false;
@@ -2118,7 +2136,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 tin_vmintern_push(est, tin_value_makebool(est->vm->state, found));
                 continue;
             }
-            op_case(OP_POP_LOCALS)
+            op_case(OP_POPLOCALS)
             {
                 tin_vmintern_dropn(est, tin_vmintern_readshort(est));
                 continue;
@@ -2138,12 +2156,12 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 {
                     tin_vmintern_push(est, tin_vallist_get(values, i));
                 }
-                // Hot-bytecode patching, increment the amount of arguments to OP_CALL
+                // Hot-bytecode patching, increment the amount of arguments to OP_CALLFUNCTION
                 est->ip[1] = est->ip[1] + tin_vallist_count(values) - 1;
                 continue;
             }
 
-            op_case(OP_REFERENCE_GLOBAL)
+            op_case(OP_REFGLOBAL)
             {
                 TinString* name;
                 TinValue* pval;
@@ -2154,26 +2172,26 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 else
                 {
-                    vmexec_raiseerror("attempt to reference a null value");
+                    tin_vmmac_raiseerror("attempt to reference a null value");
                 }
                 continue;
             }
-            op_case(OP_REFERENCE_PRIVATE)
+            op_case(OP_REFPRIVATE)
             {
                 tin_vmintern_push(est, tin_value_fromobject(tin_object_makereference(est->state, &est->privates[tin_vmintern_readshort(est)])));
                 continue;
             }
-            op_case(OP_REFERENCE_LOCAL)
+            op_case(OP_REFLOCAL)
             {
                 tin_vmintern_push(est, tin_value_fromobject(tin_object_makereference(est->state, &est->slots[tin_vmintern_readshort(est)])));
                 continue;
             }
-            op_case(OP_REFERENCE_UPVALUE)
+            op_case(OP_REFUPVAL)
             {
                 tin_vmintern_push(est, tin_value_fromobject(tin_object_makereference(est->state, est->upvalues[tin_vmintern_readbyte(est)]->location)));
                 continue;
             }
-            op_case(OP_REFERENCE_FIELD)
+            op_case(OP_REFFIELD)
             {
                 TinValue object;
                 TinString* name;
@@ -2181,45 +2199,45 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 object = tin_vmintern_peek(est, 1);
                 if(tin_value_isnull(object))
                 {
-                    vmexec_raiseerror("attempt to index a null value");
+                    tin_vmmac_raiseerror("attempt to index a null value");
                 }
                 name = tin_value_asstring(tin_vmintern_peek(est, 0));
                 if(tin_value_isinstance(object))
                 {
                     if(!tin_table_get_slot(&tin_value_asinstance(object)->fields, name, &pval))
                     {
-                        vmexec_raiseerror("attempt to reference a null value");
+                        tin_vmmac_raiseerror("attempt to reference a null value");
                     }
                 }
                 else
                 {
                     tin_towriter_value(est->state, &est->state->debugwriter, object, true);
                     printf("\n");
-                    vmexec_raiseerrorfmt_cont("cannot reference field '%s' of a non-instance", name->chars);
+                    tin_vmmac_raiseerrorfmtcont("cannot reference field '%s' of a non-instance", name->chars);
                 }
                 tin_vmintern_drop(est);// Pop field name
                 est->fiber->stack_top[-1] = tin_value_fromobject(tin_object_makereference(est->state, pval));
                 continue;
             }
-            op_case(OP_SET_REFERENCE)
+            op_case(OP_REFSET)
             {
                 TinValue reference;
                 reference = tin_vmintern_pop(est);
                 if(!tin_value_isreference(reference))
                 {
-                    vmexec_raiseerror("cannot set reference value of a non-reference");
+                    tin_vmmac_raiseerror("cannot set reference value of a non-reference");
                 }
                 *tin_value_asreference(reference)->slot = tin_vmintern_peek(est, 0);
                 continue;
             }
             vm_default()
             {
-                vmexec_raiseerrorfmt_cont("unknown VM op code '%d'", *est->ip);
+                tin_vmmac_raiseerrorfmtcont("unknown VM op code '%d'", *est->ip);
                 break;
             }
         }
     }
-    vm_returnerror();
+    tin_vmmac_returnerror();
     return false;
 }
 

@@ -155,8 +155,8 @@ size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offs
     {
         case OP_POP:
             return print_simple_op(state, wr, "OP_POP", offset);
-        case OP_POP_LOCALS:
-            return print_constant_op(state, wr, "OP_POP_LOCALS", chunk, offset, true);
+        case OP_POPLOCALS:
+            return print_constant_op(state, wr, "OP_POPLOCALS", chunk, offset, true);
         case OP_RETURN:
             return print_simple_op(state, wr, "OP_RETURN", offset);
         case OP_CONSTVALUE:
@@ -173,91 +173,91 @@ size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offs
             return print_simple_op(state, wr, "OP_NEGATE", offset);
         case OP_NOT:
             return print_simple_op(state, wr, "OP_NOT", offset);
-        case OP_ADD:
-            return print_simple_op(state, wr, "OP_ADD", offset);
-        case OP_SUBTRACT:
-            return print_simple_op(state, wr, "OP_SUBTRACT", offset);
-        case OP_MULTIPLY:
-            return print_simple_op(state, wr, "OP_MULTIPLY", offset);
-        case OP_POWER:
-            return print_simple_op(state, wr, "OP_POWER", offset);
-        case OP_DIVIDE:
-            return print_simple_op(state, wr, "OP_DIVIDE", offset);
-        case OP_FLOOR_DIVIDE:
-            return print_simple_op(state, wr, "OP_FLOOR_DIVIDE", offset);
-        case OP_MOD:
-            return print_simple_op(state, wr, "OP_MOD", offset);
-        case OP_BAND:
-            return print_simple_op(state, wr, "OP_BAND", offset);
-        case OP_BOR:
-            return print_simple_op(state, wr, "OP_BOR", offset);
-        case OP_BXOR:
-            return print_simple_op(state, wr, "OP_BXOR", offset);
-        case OP_LSHIFT:
-            return print_simple_op(state, wr, "OP_LSHIFT", offset);
-        case OP_RSHIFT:
-            return print_simple_op(state, wr, "OP_RSHIFT", offset);
-        case OP_BNOT:
-            return print_simple_op(state, wr, "OP_BNOT", offset);
+        case OP_MATHADD:
+            return print_simple_op(state, wr, "OP_MATHADD", offset);
+        case OP_MATHSUB:
+            return print_simple_op(state, wr, "OP_MATHSUB", offset);
+        case OP_MATHMULT:
+            return print_simple_op(state, wr, "OP_MATHMULT", offset);
+        case OP_MATHPOWER:
+            return print_simple_op(state, wr, "OP_MATHPOWER", offset);
+        case OP_MATHDIV:
+            return print_simple_op(state, wr, "OP_MATHDIV", offset);
+        case OP_MATHFLOORDIV:
+            return print_simple_op(state, wr, "OP_MATHFLOORDIV", offset);
+        case OP_MATHMOD:
+            return print_simple_op(state, wr, "OP_MATHMOD", offset);
+        case OP_BINAND:
+            return print_simple_op(state, wr, "OP_BINAND", offset);
+        case OP_BINOR:
+            return print_simple_op(state, wr, "OP_BINOR", offset);
+        case OP_BINXOR:
+            return print_simple_op(state, wr, "OP_BINXOR", offset);
+        case OP_LEFTSHIFT:
+            return print_simple_op(state, wr, "OP_LEFTSHIFT", offset);
+        case OP_RIGHTSHIFT:
+            return print_simple_op(state, wr, "OP_RIGHTSHIFT", offset);
+        case OP_BINNOT:
+            return print_simple_op(state, wr, "OP_BINNOT", offset);
         case OP_EQUAL:
             return print_simple_op(state, wr, "OP_EQUAL", offset);
-        case OP_GREATER:
-            return print_simple_op(state, wr, "OP_GREATER", offset);
-        case OP_GREATER_EQUAL:
-            return print_simple_op(state, wr, "OP_GREATER_EQUAL", offset);
-        case OP_LESS:
-            return print_simple_op(state, wr, "OP_LESS", offset);
-        case OP_LESS_EQUAL:
-            return print_simple_op(state, wr, "OP_LESS_EQUAL", offset);
-        case OP_SET_GLOBAL:
-            return print_constant_op(state, wr, "OP_SET_GLOBAL", chunk, offset, true);
-        case OP_GET_GLOBAL:
-            return print_constant_op(state, wr, "OP_GET_GLOBAL", chunk, offset, true);
-        case OP_SET_LOCAL:
-            return print_byte_op(state, wr, "OP_SET_LOCAL", chunk, offset);
-        case OP_GET_LOCAL:
-            return print_byte_op(state, wr, "OP_GET_LOCAL", chunk, offset);
-        case OP_SET_LOCAL_LONG:
-            return print_short_op(state, wr, "OP_SET_LOCAL_LONG", chunk, offset);
-        case OP_GET_LOCAL_LONG:
-            return print_short_op(state, wr, "OP_GET_LOCAL_LONG", chunk, offset);
-        case OP_SET_PRIVATE:
-            return print_byte_op(state, wr, "OP_SET_PRIVATE", chunk, offset);
-        case OP_GET_PRIVATE:
-            return print_byte_op(state, wr, "OP_GET_PRIVATE", chunk, offset);
-        case OP_SET_PRIVATE_LONG:
-            return print_short_op(state, wr, "OP_SET_PRIVATE_LONG", chunk, offset);
-        case OP_GET_PRIVATE_LONG:
-            return print_short_op(state, wr, "OP_GET_PRIVATE_LONG", chunk, offset);
-        case OP_SET_UPVALUE:
-            return print_byte_op(state, wr, "OP_SET_UPVALUE", chunk, offset);
-        case OP_GET_UPVALUE:
-            return print_byte_op(state, wr, "OP_GET_UPVALUE", chunk, offset);
-        case OP_JUMP_IF_FALSE:
-            return print_jump_op(state, wr, "OP_JUMP_IF_FALSE", 1, chunk, offset);
-        case OP_JUMP_IF_NULL:
-            return print_jump_op(state, wr, "OP_JUMP_IF_NULL", 1, chunk, offset);
-        case OP_JUMP_IF_NULL_POPPING:
-            return print_jump_op(state, wr, "OP_JUMP_IF_NULL_POPPING", 1, chunk, offset);
-        case OP_JUMP:
-            return print_jump_op(state, wr, "OP_JUMP", 1, chunk, offset);
-        case OP_JUMP_BACK:
-            return print_jump_op(state, wr, "OP_JUMP_BACK", -1, chunk, offset);
+        case OP_GREATERTHAN:
+            return print_simple_op(state, wr, "OP_GREATERTHAN", offset);
+        case OP_GREATEREQUAL:
+            return print_simple_op(state, wr, "OP_GREATEREQUAL", offset);
+        case OP_LESSTHAN:
+            return print_simple_op(state, wr, "OP_LESSTHAN", offset);
+        case OP_LESSEQUAL:
+            return print_simple_op(state, wr, "OP_LESSEQUAL", offset);
+        case OP_GLOBALSET:
+            return print_constant_op(state, wr, "OP_GLOBALSET", chunk, offset, true);
+        case OP_GLOBALGET:
+            return print_constant_op(state, wr, "OP_GLOBALGET", chunk, offset, true);
+        case OP_LOCALSET:
+            return print_byte_op(state, wr, "OP_LOCALSET", chunk, offset);
+        case OP_LOCALGET:
+            return print_byte_op(state, wr, "OP_LOCALGET", chunk, offset);
+        case OP_LOCALLONGSET:
+            return print_short_op(state, wr, "OP_LOCALLONGSET", chunk, offset);
+        case OP_LOCALLONGGET:
+            return print_short_op(state, wr, "OP_LOCALLONGGET", chunk, offset);
+        case OP_PRIVATESET:
+            return print_byte_op(state, wr, "OP_PRIVATESET", chunk, offset);
+        case OP_PRIVATEGET:
+            return print_byte_op(state, wr, "OP_PRIVATEGET", chunk, offset);
+        case OP_PRIVATELONGSET:
+            return print_short_op(state, wr, "OP_PRIVATELONGSET", chunk, offset);
+        case OP_PRIVATELONGGET:
+            return print_short_op(state, wr, "OP_PRIVATELONGGET", chunk, offset);
+        case OP_UPVALSET:
+            return print_byte_op(state, wr, "OP_UPVALSET", chunk, offset);
+        case OP_UPVALGET:
+            return print_byte_op(state, wr, "OP_UPVALGET", chunk, offset);
+        case OP_JUMPIFFALSE:
+            return print_jump_op(state, wr, "OP_JUMPIFFALSE", 1, chunk, offset);
+        case OP_JUMPIFNULL:
+            return print_jump_op(state, wr, "OP_JUMPIFNULL", 1, chunk, offset);
+        case OP_JUMPIFNULLPOP:
+            return print_jump_op(state, wr, "OP_JUMPIFNULLPOP", 1, chunk, offset);
+        case OP_JUMPALWAYS:
+            return print_jump_op(state, wr, "OP_JUMPALWAYS", 1, chunk, offset);
+        case OP_JUMPBACK:
+            return print_jump_op(state, wr, "OP_JUMPBACK", -1, chunk, offset);
         case OP_AND:
             return print_jump_op(state, wr, "OP_AND", 1, chunk, offset);
         case OP_OR:
             return print_jump_op(state, wr, "OP_OR", 1, chunk, offset);
-        case OP_NULL_OR:
-            return print_jump_op(state, wr, "OP_NULL_OR", 1, chunk, offset);
-        case OP_CALL:
-            return print_byte_op(state, wr, "OP_CALL", chunk, offset);
-        case OP_CLOSURE:
+        case OP_NULLOR:
+            return print_jump_op(state, wr, "OP_NULLOR", 1, chunk, offset);
+        case OP_CALLFUNCTION:
+            return print_byte_op(state, wr, "OP_CALLFUNCTION", chunk, offset);
+        case OP_MAKECLOSURE:
             {
                 offset++;
                 constant = (uint16_t)(chunk->code[offset] << 8);
                 offset++;
                 constant |= chunk->code[offset];
-                tin_writer_writeformat(wr, "%-16s %4d ", "OP_CLOSURE", constant);
+                tin_writer_writeformat(wr, "%-16s %4d ", "OP_MAKECLOSURE", constant);
                 tin_towriter_value(state, wr, tin_vallist_get(&chunk->constants, constant), true);
                 tin_writer_writeformat(wr, "\n");
                 function = tin_value_asfunction(tin_vallist_get(&chunk->constants, constant));
@@ -270,64 +270,64 @@ size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offs
                 return offset;
             }
             break;
-        case OP_CLOSE_UPVALUE:
-            return print_simple_op(state, wr, "OP_CLOSE_UPVALUE", offset);
-        case OP_CLASS:
-            return print_constant_op(state, wr, "OP_CLASS", chunk, offset, true);
+        case OP_UPVALCLOSE:
+            return print_simple_op(state, wr, "OP_UPVALCLOSE", offset);
+        case OP_MAKECLASS:
+            return print_constant_op(state, wr, "OP_MAKECLASS", chunk, offset, true);
 
         case OP_FIELDGET:
             return print_simple_op(state, wr, "OP_FIELDGET", offset);
         case OP_FIELDSET:
             return print_simple_op(state, wr, "OP_FIELDSET", offset);
 
-        case OP_SUBSCRIPT_GET:
-            return print_simple_op(state, wr, "OP_SUBSCRIPT_GET", offset);
-        case OP_SUBSCRIPT_SET:
-            return print_simple_op(state, wr, "OP_SUBSCRIPT_SET", offset);
+        case OP_GETINDEX:
+            return print_simple_op(state, wr, "OP_GETINDEX", offset);
+        case OP_SETINDEX:
+            return print_simple_op(state, wr, "OP_SETINDEX", offset);
         case OP_VALARRAY:
             return print_simple_op(state, wr, "OP_VALARRAY", offset);
-        case OP_PUSH_ARRAY_ELEMENT:
-            return print_simple_op(state, wr, "OP_PUSH_ARRAY_ELEMENT", offset);
+        case OP_ARRAYPUSHVALUE:
+            return print_simple_op(state, wr, "OP_ARRAYPUSHVALUE", offset);
         case OP_VALOBJECT:
             return print_simple_op(state, wr, "OP_VALOBJECT", offset);
-        case OP_PUSH_OBJECT_FIELD:
-            return print_simple_op(state, wr, "OP_PUSH_OBJECT_FIELD", offset);
+        case OP_OBJECTPUSHFIELD:
+            return print_simple_op(state, wr, "OP_OBJECTPUSHFIELD", offset);
         case OP_RANGE:
             return print_simple_op(state, wr, "OP_RANGE", offset);
-        case OP_METHOD:
-            return print_constant_op(state, wr, "OP_METHOD", chunk, offset, true);
-        case OP_STATIC_FIELD:
-            return print_constant_op(state, wr, "OP_STATIC_FIELD", chunk, offset, true);
-        case OP_DEFINE_FIELD:
-            return print_constant_op(state, wr, "OP_DEFINE_FIELD", chunk, offset, true);
-        case OP_INVOKE:
-            return print_invoke_op(state, wr, "OP_INVOKE", chunk, offset);
-        case OP_INVOKE_SUPER:
-            return print_invoke_op(state, wr, "OP_INVOKE_SUPER", chunk, offset);
-        case OP_INVOKE_IGNORING:
-            return print_invoke_op(state, wr, "OP_INVOKE_IGNORING", chunk, offset);
-        case OP_INVOKE_SUPER_IGNORING:
-            return print_invoke_op(state, wr, "OP_INVOKE_SUPER_IGNORING", chunk, offset);
-        case OP_INHERIT:
-            return print_simple_op(state, wr, "OP_INHERIT", offset);
-        case OP_IS:
-            return print_simple_op(state, wr, "OP_IS", offset);
-        case OP_GET_SUPER_METHOD:
-            return print_constant_op(state, wr, "OP_GET_SUPER_METHOD", chunk, offset, true);
+        case OP_MAKEMETHOD:
+            return print_constant_op(state, wr, "OP_MAKEMETHOD", chunk, offset, true);
+        case OP_FIELDSTATIC:
+            return print_constant_op(state, wr, "OP_FIELDSTATIC", chunk, offset, true);
+        case OP_FIELDDEFINE:
+            return print_constant_op(state, wr, "OP_FIELDDEFINE", chunk, offset, true);
+        case OP_INVOKEMETHOD:
+            return print_invoke_op(state, wr, "OP_INVOKEMETHOD", chunk, offset);
+        case OP_INVOKESUPER:
+            return print_invoke_op(state, wr, "OP_INVOKESUPER", chunk, offset);
+        case OP_INVOKEIGNORING:
+            return print_invoke_op(state, wr, "OP_INVOKEIGNORING", chunk, offset);
+        case OP_INVOKESUPERIGNORING:
+            return print_invoke_op(state, wr, "OP_INVOKESUPERIGNORING", chunk, offset);
+        case OP_CLASSINHERIT:
+            return print_simple_op(state, wr, "OP_CLASSINHERIT", offset);
+        case OP_ISCLASS:
+            return print_simple_op(state, wr, "OP_ISCLASS", offset);
+        case OP_GETSUPERMETHOD:
+            return print_constant_op(state, wr, "OP_GETSUPERMETHOD", chunk, offset, true);
         case OP_VARARG:
             return print_byte_op(state, wr, "OP_VARARG", chunk, offset);
-        case OP_REFERENCE_FIELD:
-            return print_simple_op(state, wr, "OP_REFERENCE_FIELD", offset);
-        case OP_REFERENCE_UPVALUE:
-            return print_byte_op(state, wr, "OP_REFERENCE_UPVALUE", chunk, offset);
-        case OP_REFERENCE_PRIVATE:
-            return print_short_op(state, wr, "OP_REFERENCE_PRIVATE", chunk, offset);
-        case OP_REFERENCE_LOCAL:
-            return print_short_op(state, wr, "OP_REFERENCE_LOCAL", chunk, offset);
-        case OP_REFERENCE_GLOBAL:
-            return print_constant_op(state, wr, "OP_REFERENCE_GLOBAL", chunk, offset, true);
-        case OP_SET_REFERENCE:
-            return print_simple_op(state, wr, "OP_SET_REFERENCE", offset);
+        case OP_REFFIELD:
+            return print_simple_op(state, wr, "OP_REFFIELD", offset);
+        case OP_REFUPVAL:
+            return print_byte_op(state, wr, "OP_REFUPVAL", chunk, offset);
+        case OP_REFPRIVATE:
+            return print_short_op(state, wr, "OP_REFPRIVATE", chunk, offset);
+        case OP_REFLOCAL:
+            return print_short_op(state, wr, "OP_REFLOCAL", chunk, offset);
+        case OP_REFGLOBAL:
+            return print_constant_op(state, wr, "OP_REFGLOBAL", chunk, offset, true);
+        case OP_REFSET:
+            return print_simple_op(state, wr, "OP_REFSET", offset);
         default:
             {
                 tin_writer_writeformat(wr, "Unknown opcode %d\n", instruction);
