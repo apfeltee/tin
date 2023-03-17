@@ -4,7 +4,7 @@
 
 enum TinOpCode
 {
-#define OPCODE(name, effect) OP_##name,
+#define OPCODE(name, effect) name,
 #include "opcodes.inc"
 #undef OPCODE
 };

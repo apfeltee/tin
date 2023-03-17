@@ -159,16 +159,16 @@ size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offs
             return print_constant_op(state, wr, "OP_POP_LOCALS", chunk, offset, true);
         case OP_RETURN:
             return print_simple_op(state, wr, "OP_RETURN", offset);
-        case OP_CONSTANT:
-            return print_constant_op(state, wr, "OP_CONSTANT", chunk, offset, false);
-        case OP_CONSTANT_LONG:
-            return print_constant_op(state, wr, "OP_CONSTANT_LONG", chunk, offset, true);
-        case OP_TRUE:
-            return print_simple_op(state, wr, "OP_TRUE", offset);
-        case OP_FALSE:
-            return print_simple_op(state, wr, "OP_FALSE", offset);
-        case OP_NULL:
-            return print_simple_op(state, wr, "OP_NULL", offset);
+        case OP_CONSTVALUE:
+            return print_constant_op(state, wr, "OP_CONSTVALUE", chunk, offset, false);
+        case OP_CONSTLONG:
+            return print_constant_op(state, wr, "OP_CONSTLONG", chunk, offset, true);
+        case OP_VALTRUE:
+            return print_simple_op(state, wr, "OP_VALTRUE", offset);
+        case OP_VALFALSE:
+            return print_simple_op(state, wr, "OP_VALFALSE", offset);
+        case OP_VALNULL:
+            return print_simple_op(state, wr, "OP_VALNULL", offset);
         case OP_NEGATE:
             return print_simple_op(state, wr, "OP_NEGATE", offset);
         case OP_NOT:
@@ -275,21 +275,21 @@ size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offs
         case OP_CLASS:
             return print_constant_op(state, wr, "OP_CLASS", chunk, offset, true);
 
-        case OP_GET_FIELD:
-            return print_simple_op(state, wr, "OP_GET_FIELD", offset);
-        case OP_SET_FIELD:
-            return print_simple_op(state, wr, "OP_SET_FIELD", offset);
+        case OP_FIELDGET:
+            return print_simple_op(state, wr, "OP_FIELDGET", offset);
+        case OP_FIELDSET:
+            return print_simple_op(state, wr, "OP_FIELDSET", offset);
 
         case OP_SUBSCRIPT_GET:
             return print_simple_op(state, wr, "OP_SUBSCRIPT_GET", offset);
         case OP_SUBSCRIPT_SET:
             return print_simple_op(state, wr, "OP_SUBSCRIPT_SET", offset);
-        case OP_ARRAY:
-            return print_simple_op(state, wr, "OP_ARRAY", offset);
+        case OP_VALARRAY:
+            return print_simple_op(state, wr, "OP_VALARRAY", offset);
         case OP_PUSH_ARRAY_ELEMENT:
             return print_simple_op(state, wr, "OP_PUSH_ARRAY_ELEMENT", offset);
-        case OP_OBJECT:
-            return print_simple_op(state, wr, "OP_OBJECT", offset);
+        case OP_VALOBJECT:
+            return print_simple_op(state, wr, "OP_VALOBJECT", offset);
         case OP_PUSH_OBJECT_FIELD:
             return print_simple_op(state, wr, "OP_PUSH_OBJECT_FIELD", offset);
         case OP_RANGE:

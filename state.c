@@ -430,7 +430,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
     vm = state->vm;
     if(tin_value_isobject(callee))
     {
-        if(tin_vmutil_setexitjump())
+        if(tin_vmintern_setexitjump())
         {
             RETURN_RUNTIME_ERROR();
         }

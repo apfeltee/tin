@@ -263,7 +263,7 @@ static void tin_astemit_emitreturn(TinAstEmitter* emitter, size_t line)
     }
     else
     {
-        tin_astemit_emit2ops(emitter, line, OP_NULL, OP_RETURN);
+        tin_astemit_emit2ops(emitter, line, OP_VALNULL, OP_RETURN);
     }
 }
 
@@ -332,11 +332,11 @@ static size_t tin_astemit_emitconstant(TinAstEmitter* emitter, size_t line, TinV
     constant = tin_chunk_addconst(emitter->state, emitter->chunk, value);
     if(constant < UINT8_MAX)
     {
-        tin_astemit_emitargedop(emitter, line, OP_CONSTANT, constant);
+        tin_astemit_emitargedop(emitter, line, OP_CONSTVALUE, constant);
     }
     else if(constant < UINT16_MAX)
     {
-        tin_astemit_emit1op(emitter, line, OP_CONSTANT_LONG);
+        tin_astemit_emit1op(emitter, line, OP_CONSTLONG);
         tin_astemit_emitshort(emitter, line, constant);
     }
     else
@@ -627,11 +627,11 @@ static bool tin_astemit_doemitliteral(TinAstEmitter* emitter, TinAstExpression* 
     }
     else if(tin_value_isbool(value))
     {
-        tin_astemit_emit1op(emitter, expr->line, tin_value_asbool(value) ? OP_TRUE : OP_FALSE);
+        tin_astemit_emit1op(emitter, expr->line, tin_value_asbool(value) ? OP_VALTRUE : OP_VALFALSE);
     }
     else if(tin_value_isnull(value))
     {
-        tin_astemit_emit1op(emitter, expr->line, OP_NULL);
+        tin_astemit_emit1op(emitter, expr->line, OP_VALNULL);
     }
     else
     {
@@ -930,7 +930,7 @@ static bool tin_astemit_doemitassign(TinAstEmitter* emitter, TinAstExpression* e
         tin_astemit_emitexpression(emitter, getexpr->where);
         tin_astemit_emitexpression(emitter, assignexpr->value);
         tin_astemit_emitconstant(emitter, emitter->lastline, tin_value_fromobject(tin_string_copy(emitter->state, getexpr->name, getexpr->length)));
-        tin_astemit_emit2ops(emitter, emitter->lastline, OP_SET_FIELD, OP_POP);
+        tin_astemit_emit2ops(emitter, emitter->lastline, OP_FIELDSET, OP_POP);
     }
     else if(assignexpr->to->type == TINEXPR_SUBSCRIPT)
     {
@@ -1084,14 +1084,14 @@ static bool tin_astemit_doemitget(TinAstEmitter* emitter, TinAstExpression* expr
         {
             tin_astemit_emitconstant(emitter, emitter->lastline,
                           tin_value_fromobject(tin_string_copy(emitter->state, getexpr->name, getexpr->length)));
-            tin_astemit_emit1op(emitter, emitter->lastline, ref ? OP_REFERENCE_FIELD : OP_GET_FIELD);
+            tin_astemit_emit1op(emitter, emitter->lastline, ref ? OP_REFERENCE_FIELD : OP_FIELDGET);
         }
         tin_astemit_patchjump(emitter, getexpr->jump, emitter->lastline);
     }
     else if(!getexpr->ignemit)
     {
         tin_astemit_emitconstant(emitter, emitter->lastline, tin_value_fromobject(tin_string_copy(emitter->state, getexpr->name, getexpr->length)));
-        tin_astemit_emit1op(emitter, emitter->lastline, ref ? OP_REFERENCE_FIELD : OP_GET_FIELD);
+        tin_astemit_emit1op(emitter, emitter->lastline, ref ? OP_REFERENCE_FIELD : OP_FIELDGET);
     }
     return true;
 }
@@ -1103,7 +1103,7 @@ static bool tin_astemit_doemitset(TinAstEmitter* emitter, TinAstExpression* expr
     tin_astemit_emitexpression(emitter, setexpr->where);
     tin_astemit_emitexpression(emitter, setexpr->value);
     tin_astemit_emitconstant(emitter, emitter->lastline, tin_value_fromobject(tin_string_copy(emitter->state, setexpr->name, setexpr->length)));
-    tin_astemit_emit1op(emitter, emitter->lastline, OP_SET_FIELD);
+    tin_astemit_emit1op(emitter, emitter->lastline, OP_FIELDSET);
     return true;
 }
 
@@ -1162,7 +1162,7 @@ static bool tin_astemit_doemitarray(TinAstEmitter* emitter, TinAstExpression* ex
     size_t i;
     TinAstArrayExpr* arrexpr;
     arrexpr = (TinAstArrayExpr*)expr;
-    tin_astemit_emit1op(emitter, expr->line, OP_ARRAY);
+    tin_astemit_emit1op(emitter, expr->line, OP_VALARRAY);
     for(i = 0; i < arrexpr->values.count; i++)
     {
         tin_astemit_emitexpression(emitter, arrexpr->values.values[i]);
@@ -1176,7 +1176,7 @@ static bool tin_astemit_doemitobject(TinAstEmitter* emitter, TinAstExpression* e
     size_t i;
     TinAstObjectExpr* objexpr;
     objexpr = (TinAstObjectExpr*)expr;
-    tin_astemit_emit1op(emitter, expr->line, OP_OBJECT);
+    tin_astemit_emit1op(emitter, expr->line, OP_VALOBJECT);
     for(i = 0; i < objexpr->values.count; i++)
     {
         tin_astemit_emitexpression(emitter, objexpr->keys.values[i]);
@@ -1260,7 +1260,7 @@ static bool tin_astemit_doemitinterpolation(TinAstEmitter* emitter, TinAstExpres
     size_t i;
     TinAstStrInterExpr* ifexpr;
     ifexpr = (TinAstStrInterExpr*)expr;
-    tin_astemit_emit1op(emitter, expr->line, OP_ARRAY);
+    tin_astemit_emit1op(emitter, expr->line, OP_VALARRAY);
     for(i = 0; i < ifexpr->expressions.count; i++)
     {
         tin_astemit_emitexpression(emitter, ifexpr->expressions.values[i]);
@@ -1302,7 +1302,7 @@ static bool tin_astemit_doemitvarstmt(TinAstEmitter* emitter, TinAstExpression* 
                           tin_astemit_addlocal(emitter, varstmt->name, varstmt->length, expr->line, varstmt->constant);
     if(varstmt->init == NULL)
     {
-        tin_astemit_emit1op(emitter, line, OP_NULL);
+        tin_astemit_emit1op(emitter, line, OP_VALNULL);
     }
     else
     {
@@ -1518,7 +1518,7 @@ static bool tin_astemit_doemitforstmt(TinAstEmitter* emitter, TinAstExpression* 
             varstr = "iter ";
             iterator = tin_astemit_addlocal(emitter, varstr, strlen(varstr), expr->line, false);
             tin_astemit_marklocalinit(emitter, iterator);
-            tin_astemit_emit1op(emitter, emitter->lastline, OP_NULL);
+            tin_astemit_emit1op(emitter, emitter->lastline, OP_VALNULL);
             tin_astemit_emitbyteorshort(emitter, emitter->lastline, OP_SET_LOCAL, OP_SET_LOCAL_LONG, iterator);
         }
         start = emitter->chunk->count;
@@ -1623,7 +1623,7 @@ static bool tin_astemit_doemitreturn(TinAstEmitter* emitter, TinAstExpression* e
     expression = ((TinAstReturnExpr*)expr)->expression;
     if(expression == NULL)
     {
-        tin_astemit_emit1op(emitter, emitter->lastline, OP_NULL);
+        tin_astemit_emit1op(emitter, emitter->lastline, OP_VALNULL);
     }
     else
     {
