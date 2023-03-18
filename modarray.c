@@ -269,6 +269,11 @@ TinValue tin_array_get(TinState* state, TinArray* array, size_t idx)
     return NULL_VALUE;
 }
 
+void tin_array_set(TinState* state, TinArray* array, size_t idx, TinValue val)
+{
+    tin_vallist_set(&array->list, idx, val);
+}
+
 TinArray* tin_array_splice(TinState* state, TinArray* oa, int from, int to)
 {
     size_t i;
@@ -587,15 +592,15 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
     for(i = 0; i < tin_vallist_count(vl); i++)
     {
         string = strings[i];
-        memcpy(chars + index, string->chars, tin_string_getlength(string));
-        chars = sds_appendlen(chars, string->chars, tin_string_getlength(string));
+        memcpy(chars + index, string->data, tin_string_getlength(string));
+        chars = sds_appendlen(chars, string->data, tin_string_getlength(string));
         index += tin_string_getlength(string);
         if(joinee != NULL)
         {
             
             //if((i+1) < vl->count)
             {
-                chars = sds_appendlen(chars, joinee->chars, jlen);
+                chars = sds_appendlen(chars, joinee->data, jlen);
             }
             index += jlen;
         }
@@ -670,6 +675,90 @@ static TinValue objfn_array_pop(TinVM* vm, TinValue instance, size_t argc, TinVa
     return tin_array_pop(vm->state, self);
 }
 
+static TinValue objfn_array_map(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    size_t i;
+    size_t len;
+    TinValue val;
+    TinValue callable;
+    TinValue args[2];
+    TinInterpretResult tr;
+    (void)argc;
+    (void)argv;
+    TinArray* self;
+    if(argc == 0)
+    {
+        tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.map requires a function");
+        return NULL_VALUE;
+    }
+    callable = argv[0];
+    if(!tin_value_iscallablefunction(callable))
+    {
+        tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.map cannot call first argument");
+        return NULL_VALUE;
+    }
+    self = tin_value_asarray(instance);
+    len = tin_array_count(self);
+    for(i=0; i<len; i++)
+    {
+        val = tin_array_get(vm->state, self, i);
+        //TinInterpretResult tin_state_callvalue(TinState *state, TinValue callee, TinValue *argv, uint8_t argc, bool ignfiber);
+        args[0] = val;
+        tr = tin_state_callvalue(vm->state, callable, args, 1, false);
+        if(tr.type != TINSTATE_OK)
+        {
+            tin_state_raiseerror(vm->state, RUNTIME_ERROR, "call failed");
+            return NULL_VALUE;
+        }
+        tin_array_set(vm->state, self, i, tr.result);
+    }
+    return tin_value_fromobject(self);
+}
+
+static TinValue objfn_array_filter(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    size_t i;
+    size_t len;
+    TinValue val;
+    TinValue callable;
+    TinValue args[2];
+    TinInterpretResult tr;
+    (void)argc;
+    (void)argv;
+    TinArray* self;
+    TinArray* newarr;
+    if(argc == 0)
+    {
+        tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.filter requires a function");
+        return NULL_VALUE;
+    }
+    callable = argv[0];
+    if(!tin_value_iscallablefunction(callable))
+    {
+        tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.filter cannot call first argument");
+        return NULL_VALUE;
+    }
+    self = tin_value_asarray(instance);
+    len = tin_array_count(self);
+    newarr = tin_object_makearray(vm->state);
+    for(i=0; i<len; i++)
+    {
+        val = tin_array_get(vm->state, self, i);
+        //TinInterpretResult tin_state_callvalue(TinState *state, TinValue callee, TinValue *argv, uint8_t argc, bool ignfiber);
+        args[0] = val;
+        tr = tin_state_callvalue(vm->state, callable, args, 1, false);
+        if(tr.type != TINSTATE_OK)
+        {
+            tin_state_raiseerror(vm->state, RUNTIME_ERROR, "call failed");
+            return NULL_VALUE;
+        }
+        if(tin_value_asbool(tr.result))
+        {
+            tin_array_push(vm->state, newarr, val);
+        }
+    }
+    return tin_value_fromobject(newarr);
+}
 
 static TinValue objfn_array_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
@@ -705,6 +794,8 @@ void tin_open_array_library(TinState* state)
         tin_class_bindmethod(state, klass, "clone", objfn_array_clone);
         tin_class_bindmethod(state, klass, "toString", objfn_array_tostring);
         tin_class_bindmethod(state, klass, "pop", objfn_array_pop);
+        tin_class_bindmethod(state, klass, "map", objfn_array_map);
+        tin_class_bindmethod(state, klass, "filter", objfn_array_filter);
         tin_class_bindgetset(state, klass, "length", objfn_array_length, NULL, false);
         state->primarrayclass = klass;
     }

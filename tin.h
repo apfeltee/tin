@@ -283,7 +283,7 @@ typedef struct /**/TinModule TinModule;
 typedef struct /**/TinFiber TinFiber;
 typedef struct /**/TinUserdata TinUserdata;
 typedef struct /**/TinChunk TinChunk;
-typedef struct /**/TinTableEntry TinTableEntry;
+typedef struct /**/TinTabEntry TinTabEntry;
 typedef struct /**/TinTable TinTable;
 typedef struct /**/TinFunction TinFunction;
 typedef struct /**/TinUpvalue TinUpvalue;
@@ -482,7 +482,7 @@ struct TinWriter
 };
 
 
-struct TinTableEntry
+struct TinTabEntry
 {
     /* the key of this entry. can be NULL! */
     TinString* key;
@@ -502,7 +502,7 @@ struct TinTable
     int capacity;
 
     /* the actual entries */
-    TinTableEntry* entries;
+    TinTabEntry* entries;
 };
 
 struct TinNumber
@@ -517,7 +517,7 @@ struct TinString
     /* the hash of this string - note that it is only unique to the context! */
     uint32_t hash;
     /* this is handled by sds - use tin_string_getlength to get the length! */
-    char* chars;
+    char* data;
 };
 
 struct TinFunction
@@ -930,7 +930,7 @@ static inline TinString* tin_value_asstring(TinValue v)
 
 static inline char* tin_value_ascstring(TinValue v)
 {
-    return (tin_value_asstring(v)->chars);
+    return (tin_value_asstring(v)->data);
 }
 
 static inline TinFunction* tin_value_asfunction(TinValue v)

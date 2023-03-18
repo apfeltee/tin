@@ -13,6 +13,9 @@
     #define rand_r(v) (*v)
 #endif
 
+static size_t staticrandomdata;
+
+
 static TinValue math_abs(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
@@ -149,110 +152,106 @@ static TinValue math_exp(TinVM* vm, TinValue instance, size_t argc, TinValue* ar
  * Random
  */
 
-static size_t staticrandomdata;
-
 static size_t* extract_random_data(TinState* state, TinValue instance)
 {
+    TinValue data;
     if(tin_value_isclass(instance))
     {
         return &staticrandomdata;
     }
-
-    TinValue data;
-
     if(!tin_table_get(&tin_value_asinstance(instance)->fields, tin_string_copyconst(state, "_data"), &data))
     {
         return 0;
     }
-
     return (size_t*)tin_value_asuserdata(data)->data;
 }
 
 static TinValue random_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TinUserdata* userdata = tin_object_makeuserdata(vm->state, sizeof(size_t), false);
+    size_t* data;
+    size_t number;
+    TinUserdata* userdata;
+    userdata = tin_object_makeuserdata(vm->state, sizeof(size_t), false);
     tin_table_set(vm->state, &tin_value_asinstance(instance)->fields, tin_string_copyconst(vm->state, "_data"), tin_value_fromobject(userdata));
-
-    size_t* data = (size_t*)userdata->data;
-
+    data = (size_t*)userdata->data;
     if(argc == 1)
     {
-        size_t number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
+        number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
         *data = number;
     }
     else
     {
         *data = time(NULL);
     }
-
     return instance;
 }
 
 static TinValue random_setSeed(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    size_t* data = extract_random_data(vm->state, instance);
-
+    size_t* data;
+    size_t number;
+    data = extract_random_data(vm->state, instance);
     if(argc == 1)
     {
-        size_t number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
+        number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
         *data = number;
     }
     else
     {
         *data = time(NULL);
     }
-
     return NULL_VALUE;
 }
 
 static TinValue random_int(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    size_t* data = extract_random_data(vm->state, instance);
-
+    size_t* data;
+    int vmin;
+    int vmax;
+    int bound;
+    data = extract_random_data(vm->state, instance);
     if(argc == 1)
     {
-        int bound = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        bound = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
         return tin_value_makefixednumber(vm->state, rand_r((unsigned int*)data) % bound);
     }
     else if(argc == 2)
     {
-        int min = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
-        int max = (int)tin_value_getnumber(vm, argv, argc, 1, 1);
-
-        if(max - min == 0)
+        vmin = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        vmax = (int)tin_value_getnumber(vm, argv, argc, 1, 1);
+        if(vmax - vmin == 0)
         {
-            return tin_value_makefixednumber(vm->state, max);
+            return tin_value_makefixednumber(vm->state, vmax);
         }
-
-        return tin_value_makefixednumber(vm->state, min + rand_r((unsigned int*)data) % (max - min));
+        return tin_value_makefixednumber(vm->state, vmin + rand_r((unsigned int*)data) % (vmax - vmin));
     }
-
     return tin_value_makefixednumber(vm->state, rand_r((unsigned int*)data));
 }
 
 static TinValue random_float(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    size_t* data = extract_random_data(vm->state, instance);
-    double value = (double)rand_r((unsigned int*)data) / RAND_MAX;
-
+    size_t* data;
+    int vmin;
+    int vmax;
+    int bound;
+    double value;
+    data = extract_random_data(vm->state, instance);
+    value = (double)rand_r((unsigned int*)data) / RAND_MAX;
     if(argc == 1)
     {
-        int bound = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        bound = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
         return tin_value_makefloatnumber(vm->state, value * bound);
     }
     else if(argc == 2)
     {
-        int min = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
-        int max = (int)tin_value_getnumber(vm, argv, argc, 1, 1);
-
-        if(max - min == 0)
+        vmin = (int)tin_value_getnumber(vm, argv, argc, 0, 0);
+        vmax = (int)tin_value_getnumber(vm, argv, argc, 1, 1);
+        if(vmax - vmin == 0)
         {
-            return tin_value_makefloatnumber(vm->state, max);
+            return tin_value_makefloatnumber(vm->state, vmax);
         }
-
-        return tin_value_makefloatnumber(vm->state, min + value * (max - min));
+        return tin_value_makefloatnumber(vm->state, vmin + value * (vmax - vmin));
     }
-
     return tin_value_makefloatnumber(vm->state, value);
 }
 
@@ -275,49 +274,63 @@ static TinValue random_chance(TinVM* vm, TinValue instance, size_t argc, TinValu
     return FALSE_VALUE;
 }
 
+static TinValue pickrand_map(TinVM* vm, int randoffset, TinValue* av0)
+{
+    size_t i;
+    size_t fidx;
+    size_t target;
+    size_t length;
+    size_t capacity;
+    TinMap* map;
+    (void)vm;
+    map = tin_value_asmap(*av0);
+    length = map->values.count;
+    capacity = map->values.capacity;
+    if(length == 0)
+    {
+        return NULL_VALUE;
+    }
+    target = randoffset % length;
+    fidx = 0;
+    for(i = 0; i < capacity; i++)
+    {
+        if(map->values.entries[i].key != NULL)
+        {
+            if(fidx == target)
+            {
+                return map->values.entries[i].value;
+            }
+            fidx++;
+        }
+    }
+    return NULL_VALUE;
+}
+
+static TinValue pickrand_array(TinVM* vm, int randoffset, TinValue* av0)
+{
+    TinArray* array;
+    (void)vm;
+    array = tin_value_asarray(*av0);
+    if(tin_vallist_count(&array->list) == 0)
+    {
+        return NULL_VALUE;
+    }
+    return tin_vallist_get(&array->list, randoffset % tin_vallist_count(&array->list));
+}
+
 static TinValue random_pick(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    int value = rand_r((unsigned int*)extract_random_data(vm->state, instance));
-
+    int randoffset;
+    randoffset = rand_r((unsigned int*)extract_random_data(vm->state, instance));
     if(argc == 1)
     {
         if(tin_value_isarray(argv[0]))
         {
-            TinArray* array = tin_value_asarray(argv[0]);
-
-            if(tin_vallist_count(&array->list) == 0)
-            {
-                return NULL_VALUE;
-            }
-
-            return tin_vallist_get(&array->list, value % tin_vallist_count(&array->list));
+            return pickrand_array(vm, randoffset, &argv[0]);
         }
         else if(tin_value_ismap(argv[0]))
         {
-            TinMap* map = tin_value_asmap(argv[0]);
-            size_t length = map->values.count;
-            size_t capacity = map->values.capacity;
-
-            if(length == 0)
-            {
-                return NULL_VALUE;
-            }
-
-            size_t target = value % length;
-            size_t index = 0;
-
-            for(size_t i = 0; i < capacity; i++)
-            {
-                if(map->values.entries[i].key != NULL)
-                {
-                    if(index == target)
-                    {
-                        return map->values.entries[i].value;
-                    }
-
-                    index++;
-                }
-            }
+            return pickrand_map(vm, randoffset, &argv[0]);
         }
         else
         {
@@ -326,7 +339,7 @@ static TinValue random_pick(TinVM* vm, TinValue instance, size_t argc, TinValue*
     }
     else
     {
-        return argv[value % argc];
+        return argv[randoffset % argc];
     }
 
     return NULL_VALUE;

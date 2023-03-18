@@ -126,7 +126,7 @@ int tin_ustring_length(TinString* string)
     length = 0;
     for(i = 0; i < tin_string_getlength(string);)
     {
-        i += tin_util_decodenumbytes(string->chars[i]);
+        i += tin_util_decodenumbytes(string->data[i]);
         length++;
     }
     return length;
@@ -140,10 +140,10 @@ TinString* tin_ustring_codepointat(TinState* state, TinString* string, uint32_t 
     {
         return NULL;
     }
-    codepoint = tin_ustring_decode((uint8_t*)string->chars + index, tin_string_getlength(string) - index);
+    codepoint = tin_ustring_decode((uint8_t*)string->data + index, tin_string_getlength(string) - index);
     if(codepoint == -1)
     {
-        bytes[0] = string->chars[index];
+        bytes[0] = string->data[index];
         bytes[1] = '\0';
         return tin_string_copy(state, bytes, 1);
     }
@@ -173,7 +173,7 @@ TinString* tin_ustring_fromrange(TinState* state, TinString* source, int start, 
     uint8_t* to;
     uint8_t* from;
     char* bytes;
-    from = (uint8_t*)source->chars;
+    from = (uint8_t*)source->data;
     length = 0;
     for(i = 0; i < count; i++)
     {
@@ -316,18 +316,18 @@ TinString* tin_string_makeempty(TinState* state, size_t length, bool reuse)
     string = (TinString*)tin_gcmem_allocobject(state, sizeof(TinString), TINTYPE_STRING, false);
     if(!reuse)
     {
-        string->chars = sds_makeempty();
+        string->data = sds_makeempty();
         /* reserving the required space may reduce number of allocations */
-        string->chars = sds_allocroomfor(string->chars, length);
+        string->data = sds_allocroomfor(string->data, length);
     }
-    //string->chars = NULL;
+    //string->data = NULL;
     string->hash = 0;
     return string;
 }
 
 /*
 * if given $chars was alloc'd via sds, then only a TinString instance is created, without initializing
-* string->chars.
+* string->data.
 * if it was not, and not scheduled for reuse, then first an empty sds string is created,
 * and $chars is appended, and finally, $chars is freed.
 * NB. do *not* actually allocate any sds instance here - this is already done in tin_string_makeempty().
@@ -338,15 +338,15 @@ TinString* tin_string_makelen(TinState* state, char* chars, size_t length, uint3
     string = tin_string_makeempty(state, length, reuse);
     if(wassds && reuse)
     {
-        string->chars = chars;
+        string->data = chars;
     }
     else
     {
         /*
-        * string->chars is initialized in tin_string_makeempty(),
+        * string->data is initialized in tin_string_makeempty(),
         * as an empty string!
         */
-        string->chars = sds_appendlen(string->chars, chars, length);
+        string->data = sds_appendlen(string->data, chars, length);
     }
     string->hash = hash;
     if(!wassds)
@@ -413,41 +413,41 @@ TinString* tin_string_copy(TinState* state, const char* chars, size_t length)
 
 const char* tin_string_getdata(TinString* ls)
 {
-    return ls->chars;
+    return ls->data;
 }
 
 size_t tin_string_getlength(TinString* ls)
 {
-    if(ls->chars == NULL)
+    if(ls->data == NULL)
     {
         return 0;
     }
-    return sds_getlength(ls->chars);
+    return sds_getlength(ls->data);
 }
 
 void tin_string_appendlen(TinString* ls, const char* s, size_t len)
 {
     if(len > 0)
     {
-        if(ls->chars == NULL)
+        if(ls->data == NULL)
         {
-            ls->chars = sds_makelength(s, len);
+            ls->data = sds_makelength(s, len);
         }
         else
         {
-            ls->chars = sds_appendlen(ls->chars, s, len);
+            ls->data = sds_appendlen(ls->data, s, len);
         }
     }
 }
 
 void tin_string_appendobj(TinString* ls, TinString* other)
 {
-    tin_string_appendlen(ls, other->chars, tin_string_getlength(other));
+    tin_string_appendlen(ls, other->data, tin_string_getlength(other));
 }
 
 void tin_string_appendchar(TinString* ls, char ch)
 {
-    ls->chars = sds_appendlen(ls->chars, (const char*)&ch, 1);
+    ls->data = sds_appendlen(ls->data, (const char*)&ch, 1);
 }
 
 TinValue tin_string_numbertostring(TinState* state, double value)
@@ -505,7 +505,7 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                     if(strval != NULL)
                     {
                         length = strlen(strval);
-                        result->chars = sds_appendlen(result->chars, strval, length);
+                        result->data = sds_appendlen(result->data, strval, length);
                     }
                     else
                     {
@@ -528,10 +528,10 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                     }
                     if(string != NULL)
                     {
-                        length = sds_getlength(string->chars);
+                        length = sds_getlength(string->data);
                         if(length > 0)
                         {
-                            result->chars = sds_appendlen(result->chars, string->chars, length);
+                            result->data = sds_appendlen(result->data, string->data, length);
                         }
                     }
                     else
@@ -543,10 +543,10 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
             case '#':
                 {
                     string = tin_value_asstring(tin_string_numbertostring(state, va_arg(arglist, double)));
-                    length = sds_getlength(string->chars);
+                    length = sds_getlength(string->data);
                     if(length > 0)
                     {
-                        result->chars = sds_appendlen(result->chars, string->chars, length);
+                        result->data = sds_appendlen(result->data, string->data, length);
                     }
                 }
                 break;
@@ -554,13 +554,13 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                 {
                     defaultendingcopying:
                     ch = *c;
-                    result->chars = sds_appendlen(result->chars, &ch, 1);
+                    result->data = sds_appendlen(result->data, &ch, 1);
                 }
                 break;
         }
     }
     va_end(arglist);
-    result->hash = tin_util_hashstring(result->chars, tin_string_getlength(result));
+    result->hash = tin_util_hashstring(result->data, tin_string_getlength(result));
     tin_state_regstring(state, result);
     state->gcallow = wasallowed;
     return tin_value_fromobject(result);
@@ -573,7 +573,7 @@ bool tin_string_equal(TinState* state, TinString* a, TinString* b)
     {
         return false;
     }
-    return (sds_compare(a->chars, b->chars) == 0);
+    return (sds_compare(a->data, b->data) == 0);
 }
 
 TinValue util_invalid_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv);
@@ -631,8 +631,8 @@ static TinValue objfn_string_splice(TinVM* vm, TinString* string, int from, int 
     {
         tin_vm_raiseexitingerror(vm, "String.splice argument 'from' is larger than argument 'to'");
     }
-    from = tin_util_ucharoffset(string->chars, from);
-    to = tin_util_ucharoffset(string->chars, to);
+    from = tin_util_ucharoffset(string->data, from);
+    to = tin_util_ucharoffset(string->data, to);
     return tin_value_fromobject(tin_ustring_fromrange(vm->state, string, from, to - from + 1));
 }
 
@@ -661,7 +661,7 @@ static TinValue objfn_string_subscript(TinVM* vm, TinValue instance, size_t argc
             return NULL_VALUE;
         }
     }
-    c = tin_ustring_codepointat(vm->state, string, tin_util_ucharoffset(string->chars, index));
+    c = tin_ustring_codepointat(vm->state, string, tin_util_ucharoffset(string->data, index));
     return c == NULL ? NULL_VALUE : tin_value_fromobject(c);
 }
 
@@ -677,8 +677,8 @@ static TinValue objfn_string_compare(TinVM* vm, TinValue instance, size_t argc, 
         other = tin_value_asstring(argv[0]);
         if(tin_string_getlength(self) == tin_string_getlength(other))
         {
-            //fprintf(stderr, "string: same length(self=\"%s\" other=\"%s\")... strncmp=%d\n", self->chars, other->chars, strncmp(self->chars, other->chars, self->length));
-            if(memcmp(self->chars, other->chars, tin_string_getlength(self)) == 0)
+            //fprintf(stderr, "string: same length(self=\"%s\" other=\"%s\")... strncmp=%d\n", self->data, other->data, strncmp(self->data, other->data, self->length));
+            if(memcmp(self->data, other->data, tin_string_getlength(self)) == 0)
             {
                 return TRUE_VALUE;
             }
@@ -699,12 +699,12 @@ static TinValue objfn_string_compare(TinVM* vm, TinValue instance, size_t argc, 
 
 static TinValue objfn_string_less(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->chars, tin_value_checkstring(vm, argv, argc, 0)) < 0);
+    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->data, tin_value_checkstring(vm, argv, argc, 0)) < 0);
 }
 
 static TinValue objfn_string_greater(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->chars, tin_value_checkstring(vm, argv, argc, 0)) > 0);
+    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->data, tin_value_checkstring(vm, argv, argc, 0)) > 0);
 }
 
 static TinValue objfn_string_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -721,7 +721,7 @@ static TinValue objfn_string_tonumber(TinVM* vm, TinValue instance, size_t argc,
     (void)vm;
     (void)argc;
     (void)argv;
-    result = strtod(tin_value_asstring(instance)->chars, NULL);
+    result = strtod(tin_value_asstring(instance)->data, NULL);
     if(errno == ERANGE)
     {
         errno = 0;
@@ -742,7 +742,7 @@ static TinValue objfn_string_touppercase(TinVM* vm, TinValue instance, size_t ar
     buffer = TIN_ALLOCATE(vm->state, sizeof(char), tin_string_getlength(string) + 1);
     for(i = 0; i < tin_string_getlength(string); i++)
     {
-        buffer[i] = (char)toupper(string->chars[i]);
+        buffer[i] = (char)toupper(string->data[i]);
     }
     buffer[i] = 0;
     rt = tin_string_take(vm->state, buffer, tin_string_getlength(string), false);
@@ -761,7 +761,7 @@ static TinValue objfn_string_tolowercase(TinVM* vm, TinValue instance, size_t ar
     buffer = TIN_ALLOCATE(vm->state, sizeof(char), tin_string_getlength(string) + 1);
     for(i = 0; i < tin_string_getlength(string); i++)
     {
-        buffer[i] = (char)tolower(string->chars[i]);
+        buffer[i] = (char)tolower(string->data[i]);
     }
     buffer[i] = 0;
     rt = tin_string_take(vm->state, buffer, tin_string_getlength(string), false);
@@ -776,7 +776,7 @@ static TinValue objfn_string_tobyte(TinVM* vm, TinValue instance, size_t argc, T
     (void)argc;
     (void)argv;
     selfstr = tin_value_asstring(instance);
-    iv = tin_ustring_decode((const uint8_t*)selfstr->chars, tin_string_getlength(selfstr));
+    iv = tin_ustring_decode((const uint8_t*)selfstr->data, tin_string_getlength(selfstr));
     return tin_value_makefixednumber(vm->state, iv);
 }
 
@@ -793,7 +793,7 @@ static TinValue objfn_string_contains(TinVM* vm, TinValue instance, size_t argc,
     {
         return TRUE_VALUE;
     }
-    return tin_value_makebool(vm->state, strstr(string->chars, sub->chars) != NULL);
+    return tin_value_makebool(vm->state, strstr(string->data, sub->data) != NULL);
 }
 
 static TinValue objfn_string_startswith(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -813,7 +813,7 @@ static TinValue objfn_string_startswith(TinVM* vm, TinValue instance, size_t arg
     }
     for(i = 0; i < tin_string_getlength(sub); i++)
     {
-        if(sub->chars[i] != string->chars[i])
+        if(sub->data[i] != string->data[i])
         {
             return FALSE_VALUE;
         }
@@ -840,7 +840,7 @@ static TinValue objfn_string_endswith(TinVM* vm, TinValue instance, size_t argc,
     start = tin_string_getlength(string) - tin_string_getlength(sub);
     for(i = 0; i < tin_string_getlength(sub); i++)
     {
-        if(sub->chars[i] != string->chars[i + start])
+        if(sub->data[i] != string->data[i + start])
         {
             return FALSE_VALUE;
         }
@@ -868,7 +868,7 @@ static TinValue objfn_string_replace(TinVM* vm, TinValue instance, size_t argc, 
     bufferlength = 0;
     for(i = 0; i < tin_string_getlength(string); i++)
     {
-        if(strncmp(string->chars + i, what->chars, tin_string_getlength(what)) == 0)
+        if(strncmp(string->data + i, what->data, tin_string_getlength(what)) == 0)
         {
             i += tin_string_getlength(what) - 1;
             bufferlength += tin_string_getlength(with);
@@ -882,15 +882,15 @@ static TinValue objfn_string_replace(TinVM* vm, TinValue instance, size_t argc, 
     buffer = TIN_ALLOCATE(vm->state, sizeof(char), bufferlength+1);
     for(i = 0; i < tin_string_getlength(string); i++)
     {
-        if(strncmp(string->chars + i, what->chars, tin_string_getlength(what)) == 0)
+        if(strncmp(string->data + i, what->data, tin_string_getlength(what)) == 0)
         {
-            memcpy(buffer + bufferindex, with->chars, tin_string_getlength(with));
+            memcpy(buffer + bufferindex, with->data, tin_string_getlength(with));
             bufferindex += tin_string_getlength(with);
             i += tin_string_getlength(what) - 1;
         }
         else
         {
-            buffer[bufferindex] = string->chars[i];
+            buffer[bufferindex] = string->data[i];
             bufferindex++;
         }
     }
@@ -911,7 +911,7 @@ static TinValue objfn_string_byteat(TinVM* vm, TinValue instance, size_t argc, T
 {
     int idx;
     idx = tin_value_checknumber(vm, argv, argc, 0);
-    return tin_value_makefixednumber(vm->state, tin_value_asstring(instance)->chars[idx]);
+    return tin_value_makefixednumber(vm->state, tin_value_asstring(instance)->data[idx]);
 }
 
 static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -923,7 +923,7 @@ static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, 
     findme = -1;
     if(tin_value_isstring(argv[0]))
     {
-        findme = tin_value_checkobjstring(vm, argv, argc, 0)->chars[0];
+        findme = tin_value_checkobjstring(vm, argv, argc, 0)->data[0];
     }
     else
     {
@@ -937,7 +937,7 @@ static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, 
     len = tin_string_getlength(self);
     for(i=0; i<len; i++)
     {
-        if(self->chars[i] == findme)
+        if(self->data[i] == findme)
         {
             return tin_value_makefixednumber(vm->state, i);
         }
@@ -979,10 +979,9 @@ static TinValue objfn_string_iterator(TinVM* vm, TinValue instance, size_t argc,
         {
             return NULL_VALUE;
         }
-    } while((string->chars[index] & 0xc0) == 0x80);
+    } while((string->data[index] & 0xc0) == 0x80);
     return tin_value_makefixednumber(vm->state, index);
 }
-
 
 static TinValue objfn_string_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
@@ -996,7 +995,6 @@ static TinValue objfn_string_iteratorvalue(TinVM* vm, TinValue instance, size_t 
     }
     return tin_value_fromobject(tin_ustring_codepointat(vm->state, string, index));
 }
-
 
 bool check_fmt_arg(TinVM* vm, char* buf, size_t ai, size_t argc, TinValue* argv, const char* fmttext)
 {
@@ -1035,10 +1033,10 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
     for(i=0; i<selflen; i++)
     {
         pch = ch;
-        ch = selfstr->chars[i];
+        ch = selfstr->data[i];
         if(i <= selflen)
         {
-            nch = selfstr->chars[i + 1];
+            nch = selfstr->data[i + 1];
         }
         if(ch == '%')
         {
@@ -1058,7 +1056,7 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
                             {
                                 return NULL_VALUE;
                             }
-                            buf = sds_appendlen(buf, tin_value_asstring(argv[ai])->chars, tin_string_getlength(tin_value_asstring(argv[ai])));
+                            buf = sds_appendlen(buf, tin_value_asstring(argv[ai])->data, tin_string_getlength(tin_value_asstring(argv[ai])));
                         }
                         break;
                     case 'd':
@@ -1118,6 +1116,59 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
     return rtv;
 }
 
+static TinValue objfn_string_split(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    size_t i;
+    int cnt;
+    sdstring_t* sres;
+    TinValue needleval;
+    TinString* ts;
+    TinString* string;
+    TinString* needlestr;
+    TinArray* res;
+    needlestr = NULL;
+    string = tin_value_asstring(instance);
+    if(argc > 0)
+    {
+        needleval = argv[0];
+        if(tin_value_isstring(needleval))
+        {
+            needlestr = tin_value_asstring(needleval);
+        }
+        else
+        {
+            tin_state_raiseerror(vm->state, RUNTIME_ERROR, "String.split() first argument must be a string");
+            return NULL_VALUE;
+        }
+    }
+    res = tin_object_makearray(vm->state);
+    if(needlestr == NULL)
+    {
+        for(i=0; i<tin_string_getlength(string); i++)
+        {
+            ts = tin_string_copy(vm->state, &string->data[i], 1);
+            tin_array_push(vm->state, res, tin_value_fromobject(ts));
+        }
+    }
+    else
+    {
+        sres = sds_splitlen(string->data, tin_string_getlength(string), needlestr->data, tin_string_getlength(needlestr), &cnt);
+        if((sres == NULL) || (cnt < 0))
+        {
+            tin_state_raiseerror(vm->state, RUNTIME_ERROR, "String.split() failed in sds_splitlen()");
+            return NULL_VALUE;
+        }
+        for(i=0; i<(size_t)cnt; i++)
+        {
+            ts = tin_string_copy(vm->state, sres[i], sds_getlength(sres[i]));
+            tin_array_push(vm->state, res, tin_value_fromobject(ts));
+        }
+        sds_freesplitres(sres, cnt);
+    }
+    return tin_value_fromobject(res);
+}
+
+
 void tin_open_string_library(TinState* state)
 {
     {
@@ -1133,6 +1184,17 @@ void tin_open_string_library(TinState* state)
             tin_class_bindmethod(state, klass, ">", objfn_string_greater);
             tin_class_bindmethod(state, klass, "==", objfn_string_compare);
             tin_class_bindmethod(state, klass, "toString", objfn_string_tostring);
+            tin_class_bindmethod(state, klass, "contains", objfn_string_contains);
+            tin_class_bindmethod(state, klass, "startsWith", objfn_string_startswith);
+            tin_class_bindmethod(state, klass, "endsWith", objfn_string_endswith);
+            tin_class_bindmethod(state, klass, "replace", objfn_string_replace);
+            tin_class_bindmethod(state, klass, "substring", objfn_string_substring);
+            tin_class_bindmethod(state, klass, "iterator", objfn_string_iterator);
+            tin_class_bindmethod(state, klass, "iteratorValue", objfn_string_iteratorvalue);
+            tin_class_bindgetset(state, klass, "length", objfn_string_length, NULL, false);
+            tin_class_bindmethod(state, klass, "format", objfn_string_format);
+            tin_class_bindmethod(state, klass, "split", objfn_string_split);
+
             // js-isms
             tin_class_bindmethod(state, klass, "indexOf", objfn_string_indexof);
             tin_class_bindmethod(state, klass, "charCodeAt", objfn_string_byteat);
@@ -1154,17 +1216,10 @@ void tin_open_string_library(TinState* state)
             }
             {
                 tin_class_bindgetset(state, klass, "toByte", objfn_string_tobyte, NULL, false);
+                // ruby-ism
                 tin_class_bindgetset(state, klass, "ord", objfn_string_tobyte, NULL, false);
             }
-            tin_class_bindmethod(state, klass, "contains", objfn_string_contains);
-            tin_class_bindmethod(state, klass, "startsWith", objfn_string_startswith);
-            tin_class_bindmethod(state, klass, "endsWith", objfn_string_endswith);
-            tin_class_bindmethod(state, klass, "replace", objfn_string_replace);
-            tin_class_bindmethod(state, klass, "substring", objfn_string_substring);
-            tin_class_bindmethod(state, klass, "iterator", objfn_string_iterator);
-            tin_class_bindmethod(state, klass, "iteratorValue", objfn_string_iteratorvalue);
-            tin_class_bindgetset(state, klass, "length", objfn_string_length, NULL, false);
-            tin_class_bindmethod(state, klass, "format", objfn_string_format);
+
             state->primstringclass = klass;
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));

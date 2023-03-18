@@ -173,7 +173,7 @@ TinValue util_invalid_constructor(TinVM *vm, TinValue instance, size_t argc, Tin
 void tin_open_core_library(TinState *state);
 /* modfiber.c */
 TinFiber *tin_object_makefiber(TinState *state, TinModule *module, TinFunction *function);
-void tin_ensure_fiber_stack(TinState *state, TinFiber *fiber, size_t needed);
+void tin_fiber_ensurestack(TinState *state, TinFiber *fiber, size_t needed);
 void tin_open_fiber_library(TinState *state);
 /* modfs.c */
 bool tin_fs_diropen(TinDirReader *rd, const char *path);
@@ -238,13 +238,13 @@ void tin_open_module_library(TinState *state);
 TinUpvalue *tin_object_makeupvalue(TinState *state, TinValue *slot);
 TinModule *tin_object_makemodule(TinState *state, TinString *name);
 TinUserdata *tin_object_makeuserdata(TinState *state, size_t size, bool ispointeronly);
-TinRange *tin_object_makerange(TinState *state, double from, double to);
 TinReference *tin_object_makereference(TinState *state, TinValue *slot);
 void tin_object_destroy(TinState *state, TinObject *object);
 void tin_object_destroylistof(TinState *state, TinObject *objects);
 TinValue tin_function_getname(TinVM *vm, TinValue instance);
 void tin_state_openobjectlibrary(TinState *state);
 /* modrange.c */
+TinRange *tin_object_makerange(TinState *state, double from, double to);
 void tin_open_range_library(TinState *state);
 /* modstring.c */
 char *itoa(int value, char *result, int base);
@@ -382,11 +382,13 @@ bool tin_vm_callvalue(TinExecState *est, TinValue callee, uint8_t argc);
 TinUpvalue *tin_vmintern_captureupvalue(TinState *state, TinValue *local);
 void tin_vmintern_closeupvalues(TinVM *vm, const TinValue *last);
 TinInterpretResult tin_vm_execmodule(TinState *state, TinModule *module);
-int vmutil_numtoint32(TinValue val);
-unsigned int vmutil_numtouint32(TinValue val);
 bool tin_vmdo_call(TinExecState *est, TinValue *finalresult);
 bool tin_vmdo_fieldget(TinExecState *est, TinValue *finalresult);
 bool tin_vmdo_fieldset(TinExecState *est, TinValue *finalresult);
+bool tin_vmdo_range(TinExecState *est, TinValue *finalresult);
+bool tin_vmdo_makeclosure(TinExecState *est, TinValue *finalresult);
+bool tin_vmdo_makeclass(TinExecState *est, TinValue *finalresult);
+bool tin_vmdo_makemethod(TinExecState *est, TinValue *finalresult);
 TinInterpretResult tin_vm_execfiber(TinState *state, TinFiber *fiber);
 bool tin_vmintern_execfiber(TinState *exstate, TinFiber *exfiber, TinValue *finalresult);
 /* writer.c */

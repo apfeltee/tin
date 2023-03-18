@@ -13,16 +13,16 @@ void tin_table_destroy(TinState* state, TinTable* table)
 {
     if(table->capacity > 0)
     {
-        TIN_FREE_ARRAY(state, sizeof(TinTableEntry), table->entries, table->capacity + 1);
+        TIN_FREE_ARRAY(state, sizeof(TinTabEntry), table->entries, table->capacity + 1);
     }
     tin_table_init(state, table);
 }
 
-static TinTableEntry* find_entry(TinTableEntry* entries, int capacity, TinString* key)
+static TinTabEntry* find_entry(TinTabEntry* entries, int capacity, TinString* key)
 {
     uint32_t index;
-    TinTableEntry* entry;
-    TinTableEntry* tombstone;
+    TinTabEntry* entry;
+    TinTabEntry* tombstone;
     index = key->hash % capacity;
     tombstone = NULL;
     while(true)
@@ -51,10 +51,10 @@ static TinTableEntry* find_entry(TinTableEntry* entries, int capacity, TinString
 static void adjust_capacity(TinState* state, TinTable* table, int capacity)
 {
     int i;
-    TinTableEntry* destination;
-    TinTableEntry* entries;
-    TinTableEntry* entry;
-    entries = TIN_ALLOCATE(state, sizeof(TinTableEntry), capacity + 1);
+    TinTabEntry* destination;
+    TinTabEntry* entries;
+    TinTabEntry* entry;
+    entries = TIN_ALLOCATE(state, sizeof(TinTabEntry), capacity + 1);
     for(i = 0; i <= capacity; i++)
     {
         entries[i].key = NULL;
@@ -73,7 +73,7 @@ static void adjust_capacity(TinState* state, TinTable* table, int capacity)
         destination->value = entry->value;
         table->count++;
     }
-    TIN_FREE_ARRAY(state, sizeof(TinTableEntry), table->entries, table->capacity + 1);
+    TIN_FREE_ARRAY(state, sizeof(TinTabEntry), table->entries, table->capacity + 1);
     table->capacity = capacity;
     table->entries = entries;
 }
@@ -82,7 +82,7 @@ bool tin_table_set(TinState* state, TinTable* table, TinString* key, TinValue va
 {
     bool isnew;
     int capacity;
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     if(table->count + 1 > (table->capacity + 1) * TABLE_MAX_LOAD)
     {
         capacity = TIN_GROW_CAPACITY(table->capacity + 1) - 1;
@@ -101,7 +101,7 @@ bool tin_table_set(TinState* state, TinTable* table, TinString* key, TinValue va
 
 bool tin_table_get(TinTable* table, TinString* key, TinValue* value)
 {
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     if(table->count == 0)
     {
         return false;
@@ -117,7 +117,7 @@ bool tin_table_get(TinTable* table, TinString* key, TinValue* value)
 
 bool tin_table_get_slot(TinTable* table, TinString* key, TinValue** value)
 {
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     if(table->count == 0)
     {
         return false;
@@ -133,7 +133,7 @@ bool tin_table_get_slot(TinTable* table, TinString* key, TinValue** value)
 
 bool tin_table_delete(TinTable* table, TinString* key)
 {
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     if(table->count == 0)
     {
         return false;
@@ -151,7 +151,7 @@ bool tin_table_delete(TinTable* table, TinString* key)
 TinString* tin_table_find_string(TinTable* table, const char* chars, size_t length, uint32_t hash)
 {
     uint32_t index;
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     if(table->count == 0)
     {
         return NULL;
@@ -167,7 +167,7 @@ TinString* tin_table_find_string(TinTable* table, const char* chars, size_t leng
                 return NULL;
             }
         }
-        else if(tin_string_getlength(entry->key) == length && entry->key->hash == hash && memcmp(entry->key->chars, chars, length) == 0)
+        else if(tin_string_getlength(entry->key) == length && entry->key->hash == hash && memcmp(entry->key->data, chars, length) == 0)
         {
             return entry->key;
         }
@@ -179,7 +179,7 @@ TinString* tin_table_find_string(TinTable* table, const char* chars, size_t leng
 void tin_table_add_all(TinState* state, TinTable* from, TinTable* to)
 {
     int i;
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     for(i = 0; i <= from->capacity; i++)
     {
         entry = &from->entries[i];
@@ -193,7 +193,7 @@ void tin_table_add_all(TinState* state, TinTable* from, TinTable* to)
 void tin_table_removewhite(TinTable* table)
 {
     int i;
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     for(i = 0; i <= table->capacity; i++)
     {
         entry = &table->entries[i];
@@ -267,7 +267,7 @@ bool tin_map_delete(TinMap* map, TinString* key)
 void tin_map_add_all(TinState* state, TinMap* from, TinMap* to)
 {
     int i;
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     for(i = 0; i <= from->values.capacity; i++)
     {
         entry = &from->values.entries[i];

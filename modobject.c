@@ -47,15 +47,6 @@ TinUserdata* tin_object_makeuserdata(TinState* state, size_t size, bool ispointe
     return userdata;
 }
 
-TinRange* tin_object_makerange(TinState* state, double from, double to)
-{
-    TinRange* range;
-    range = (TinRange*)tin_gcmem_allocobject(state, sizeof(TinRange), TINTYPE_RANGE, false);
-    range->from = from;
-    range->to = to;
-    return range;
-}
-
 TinReference* tin_object_makereference(TinState* state, TinValue* slot)
 {
     TinReference* reference;
@@ -94,9 +85,9 @@ void tin_object_destroy(TinState* state, TinObject* object)
         case TINTYPE_STRING:
             {
                 string = (TinString*)object;
-                //TIN_FREE_ARRAY(state, sizeof(char), string->chars, string->length + 1);
-                sds_destroy(string->chars);
-                string->chars = NULL;
+                //TIN_FREE_ARRAY(state, sizeof(char), string->data, string->length + 1);
+                sds_destroy(string->data);
+                string->data = NULL;
                 TIN_FREE(state, sizeof(TinString), object);
             }
             break;

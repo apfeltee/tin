@@ -4,7 +4,7 @@
 
 void tin_disassemble_module(TinState* state, TinModule* module, const char* source)
 {
-    tin_disassemble_chunk(state, &module->main_function->chunk, module->main_function->name->chars, source);
+    tin_disassemble_chunk(state, &module->main_function->chunk, module->main_function->name->data, source);
 }
 
 void tin_disassemble_chunk(TinState* state, TinChunk* chunk, const char* name, const char* source)
@@ -22,7 +22,7 @@ void tin_disassemble_chunk(TinState* state, TinChunk* chunk, const char* name, c
         if(tin_value_isfunction(value))
         {
             function = tin_value_asfunction(value);
-            tin_disassemble_chunk(state, &function->chunk, function->name->chars, source);
+            tin_disassemble_chunk(state, &function->chunk, function->name->data, source);
         }
     }
     tin_writer_writeformat(&state->debugwriter, "== %s ==\n", name);
@@ -350,7 +350,7 @@ void tin_trace_frame(TinFiber* fiber, TinWriter* wr)
     }
     frame = &fiber->frames[fiber->frame_count - 1];
     tin_writer_writeformat(wr, "== fiber %p f%i %s (expects %i, max %i, added %i, current %i, exits %i) ==\n", fiber,
-           fiber->frame_count - 1, frame->function->name->chars, frame->function->arg_count, frame->function->maxslots,
+           fiber->frame_count - 1, frame->function->name->data, frame->function->arg_count, frame->function->maxslots,
            frame->function->maxslots + (int)(fiber->stack_top - fiber->stack), fiber->stack_capacity, frame->return_to_c);
 #endif
 }

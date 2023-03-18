@@ -133,7 +133,7 @@ size_t tin_ioutil_writestring(FILE* file, TinString* string)
     rt = fwrite(&c, 2, 1, file);
     for(i = 0; i < c; i++)
     {
-        tin_ioutil_writeuint8(file, (uint8_t)string->chars[i] ^ TIN_STRING_KEY);
+        tin_ioutil_writeuint8(file, (uint8_t)string->data[i] ^ TIN_STRING_KEY);
     }
     return (rt + i);
 }
@@ -598,7 +598,7 @@ static TinValue objmethod_file_write(TinVM* vm, TinValue instance, size_t argc, 
     size_t rt;
     TinString* value;
     value = tin_value_tostring(vm->state, argv[0]);
-    rt = fwrite(value->chars, tin_string_getlength(value), 1, ((TinFileData*)tin_util_instancedataget(vm, instance))->handle);
+    rt = fwrite(value->data, tin_string_getlength(value), 1, ((TinFileData*)tin_util_instancedataget(vm, instance))->handle);
     return tin_value_makefixednumber(vm->state, rt);
 }
 
@@ -693,7 +693,7 @@ static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc
         actuallen = 0;
         while((c = fgetc(data->handle)) != EOF)
         {
-            result->chars = sds_appendlen(result->chars, &c, 1);
+            result->data = sds_appendlen(result->data, &c, 1);
             actuallen++;
         }
     }
@@ -702,14 +702,14 @@ static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc
         filelen = ftell(data->handle);
         fseek(data->handle, 0, SEEK_SET);
         result = tin_string_makeempty(vm->state, filelen, false);
-        actuallen = fread(result->chars, sizeof(char), filelen, data->handle);
+        actuallen = fread(result->data, sizeof(char), filelen, data->handle);
         /*
         * after reading, THIS actually sets the correct length.
         * before that, it would be 0.
         */
-        sds_internincrlength(result->chars, actuallen);
+        sds_internincrlength(result->data, actuallen);
     }
-    result->hash = tin_util_hashstring(result->chars, actuallen);
+    result->hash = tin_util_hashstring(result->data, actuallen);
     tin_state_regstring(vm->state, result);
     return tin_value_fromobject(result);
 }
@@ -753,7 +753,7 @@ static TinValue objmethod_file_readamount(TinVM* vm, TinValue instance, size_t a
     /* make room for NUL. this will still be overriden by fread() */
     storelen = storelen + 1;
     result = tin_string_makeempty(vm->state, storelen + 1, false);
-    actuallen = fread(result->chars, sizeof(char), storelen, data->handle);
+    actuallen = fread(result->data, sizeof(char), storelen, data->handle);
     /* if that didn't work, it's an error */
     if(actuallen == 0)
     {
@@ -761,9 +761,9 @@ static TinValue objmethod_file_readamount(TinVM* vm, TinValue instance, size_t a
         return NULL_VALUE;
     }
     /* important: until sds_internincrlength is called, the string is zero-length. */
-    sds_internincrlength(result->chars, actuallen);
+    sds_internincrlength(result->data, actuallen);
     /* insert string into the gc matrix. */
-    result->hash = tin_util_hashstring(result->chars, actuallen);
+    result->hash = tin_util_hashstring(result->data, actuallen);
     tin_state_regstring(vm->state, result);
     return tin_value_fromobject(result);
 }

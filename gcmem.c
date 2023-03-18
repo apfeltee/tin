@@ -73,7 +73,7 @@ void* tin_gcmem_memrealloc(TinState* state, void* pointer, size_t oldsize, size_
 void tin_gcmem_marktable(TinVM* vm, TinTable* table)
 {
     int i;
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     for(i = 0; i <= table->capacity; i++)
     {
         entry = &table->entries[i];

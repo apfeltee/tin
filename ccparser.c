@@ -284,7 +284,7 @@ static void tin_astparser_raisestring(TinAstParser* parser, TinAstToken* token, 
 
 static void tin_astparser_raiseat(TinAstParser* parser, TinAstToken* token, const char* fmt, va_list args)
 {
-    tin_astparser_raisestring(parser, token, tin_vformat_error(parser->state, token->line, fmt, args)->chars);
+    tin_astparser_raisestring(parser, token, tin_vformat_error(parser->state, token->line, fmt, args)->data);
 }
 
 static void tin_astparser_raiseatcurrent(TinAstParser* parser, const char* fmt, ...)
@@ -366,7 +366,7 @@ static void tin_astparser_consume(TinAstParser* parser, TinAstTokType type, cons
     line = parser->previous.type == TINTOK_NEWLINE;
     olen = (line ? 8 : parser->previous.length);
     otext = (line ? "new line" : parser->previous.start);
-    fmt = tin_format_error(parser->state, parser->current.line, "expected %s, got '%.*s'", onerror, olen, otext)->chars;
+    fmt = tin_format_error(parser->state, parser->current.line, "expected %s, got '%.*s'", onerror, olen, otext)->data;
     tin_astparser_raisestring(parser, &parser->current,fmt);
 }
 
@@ -865,7 +865,7 @@ static TinAstExpression* tin_astparser_ruleobject(TinAstParser* parser, bool can
     TinAstExpression* expr;
     TinAstObjectExpr* object;
     (void)canassign;
-
+    (void)ts;
     object = tin_ast_make_objectexpr(parser->state, parser->previous.line);
     tin_astparser_ignorenewlines(parser, true);
     while(!tin_astparser_check(parser, TINTOK_BRACECLOSE))
@@ -886,7 +886,7 @@ static TinAstExpression* tin_astparser_ruleobject(TinAstParser* parser, bool can
             expr = tin_astparser_parseexpression(parser, true);
             tv = parser->previous.value;
             ts = tin_value_asstring(tv);
-            //tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, ts->chars, tin_string_getlength(ts))));
+            //tin_vallist_push(parser->state, &object->keys, tin_value_fromobject(tin_string_copy(parser->state, ts->data, tin_string_getlength(ts))));
             //tin_vallist_push(parser->state, &object->keys, tv);
             tin_exprlist_push(parser->state, &object->keys, expr);
 

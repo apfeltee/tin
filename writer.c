@@ -38,7 +38,7 @@ static void litwr_cb_writeformat(TinWriter* wr, const char* fmt, va_list va)
     if(wr->stringmode)
     {
         ds = (TinString*)wr->uptr;
-        ds->chars = sds_appendvprintf(ds->chars, fmt, va);
+        ds->data = sds_appendvprintf(ds->data, fmt, va);
     }
     else
     {
@@ -218,7 +218,7 @@ void tin_towriter_map(TinState* state, TinWriter* wr, TinMap* map, size_t size)
 {
     bool hadbefore;
     size_t i;
-    TinTableEntry* entry;
+    TinTabEntry* entry;
     tin_writer_writeformat(wr, "(%u) {", (unsigned int)size);
     hadbefore = false;
     if(size > 0)
@@ -236,7 +236,7 @@ void tin_towriter_map(TinState* state, TinWriter* wr, TinMap* map, size_t size)
                 {
                     tin_writer_writestring(wr, " ");
                 }
-                tin_writer_writeescapedstring(wr, entry->key->chars, tin_string_getlength(entry->key), true);
+                tin_writer_writeescapedstring(wr, entry->key->data, tin_string_getlength(entry->key), true);
                 tin_writer_writestring(wr, ": ");
                 if(tin_value_ismap(entry->value) && (map == tin_value_asmap(entry->value)))
                 {
@@ -265,7 +265,7 @@ void tin_towriter_functail(TinState* state, TinWriter* wr, TinString* name, TinM
     (void)state;
     (void)mod;
     tin_writer_writestring(wr, "<function ");
-    tin_writer_writeescapedstring(wr, name->chars, tin_string_getlength(name), true);
+    tin_writer_writeescapedstring(wr, name->data, tin_string_getlength(name), true);
     tin_writer_writeformat(wr, " %s>", suffix);
 }
 
@@ -288,7 +288,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                 {
                     TinString* s;
                     s = tin_value_asstring(value);
-                    tin_writer_writeescapedstring(wr, s->chars, tin_string_getlength(s), withquot);
+                    tin_writer_writeescapedstring(wr, s->data, tin_string_getlength(s), withquot);
                 }
                 break;
             case TINTYPE_FUNCTION:
@@ -300,7 +300,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                 break;
             case TINTYPE_CLOSURE:
                 {
-                    tin_writer_writeformat(wr, "<closure %s>", tin_value_asclosure(value)->function->name->chars);
+                    tin_writer_writeformat(wr, "<closure %s>", tin_value_asclosure(value)->function->name->data);
                 }
                 break;
             case TINTYPE_NATIVEPRIMITIVE:
@@ -341,7 +341,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                     TinModule* mod;
                     mod = tin_value_asmodule(value);
                     tin_writer_writestring(wr, "<module ");
-                    tin_writer_writeescapedstring(wr, mod->name->chars, tin_string_getlength(mod->name), true);
+                    tin_writer_writeescapedstring(wr, mod->name->data, tin_string_getlength(mod->name), true);
                     tin_writer_writestring(wr, ">");
                 }
                 break;
@@ -364,7 +364,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                     TinClass* klass;
                     klass = tin_value_asclass(value);
                     tin_writer_writeformat(wr, "<class ");
-                    tin_writer_writeescapedstring(wr, klass->name->chars, tin_string_getlength(klass->name), true);
+                    tin_writer_writeescapedstring(wr, klass->name->data, tin_string_getlength(klass->name), true);
                     tin_writer_writestring(wr, ">");
                 }
                 break;
@@ -373,7 +373,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                     TinInstance* inst;
                     inst = tin_value_asinstance(value);
                     tin_writer_writestring(wr, "<instance ");
-                    tin_writer_writeescapedstring(wr, inst->klass->name->chars, tin_string_getlength(inst->klass->name), true);
+                    tin_writer_writeescapedstring(wr, inst->klass->name->data, tin_string_getlength(inst->klass->name), true);
                     tin_writer_writestring(wr, ">");
                 }
                 break;
@@ -881,7 +881,7 @@ void tin_astwriter_expr(TinAstWriterState* aw, TinAstExpression* expr)
         case TINEXPR_SUPER:
             {
                 as_type(exsuper, expr, TinAstSuperExpr);
-                tin_writer_writeformat(wr, "super(%.*s)", tin_string_getlength(exsuper->method), exsuper->method->chars);
+                tin_writer_writeformat(wr, "super(%.*s)", tin_string_getlength(exsuper->method), exsuper->method->data);
             }
             break;
         case TINEXPR_RANGE:

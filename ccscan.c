@@ -72,7 +72,7 @@ static TinAstToken tin_astlex_makeerrortoken(TinAstScanner* scanner, const char*
     result = tin_vformat_error(scanner->state, scanner->line, fmt, args);
     va_end(args);
     token.type = TINTOK_ERROR;
-    token.start = result->chars;
+    token.start = result->data;
     token.length = tin_string_getlength(result);
     token.line = scanner->line;
     return token;

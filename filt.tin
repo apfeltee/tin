@@ -1,0 +1,4 @@
+
+var str = "1,2,3,4,5";
+println(str.split(",").filter((s)=>s!="3").map((s) => s+"foo"))
+

@@ -321,7 +321,7 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
             return NULL;
         }        
     }
-    tin_ensure_fiber_stack(state, fiber, callee->maxslots + (int)(fiber->stack_top - fiber->stack));
+    tin_fiber_ensurestack(state, fiber, callee->maxslots + (int)(fiber->stack_top - fiber->stack));
     frame = &fiber->frames[fiber->frame_count++];
     frame->slots = fiber->stack_top;
     tin_vm_push(state->vm, tin_value_fromobject(callee));
@@ -459,7 +459,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
                 RETURN_RUNTIME_ERROR();
             }
         }
-        tin_ensure_fiber_stack(state, fiber, 3 + argc + (int)(fiber->stack_top - fiber->stack));
+        tin_fiber_ensurestack(state, fiber, 3 + argc + (int)(fiber->stack_top - fiber->stack));
         slot = fiber->stack_top;
         tin_vm_push(state->vm, instance);
         if(type != TINTYPE_CLASS)
@@ -762,7 +762,7 @@ TinModule* tin_state_compilemodule(TinState* state, TinString* module_name, cons
             total_t = t = clock();
         }
         tin_exprlist_init(&statements);
-        if(tin_astparser_parsesource(state->parser, module_name->chars, code, &statements))
+        if(tin_astparser_parsesource(state->parser, module_name->data, code, &statements))
         {
             free_statements(state, &statements);
             return NULL;

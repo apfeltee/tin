@@ -46,12 +46,13 @@ TinFiber* tin_object_makefiber(TinState* state, TinModule* module, TinFunction* 
     return fiber;
 }
 
-void tin_ensure_fiber_stack(TinState* state, TinFiber* fiber, size_t needed)
+void tin_fiber_ensurestack(TinState* state, TinFiber* fiber, size_t needed)
 {
     size_t i;
     size_t capacity;
     TinValue* old_stack;
     TinUpvalue* upvalue;
+    TinCallFrame* frame;
     if(fiber->stack_capacity >= needed)
     {
         return;
@@ -64,7 +65,7 @@ void tin_ensure_fiber_stack(TinState* state, TinFiber* fiber, size_t needed)
     {
         for(i = 0; i < fiber->frame_capacity; i++)
         {
-            TinCallFrame* frame = &fiber->frames[i];
+            frame = &fiber->frames[i];
             frame->slots = fiber->stack + (frame->slots - old_stack);
         }
         for(upvalue = fiber->open_upvalues; upvalue != NULL; upvalue = upvalue->next)
@@ -77,21 +78,20 @@ void tin_ensure_fiber_stack(TinState* state, TinFiber* fiber, size_t needed)
 
 static TinValue objfn_fiber_constructor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinFiber* fiber;
+    TinModule* module;
+    TinFunction* function;
     (void)instance;
     if(argc < 1 || !tin_value_isfunction(argv[0]))
     {
         tin_vm_raiseexitingerror(vm, "Fiber constructor expects a function as its argument");
     }
-
-    TinFunction* function = tin_value_asfunction(argv[0]);
-    TinModule* module = vm->fiber->module;
-    TinFiber* fiber = tin_object_makefiber(vm->state, module, function);
-
+    function = tin_value_asfunction(argv[0]);
+    module = vm->fiber->module;
+    fiber = tin_object_makefiber(vm->state, module, function);
     fiber->parent = vm->fiber;
-
     return tin_value_fromobject(fiber);
 }
-
 
 static TinValue objfn_fiber_done(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
@@ -101,7 +101,6 @@ static TinValue objfn_fiber_done(TinVM* vm, TinValue instance, size_t argc, TinV
     return tin_value_makebool(vm->state, util_is_fiber_done(tin_value_asfiber(instance)));
 }
 
-
 static TinValue objfn_fiber_error(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)vm;
@@ -109,7 +108,6 @@ static TinValue objfn_fiber_error(TinVM* vm, TinValue instance, size_t argc, Tin
     (void)argv;
     return tin_value_asfiber(instance)->errorval;
 }
-
 
 static TinValue objfn_fiber_current(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
@@ -119,7 +117,6 @@ static TinValue objfn_fiber_current(TinVM* vm, TinValue instance, size_t argc, T
     return tin_value_fromobject(vm->fiber);
 }
 
-
 static bool objfn_fiber_run(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
@@ -127,16 +124,15 @@ static bool objfn_fiber_run(TinVM* vm, TinValue instance, size_t argc, TinValue*
     return true;
 }
 
-
 static bool objfn_fiber_try(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     util_run_fiber(vm, tin_value_asfiber(instance), argv, argc, true);
     return true;
 }
 
-
 static bool objfn_fiber_yield(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinFiber* fiber;
     (void)instance;
     if(vm->fiber->parent == NULL)
     {
@@ -144,13 +140,10 @@ static bool objfn_fiber_yield(TinVM* vm, TinValue instance, size_t argc, TinValu
         tin_value_tostring(vm->state, argv[0]));
         return true;
     }
-
-    TinFiber* fiber = vm->fiber;
-
+    fiber = vm->fiber;
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
     vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
-
     argv[-1] = NULL_VALUE;
     return true;
 }
@@ -158,6 +151,7 @@ static bool objfn_fiber_yield(TinVM* vm, TinValue instance, size_t argc, TinValu
 
 static bool objfn_fiber_yeet(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinFiber* fiber;
     (void)instance;
     if(vm->fiber->parent == NULL)
     {
@@ -165,17 +159,13 @@ static bool objfn_fiber_yeet(TinVM* vm, TinValue instance, size_t argc, TinValue
         tin_value_tostring(vm->state, argv[0]));
         return true;
     }
-
-    TinFiber* fiber = vm->fiber;
-
+    fiber = vm->fiber;
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
     vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
-
     argv[-1] = NULL_VALUE;
     return true;
 }
-
 
 static bool objfn_fiber_abort(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {

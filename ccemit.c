@@ -94,7 +94,7 @@ static void tin_astemit_raiseerror(TinAstEmitter* emitter, size_t line, const ch
 {
     va_list args;
     va_start(args, fmt);
-    tin_state_raiseerror(emitter->state, COMPILE_ERROR, tin_vformat_error(emitter->state, line, fmt, args)->chars);
+    tin_state_raiseerror(emitter->state, COMPILE_ERROR, tin_vformat_error(emitter->state, line, fmt, args)->data);
     va_end(args);
 }
 
@@ -284,7 +284,7 @@ static TinFunction* tin_compiler_end(TinAstEmitter* emitter, TinString* name)
         function->name = name;
     }
 #ifdef TIN_TRACE_CHUNK
-    tin_disassemble_chunk(&function->chunk, function->name->chars, NULL);
+    tin_disassemble_chunk(&function->chunk, function->name->data, NULL);
 #endif
     return function;
 }
@@ -1225,7 +1225,7 @@ static bool tin_astemit_doemitsuper(TinAstEmitter* emitter, TinAstExpression* ex
     }
     else if(!emitter->classisinheriting)
     {
-        tin_astemit_raiseerror(emitter, expr->line, "'super' cannot be used in class '%s', because it does not have a super class", emitter->classname->chars);
+        tin_astemit_raiseerror(emitter, expr->line, "'super' cannot be used in class '%s', because it does not have a super class", emitter->classname->data);
     }
     superexpr = (TinAstSuperExpr*)expr;
     if(!superexpr->ignemit)
@@ -1716,7 +1716,7 @@ static bool tin_astemit_doemitmethod(TinAstEmitter* emitter, TinAstExpression* e
     TinFunction* function;
     TinAstMethodExpr* mthstmt;
     mthstmt = (TinAstMethodExpr*)expr;
-    constructor = memcmp(mthstmt->name->chars, "constructor", 11) == 0;
+    constructor = memcmp(mthstmt->name->data, "constructor", 11) == 0;
     if(constructor && mthstmt->isstatic)
     {
         tin_astemit_raiseerror(emitter, expr->line, "constructors cannot be static (at least for now)");

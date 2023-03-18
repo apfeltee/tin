@@ -204,7 +204,7 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
         tin_chunk_emitshort(state, chunk, tin_chunk_addconst(state, chunk, tin_value_makestring(state, "toString")));
         tin_chunk_emitbyte(state, chunk, OP_RETURN);
     }
-    tin_ensure_fiber_stack(state, fiber, function->maxslots + (int)(fiber->stack_top - fiber->stack));
+    tin_fiber_ensurestack(state, fiber, function->maxslots + (int)(fiber->stack_top - fiber->stack));
     frame = &fiber->frames[fiber->frame_count++];
     frame->ip = function->chunk.code;
     frame->closure = NULL;
@@ -270,7 +270,7 @@ const char* tin_value_checkstring(TinVM* vm, TinValue* args, uint8_t arg_count, 
         tin_vm_raiseexitingerror(vm, "expected a string as argument #%i, got a %s", (int)id,
                                   id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
-    return tin_value_asstring(args[id])->chars;
+    return tin_value_asstring(args[id])->data;
 }
 
 const char* tin_value_getstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id, const char* def)
@@ -280,7 +280,7 @@ const char* tin_value_getstring(TinVM* vm, TinValue* args, uint8_t arg_count, ui
     {
         return def;
     }
-    return tin_value_asstring(args[id])->chars;
+    return tin_value_asstring(args[id])->data;
 }
 
 TinString* tin_value_checkobjstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)

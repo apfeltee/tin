@@ -1,15 +1,24 @@
 
 #include "priv.h"
 
+TinRange* tin_object_makerange(TinState* state, double from, double to)
+{
+    TinRange* range;
+    range = (TinRange*)tin_gcmem_allocobject(state, sizeof(TinRange), TINTYPE_RANGE, false);
+    range->from = from;
+    range->to = to;
+    return range;
+}
+
 static TinValue objfn_range_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TIN_ENSURE_ARGS(vm->state, 1);
     int number;
     TinRange* range;
-    range = tin_value_asrange(instance);
-    number = range->from;
     (void)vm;
     (void)argc;
+    TIN_ENSURE_ARGS(vm->state, 1);
+    range = tin_value_asrange(instance);
+    number = range->from;
     if(tin_value_isnumber(argv[0]))
     {
         number = tin_value_asnumber(argv[0]);
@@ -32,9 +41,9 @@ static TinValue objfn_range_iteratorvalue(TinVM* vm, TinValue instance, size_t a
 
 static TinValue objfn_range_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinRange* range;
     (void)argc;
     (void)argv;
-    TinRange* range;
     range = tin_value_asrange(instance);
     return tin_string_format(vm->state, "Range(#, #)", range->from, range->to);
 }
@@ -73,10 +82,10 @@ static TinValue objfn_range_set_to(TinVM* vm, TinValue instance, size_t argc, Ti
 
 static TinValue objfn_range_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinRange* range;
     (void)vm;
     (void)argc;
     (void)argv;
-    TinRange* range;
     range = tin_value_asrange(instance);
     return tin_value_makefloatnumber(vm->state, range->to - range->from);
 }

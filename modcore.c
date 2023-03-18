@@ -127,7 +127,7 @@ void util_run_fiber(TinVM* vm, TinFiber* fiber, TinValue* argv, size_t argc, boo
     if(frame->ip == frame->function->chunk.code)
     {
         fiber->arg_count = argc;
-        tin_ensure_fiber_stack(vm->state, fiber, frame->function->maxslots + 1 + (int)(fiber->stack_top - fiber->stack));
+        tin_fiber_ensurestack(vm->state, fiber, frame->function->maxslots + 1 + (int)(fiber->stack_top - fiber->stack));
         frame->slots = fiber->stack_top;
         tin_vm_push(vm, tin_value_fromobject(frame->function));
         vararg = frame->function->vararg;
@@ -312,7 +312,7 @@ static TinValue cfn_print(TinVM* vm, size_t argc, TinValue* argv)
     for(i = 0; i < argc; i++)
     {
         sv = tin_value_tostring(vm->state, argv[i]);
-        written += fwrite(sv->chars, sizeof(char), tin_string_getlength(sv), stdout);
+        written += fwrite(sv->data, sizeof(char), tin_string_getlength(sv), stdout);
     }
     return tin_value_makefixednumber(vm->state, written);
 }
@@ -331,7 +331,7 @@ static bool cfn_eval(TinVM* vm, size_t argc, TinValue* argv)
     (void)argc;
     (void)argv;
     sc = tin_value_checkobjstring(vm, argv, argc, 0);
-    return compile_and_interpret(vm, vm->fiber->module->name, sc->chars, tin_string_getlength(sc));
+    return compile_and_interpret(vm, vm->fiber->module->name, sc->data, tin_string_getlength(sc));
 }
 
 void tin_open_string_library(TinState* state);

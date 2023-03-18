@@ -13,12 +13,10 @@ static TinValue access_private(TinVM* vm, TinMap* map, TinString* name, TinValue
         return NULL_VALUE;
     }
     module = tin_value_asmodule(value);
-
     if(id == name)
     {
         return tin_value_fromobject(module);
     }
-
     if(tin_table_get(&module->private_names->values, name, &value))
     {
         index = (int)tin_value_asnumber(value);
@@ -34,7 +32,6 @@ static TinValue access_private(TinVM* vm, TinMap* map, TinString* name, TinValue
     }
     return NULL_VALUE;
 }
-
 
 static TinValue objfn_module_privates(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
