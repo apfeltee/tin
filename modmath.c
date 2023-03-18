@@ -19,61 +19,61 @@ static size_t staticrandomdata;
 static TinValue math_abs(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, fabs(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, fabs(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_cos(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, cos(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, cos(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_sin(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, sin(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, sin(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_tan(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, tan(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, tan(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_acos(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, acos(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, acos(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_asin(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, asin(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, asin(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_atan(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, atan(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, atan(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_atan2(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, atan2(tin_value_checknumber(vm, argv, argc, 0), tin_value_checknumber(vm, argv, argc, 1)));
+    return tin_value_makefloatnumber(vm->state, atan2(tin_args_checknumber(vm, argv, argc, 0), tin_args_checknumber(vm, argv, argc, 1)));
 }
 
 static TinValue math_floor(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, floor(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, floor(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_ceil(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, ceil(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, ceil(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_round(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -81,10 +81,10 @@ static TinValue math_round(TinVM* vm, TinValue instance, size_t argc, TinValue* 
     int places;
     double value;
     (void)instance;
-    value = tin_value_checknumber(vm, argv, argc, 0);
+    value = tin_args_checknumber(vm, argv, argc, 0);
     if(argc > 1)
     {
-        places = (int)pow(10, tin_value_checknumber(vm, argv, argc, 1));
+        places = (int)pow(10, tin_args_checknumber(vm, argv, argc, 1));
         return tin_value_makefloatnumber(vm->state, round(value * places) / places);
     }
     return tin_value_makefloatnumber(vm->state, round(value));
@@ -93,13 +93,13 @@ static TinValue math_round(TinVM* vm, TinValue instance, size_t argc, TinValue* 
 static TinValue math_min(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, fmin(tin_value_checknumber(vm, argv, argc, 0), tin_value_checknumber(vm, argv, argc, 1)));
+    return tin_value_makefloatnumber(vm->state, fmin(tin_args_checknumber(vm, argv, argc, 0), tin_args_checknumber(vm, argv, argc, 1)));
 }
 
 static TinValue math_max(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, fmax(tin_value_checknumber(vm, argv, argc, 0), tin_value_checknumber(vm, argv, argc, 1)));
+    return tin_value_makefloatnumber(vm->state, fmax(tin_args_checknumber(vm, argv, argc, 0), tin_args_checknumber(vm, argv, argc, 1)));
 }
 
 static TinValue math_mid(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -108,9 +108,9 @@ static TinValue math_mid(TinVM* vm, TinValue instance, size_t argc, TinValue* ar
     double y;
     double z;
     (void)instance;
-    x = tin_value_checknumber(vm, argv, argc, 0);
-    y = tin_value_checknumber(vm, argv, argc, 1);
-    z = tin_value_checknumber(vm, argv, argc, 2);
+    x = tin_args_checknumber(vm, argv, argc, 0);
+    y = tin_args_checknumber(vm, argv, argc, 1);
+    z = tin_args_checknumber(vm, argv, argc, 2);
     if(x > y)
     {
         return tin_value_makefloatnumber(vm->state, fmax(x, fmin(y, z)));
@@ -121,31 +121,31 @@ static TinValue math_mid(TinVM* vm, TinValue instance, size_t argc, TinValue* ar
 static TinValue math_toRadians(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, tin_value_checknumber(vm, argv, argc, 0) * M_PI / 180.0);
+    return tin_value_makefloatnumber(vm->state, tin_args_checknumber(vm, argv, argc, 0) * M_PI / 180.0);
 }
 
 static TinValue math_toDegrees(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, tin_value_checknumber(vm, argv, argc, 0) * 180.0 / M_PI);
+    return tin_value_makefloatnumber(vm->state, tin_args_checknumber(vm, argv, argc, 0) * 180.0 / M_PI);
 }
 
 static TinValue math_sqrt(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, sqrt(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, sqrt(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_log(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, exp(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, exp(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 static TinValue math_exp(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)instance;
-    return tin_value_makefloatnumber(vm->state, exp(tin_value_checknumber(vm, argv, argc, 0)));
+    return tin_value_makefloatnumber(vm->state, exp(tin_args_checknumber(vm, argv, argc, 0)));
 }
 
 /*
@@ -176,7 +176,7 @@ static TinValue random_constructor(TinVM* vm, TinValue instance, size_t argc, Ti
     data = (size_t*)userdata->data;
     if(argc == 1)
     {
-        number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
+        number = (size_t)tin_args_checknumber(vm, argv, argc, 0);
         *data = number;
     }
     else
@@ -193,7 +193,7 @@ static TinValue random_setSeed(TinVM* vm, TinValue instance, size_t argc, TinVal
     data = extract_random_data(vm->state, instance);
     if(argc == 1)
     {
-        number = (size_t)tin_value_checknumber(vm, argv, argc, 0);
+        number = (size_t)tin_args_checknumber(vm, argv, argc, 0);
         *data = number;
     }
     else

@@ -199,7 +199,7 @@ static TinValue objfn_class_iteratorvalue(TinVM* vm, TinValue instance, size_t a
     size_t index;
     size_t mthcap;
     TinClass* klass;
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     klass = tin_value_asclass(instance);
     mthcap = klass->methods.capacity;
     fields = index >= mthcap;

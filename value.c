@@ -223,7 +223,7 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
 }
 
 
-double tin_value_checknumber(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
+double tin_args_checknumber(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
     if(arg_count <= id || !tin_value_isnumber(args[id]))
     {
@@ -243,7 +243,7 @@ double tin_value_getnumber(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t
     return tin_value_asnumber(args[id]);
 }
 
-bool tin_value_checkbool(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
+bool tin_args_checkbool(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
     if(arg_count <= id || !tin_value_isbool(args[id]))
     {
@@ -263,7 +263,7 @@ bool tin_value_getbool(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id,
     return tin_value_asbool(args[id]);
 }
 
-const char* tin_value_checkstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
+const char* tin_args_checkstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
     if(arg_count <= id || !tin_value_isstring(args[id]))
     {
@@ -283,7 +283,7 @@ const char* tin_value_getstring(TinVM* vm, TinValue* args, uint8_t arg_count, ui
     return tin_value_asstring(args[id])->data;
 }
 
-TinString* tin_value_checkobjstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
+TinString* tin_args_checkobjstring(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
     if(arg_count <= id || !tin_value_isstring(args[id]))
     {
@@ -294,7 +294,7 @@ TinString* tin_value_checkobjstring(TinVM* vm, TinValue* args, uint8_t arg_count
     return tin_value_asstring(args[id]);
 }
 
-TinInstance* tin_value_checkinstance(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
+TinInstance* tin_args_checkinstance(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
     if(arg_count <= id || !tin_value_isinstance(args[id]))
     {
@@ -305,7 +305,7 @@ TinInstance* tin_value_checkinstance(TinVM* vm, TinValue* args, uint8_t arg_coun
     return tin_value_asinstance(args[id]);
 }
 
-TinValue* tin_value_checkreference(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
+TinValue* tin_args_checkreference(TinVM* vm, TinValue* args, uint8_t arg_count, uint8_t id)
 {
     if(arg_count <= id || !tin_value_isreference(args[id]))
     {

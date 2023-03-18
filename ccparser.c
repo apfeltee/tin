@@ -406,6 +406,7 @@ static TinAstExpression* tin_astparser_parseprecedence(TinAstParser* parser, Tin
     (void)new_line;
     prevnewline = false;
     previous = parser->previous;
+    tin_astparser_ignorenewlines(parser, true);
     tin_astparser_advance(parser);
     prefix_rule = tin_astparser_getrule(parser->previous.type)->prefix;
     if(prefix_rule == NULL)
@@ -429,6 +430,7 @@ static TinAstExpression* tin_astparser_parseprecedence(TinAstParser* parser, Tin
     tin_astparser_ignorenewlines(parser, ignsemi);
     while(precedence <= tin_astparser_getrule(parser->current.type)->precedence)
     {
+        tin_astparser_ignorenewlines(parser, true);
         tin_astparser_advance(parser);
         infix_rule = tin_astparser_getrule(parser->previous.type)->infix;
         expr = infix_rule(parser, expr, canassign);

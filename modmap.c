@@ -254,6 +254,13 @@ bool tin_map_set(TinState* state, TinMap* map, TinString* key, TinValue value)
     return tin_table_set(state, &map->values, key, value);
 }
 
+bool tin_map_setstr(TinState* state, TinMap* map, const char* str, TinValue value)
+{
+    TinString* ts;
+    ts = tin_string_copy(state, str, strlen(str));
+    return tin_map_set(state, map, ts, value);
+}
+
 bool tin_map_get(TinMap* map, TinString* key, TinValue* value)
 {
     return tin_table_get(&map->values, key, value);
@@ -358,7 +365,7 @@ static TinValue objfn_map_iterator(TinVM* vm, TinValue instance, size_t argc, Ti
 static TinValue objfn_map_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     size_t index;
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     return util_table_iterator_key(&tin_value_asmap(instance)->values, index);
 }
 

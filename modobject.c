@@ -458,7 +458,7 @@ static TinValue objfn_instance_iteratorvalue(TinVM* vm, TinValue instance, size_
 {
     size_t index;
     TinInstance* self;
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     self = tin_value_asinstance(instance);
     return util_table_iterator_key(&self->fields, index);
 }

@@ -1,0 +1,3 @@
+
+println(Dir.read(".").filter((e)=>File.isFile(e)).map((e)=>File.stat(e)))
+

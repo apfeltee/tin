@@ -584,7 +584,7 @@ static TinValue objfn_string_fromcharcode(TinVM* vm, TinValue instance, size_t a
     char ch;
     TinString* s;
     (void)instance;
-    ch = tin_value_checknumber(vm, argv, argc, 0);
+    ch = tin_args_checknumber(vm, argv, argc, 0);
     s = tin_string_copy(vm->state, &ch, 1);
     return tin_value_fromobject(s);
 }
@@ -647,7 +647,7 @@ static TinValue objfn_string_subscript(TinVM* vm, TinValue instance, size_t argc
         return objfn_string_splice(vm, tin_value_asstring(instance), range->from, range->to);
     }
     string = tin_value_asstring(instance);
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     if(argc != 1)
     {
         tin_vm_raiseexitingerror(vm, "cannot modify strings with the subscript op");
@@ -699,12 +699,12 @@ static TinValue objfn_string_compare(TinVM* vm, TinValue instance, size_t argc, 
 
 static TinValue objfn_string_less(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->data, tin_value_checkstring(vm, argv, argc, 0)) < 0);
+    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->data, tin_args_checkstring(vm, argv, argc, 0)) < 0);
 }
 
 static TinValue objfn_string_greater(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->data, tin_value_checkstring(vm, argv, argc, 0)) > 0);
+    return tin_value_makebool(vm->state, strcmp(tin_value_asstring(instance)->data, tin_args_checkstring(vm, argv, argc, 0)) > 0);
 }
 
 static TinValue objfn_string_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -788,7 +788,7 @@ static TinValue objfn_string_contains(TinVM* vm, TinValue instance, size_t argc,
     TinString* sub;
     TinString* string;
     string = tin_value_asstring(instance);
-    sub = tin_value_checkobjstring(vm, argv, argc, 0);
+    sub = tin_args_checkobjstring(vm, argv, argc, 0);
     if(sub == string)
     {
         return TRUE_VALUE;
@@ -802,7 +802,7 @@ static TinValue objfn_string_startswith(TinVM* vm, TinValue instance, size_t arg
     TinString* sub;
     TinString* string;
     string = tin_value_asstring(instance);
-    sub = tin_value_checkobjstring(vm, argv, argc, 0);
+    sub = tin_args_checkobjstring(vm, argv, argc, 0);
     if(sub == string)
     {
         return TRUE_VALUE;
@@ -828,7 +828,7 @@ static TinValue objfn_string_endswith(TinVM* vm, TinValue instance, size_t argc,
     TinString* sub;
     TinString* string;
     string = tin_value_asstring(instance);
-    sub = tin_value_checkobjstring(vm, argv, argc, 0);
+    sub = tin_args_checkobjstring(vm, argv, argc, 0);
     if(sub == string)
     {
         return TRUE_VALUE;
@@ -902,15 +902,15 @@ static TinValue objfn_string_substring(TinVM* vm, TinValue instance, size_t argc
 {
     int to;
     int from;
-    from = tin_value_checknumber(vm, argv, argc, 0);
-    to = tin_value_checknumber(vm, argv, argc, 1);
+    from = tin_args_checknumber(vm, argv, argc, 0);
+    to = tin_args_checknumber(vm, argv, argc, 1);
     return objfn_string_splice(vm, tin_value_asstring(instance), from, to);
 }
 
 static TinValue objfn_string_byteat(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int idx;
-    idx = tin_value_checknumber(vm, argv, argc, 0);
+    idx = tin_args_checknumber(vm, argv, argc, 0);
     return tin_value_makefixednumber(vm->state, tin_value_asstring(instance)->data[idx]);
 }
 
@@ -923,7 +923,7 @@ static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, 
     findme = -1;
     if(tin_value_isstring(argv[0]))
     {
-        findme = tin_value_checkobjstring(vm, argv, argc, 0)->data[0];
+        findme = tin_args_checkobjstring(vm, argv, argc, 0)->data[0];
     }
     else
     {
@@ -931,7 +931,7 @@ static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, 
         {
             return tin_value_makefixednumber(vm->state, -1);
         }
-        findme = tin_value_checknumber(vm, argv, argc, 0);
+        findme = tin_args_checknumber(vm, argv, argc, 0);
     }
     self = tin_value_asstring(instance);
     len = tin_string_getlength(self);
@@ -967,7 +967,7 @@ static TinValue objfn_string_iterator(TinVM* vm, TinValue instance, size_t argc,
         }
         return tin_value_makefixednumber(vm->state, 0);
     }
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     if(index < 0)
     {
         return NULL_VALUE;
@@ -988,7 +988,7 @@ static TinValue objfn_string_iteratorvalue(TinVM* vm, TinValue instance, size_t 
     uint32_t index;
     TinString* string;
     string = tin_value_asstring(instance);
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     if(index == UINT32_MAX)
     {
         return FALSE_VALUE;
@@ -1068,7 +1068,7 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
                             }
                             if(tin_value_isnumber(argv[ai]))
                             {
-                                iv = tin_value_checknumber(vm, argv, argc, ai);
+                                iv = tin_args_checknumber(vm, argv, argc, ai);
                                 buf = sds_appendfmt(buf, "%i", iv);
                             }
                             break;
@@ -1085,7 +1085,7 @@ static TinValue objfn_string_format(TinVM* vm, TinValue instance, size_t argc, T
                                 sds_destroy(buf);
                                 tin_vm_raiseexitingerror(vm, "flag 'c' expects a number");
                             }
-                            iv = tin_value_checknumber(vm, argv, argc, ai);
+                            iv = tin_args_checknumber(vm, argv, argc, ai);
                             /* TODO: both of these use the same amount of memory. but which is faster? */
                             #if 0
                                 buf = sds_appendfmt(buf, "%c", iv);
@@ -1189,6 +1189,7 @@ void tin_open_string_library(TinState* state)
             tin_class_bindmethod(state, klass, "endsWith", objfn_string_endswith);
             tin_class_bindmethod(state, klass, "replace", objfn_string_replace);
             tin_class_bindmethod(state, klass, "substring", objfn_string_substring);
+            tin_class_bindmethod(state, klass, "substr", objfn_string_substring);
             tin_class_bindmethod(state, klass, "iterator", objfn_string_iterator);
             tin_class_bindmethod(state, klass, "iteratorValue", objfn_string_iteratorvalue);
             tin_class_bindgetset(state, klass, "length", objfn_string_length, NULL, false);

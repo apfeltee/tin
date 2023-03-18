@@ -330,7 +330,7 @@ static bool cfn_eval(TinVM* vm, size_t argc, TinValue* argv)
     TinString* sc;
     (void)argc;
     (void)argv;
-    sc = tin_value_checkobjstring(vm, argv, argc, 0);
+    sc = tin_args_checkobjstring(vm, argv, argc, 0);
     return compile_and_interpret(vm, vm->fiber->module->name, sc->data, tin_string_getlength(sc));
 }
 

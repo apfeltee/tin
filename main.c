@@ -318,7 +318,7 @@ int main(int argc, char* argv[])
             {
                 tin_vallist_push(state, &argarray->list, tin_value_makestring(state, fx.positional[i]));
             }
-            tin_state_setglobal(state, tin_string_copyconst(state, "args"), tin_value_fromobject(argarray));
+            tin_state_setglobal(state, tin_string_copyconst(state, "ARGV"), tin_value_fromobject(argarray));
             if(opts.codeline)
             {
                 result = tin_state_execsource(state, "<-e>", opts.codeline, strlen(opts.codeline)).type;

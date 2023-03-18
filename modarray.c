@@ -271,6 +271,7 @@ TinValue tin_array_get(TinState* state, TinArray* array, size_t idx)
 
 void tin_array_set(TinState* state, TinArray* array, size_t idx, TinValue val)
 {
+    (void)state;
     tin_vallist_set(&array->list, idx, val);
 }
 
@@ -323,8 +324,8 @@ static TinValue objfn_array_slice(TinVM* vm, TinValue instance, size_t argc, Tin
 {
     int from;
     int to;
-    from = tin_value_checknumber(vm, argv, argc, 0);
-    to = tin_value_checknumber(vm, argv, argc, 1);
+    from = tin_args_checknumber(vm, argv, argc, 0);
+    to = tin_args_checknumber(vm, argv, argc, 1);
     return objfn_array_splice(vm, tin_value_asarray(instance), from, to);
 }
 
@@ -420,7 +421,7 @@ static TinValue objfn_array_insert(TinVM* vm, TinValue instance, size_t argc, Ti
     TinValList* vl;
     TIN_ENSURE_ARGS(vm->state, 2);
     vl = &tin_value_asarray(instance)->list;
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     if(index < 0)
     {
         index = fmax(0, tin_vallist_count(vl) + index);
@@ -489,7 +490,7 @@ static TinValue objfn_array_remove(TinVM* vm, TinValue instance, size_t argc, Ti
 static TinValue objfn_array_removeat(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int index;
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     if(index < 0)
     {
         return NULL_VALUE;
@@ -540,7 +541,7 @@ static TinValue objfn_array_iteratorvalue(TinVM* vm, TinValue instance, size_t a
 {
     size_t index;
     TinValList* vl;
-    index = tin_value_checknumber(vm, argv, argc, 0);
+    index = tin_args_checknumber(vm, argv, argc, 0);
     vl = &tin_value_asarray(instance)->list;
     if(tin_vallist_count(vl) <= index)
     {

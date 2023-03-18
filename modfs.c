@@ -21,6 +21,7 @@
 
 typedef struct TinFileData TinFileData;
 typedef struct TinStdioHandle TinStdioHandle;
+typedef struct TinFileStat TinFileStat;
 
 struct TinFileData
 {
@@ -37,12 +38,22 @@ struct TinStdioHandle
     bool canwrite;
 };
 
+struct TinFileStat
+{
+    struct stat st;
+    bool isfile;
+    bool isdir;
+};
+
 typedef void(*CleanupFunc)(TinState*, TinUserdata*, bool);
 
 static uint8_t g_tmpbyte;
 static uint16_t g_tmpshort;
 static uint32_t g_tmpint;
 static double g_tmpdouble;
+
+static void tin_ioutil_writechunk(FILE* fh, TinChunk* chunk);
+static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModule* module, TinChunk* chunk);
 
 static void* tin_util_instancedataset(TinVM* vm, TinValue instance, size_t typsz, CleanupFunc cleanup)
 {
@@ -64,22 +75,22 @@ static void* tin_util_instancedataget(TinVM* vm, TinValue instance)
 
 char* tin_util_readfile(const char* path, size_t* dlen)
 {
-    size_t fileSize;
+    size_t fsz;
     char* buffer;
     size_t bytesread;
-    FILE* file;
-    file = fopen(path, "rb");
-    if(file == NULL)
+    FILE* fh;
+    fh = fopen(path, "rb");
+    if(fh == NULL)
     {
         return NULL;
     }
-    fseek(file, 0L, SEEK_END);
-    fileSize = ftell(file);
-    rewind(file);
-    buffer = (char*)malloc(fileSize + 1);
-    bytesread = fread(buffer, sizeof(char), fileSize, file);
+    fseek(fh, 0L, SEEK_END);
+    fsz = ftell(fh);
+    rewind(fh);
+    buffer = (char*)malloc(fsz + 1);
+    bytesread = fread(buffer, sizeof(char), fsz, fh);
     buffer[bytesread] = '\0';
-    fclose(file);
+    fclose(fh);
     *dlen = bytesread;
     return buffer;
 }
@@ -104,80 +115,80 @@ bool tin_fs_direxists(const char* path)
     return false;
 }
 
-size_t tin_ioutil_writeuint8(FILE* file, uint8_t byte)
+size_t tin_ioutil_writeuint8(FILE* fh, uint8_t byte)
 {
-    return fwrite(&byte, sizeof(uint8_t), 1, file);
+    return fwrite(&byte, sizeof(uint8_t), 1, fh);
 }
 
-size_t tin_ioutil_writeuint16(FILE* file, uint16_t byte)
+size_t tin_ioutil_writeuint16(FILE* fh, uint16_t byte)
 {
-    return fwrite(&byte, sizeof(uint16_t), 1, file);
+    return fwrite(&byte, sizeof(uint16_t), 1, fh);
 }
 
-size_t tin_ioutil_writeuint32(FILE* file, uint32_t byte)
+size_t tin_ioutil_writeuint32(FILE* fh, uint32_t byte)
 {
-    return fwrite(&byte, sizeof(uint32_t), 1, file);
+    return fwrite(&byte, sizeof(uint32_t), 1, fh);
 }
 
-size_t tin_ioutil_writedouble(FILE* file, double byte)
+size_t tin_ioutil_writedouble(FILE* fh, double byte)
 {
-    return fwrite(&byte, sizeof(double), 1, file);
+    return fwrite(&byte, sizeof(double), 1, fh);
 }
 
-size_t tin_ioutil_writestring(FILE* file, TinString* string)
+size_t tin_ioutil_writestring(FILE* fh, TinString* string)
 {
     uint16_t i;
     uint16_t c;
     size_t rt;
     c = tin_string_getlength(string);
-    rt = fwrite(&c, 2, 1, file);
+    rt = fwrite(&c, 2, 1, fh);
     for(i = 0; i < c; i++)
     {
-        tin_ioutil_writeuint8(file, (uint8_t)string->data[i] ^ TIN_STRING_KEY);
+        tin_ioutil_writeuint8(fh, (uint8_t)string->data[i] ^ TIN_STRING_KEY);
     }
     return (rt + i);
 }
 
-uint8_t tin_ioutil_readuint8(FILE* file)
+uint8_t tin_ioutil_readuint8(FILE* fh)
 {
     size_t rt;
     (void)rt;
-    rt = fread(&g_tmpbyte, sizeof(uint8_t), 1, file);
+    rt = fread(&g_tmpbyte, sizeof(uint8_t), 1, fh);
     return g_tmpbyte;
 }
 
-uint16_t tin_ioutil_readuint16(FILE* file)
+uint16_t tin_ioutil_readuint16(FILE* fh)
 {
     size_t rt;
     (void)rt;
-    rt = fread(&g_tmpshort, sizeof(uint16_t), 1, file);
+    rt = fread(&g_tmpshort, sizeof(uint16_t), 1, fh);
     return g_tmpshort;
 }
 
-uint32_t tin_ioutil_readuint32(FILE* file)
+uint32_t tin_ioutil_readuint32(FILE* fh)
 {
     size_t rt;
     (void)rt;
-    rt = fread(&g_tmpint, sizeof(uint32_t), 1, file);
+    rt = fread(&g_tmpint, sizeof(uint32_t), 1, fh);
     return g_tmpint;
 }
 
-double tin_ioutil_readdouble(FILE* file)
+double tin_ioutil_readdouble(FILE* fh)
 {
     size_t rt;
     (void)rt;
-    rt = fread(&g_tmpdouble, sizeof(double), 1, file);
+    rt = fread(&g_tmpdouble, sizeof(double), 1, fh);
     return g_tmpdouble;
 }
 
-TinString* tin_ioutil_readstring(TinState* state, FILE* file)
+TinString* tin_ioutil_readstring(TinState* state, FILE* fh)
 {
     size_t rt;
     uint16_t i;
     uint16_t length;
     char* line;
     (void)rt;
-    rt = fread(&length, 2, 1, file);
+    rt = fread(&length, 2, 1, fh);
     if(length < 1)
     {
         return NULL;
@@ -185,57 +196,57 @@ TinString* tin_ioutil_readstring(TinState* state, FILE* file)
     line = (char*)malloc(length + 1);
     for(i = 0; i < length; i++)
     {
-        line[i] = (char)tin_ioutil_readuint8(file) ^ TIN_STRING_KEY;
+        line[i] = (char)tin_ioutil_readuint8(fh) ^ TIN_STRING_KEY;
     }
     return tin_string_take(state, line, length, false);
 }
 
-void tin_emufile_init(TinEmulatedFile* file, const char* source, size_t len)
+void tin_emufile_init(TinEmulatedFile* femu, const char* source, size_t len)
 {
-    file->source = source;
-    file->length = len;
-    file->position = 0;
+    femu->source = source;
+    femu->length = len;
+    femu->position = 0;
 }
 
-uint8_t tin_emufile_readuint8(TinEmulatedFile* file)
+uint8_t tin_emufile_readuint8(TinEmulatedFile* femu)
 {
-    return (uint8_t)file->source[file->position++];
+    return (uint8_t)femu->source[femu->position++];
 }
 
-uint16_t tin_emufile_readuint16(TinEmulatedFile* file)
+uint16_t tin_emufile_readuint16(TinEmulatedFile* femu)
 {
-    return (uint16_t)(tin_emufile_readuint8(file) | (tin_emufile_readuint8(file) << 8u));
+    return (uint16_t)(tin_emufile_readuint8(femu) | (tin_emufile_readuint8(femu) << 8u));
 }
 
-uint32_t tin_emufile_readuint32(TinEmulatedFile* file)
+uint32_t tin_emufile_readuint32(TinEmulatedFile* femu)
 {
     return (uint32_t)(
-        tin_emufile_readuint8(file) |
-        (tin_emufile_readuint8(file) << 8u) |
-        (tin_emufile_readuint8(file) << 16u) |
-        (tin_emufile_readuint8(file) << 24u)
+        tin_emufile_readuint8(femu) |
+        (tin_emufile_readuint8(femu) << 8u) |
+        (tin_emufile_readuint8(femu) << 16u) |
+        (tin_emufile_readuint8(femu) << 24u)
     );
 }
 
-double tin_emufile_readdouble(TinEmulatedFile* file)
+double tin_emufile_readdouble(TinEmulatedFile* femu)
 {
     size_t i;
     double result;
     uint8_t values[8];
     for(i = 0; i < 8; i++)
     {
-        values[i] = tin_emufile_readuint8(file);
+        values[i] = tin_emufile_readuint8(femu);
     }
     memcpy(&result, values, 8);
     return result;
 }
 
-TinString* tin_emufile_readstring(TinState* state, TinEmulatedFile* file)
+TinString* tin_emufile_readstring(TinState* state, TinEmulatedFile* femu)
 {
     uint16_t i;
     uint16_t length;
     char* line;
-    length = tin_emufile_readuint16(file);
+    length = tin_emufile_readuint16(femu);
     if(length < 1)
     {
         return NULL;
@@ -243,79 +254,76 @@ TinString* tin_emufile_readstring(TinState* state, TinEmulatedFile* file)
     line = (char*)malloc(length + 1);
     for(i = 0; i < length; i++)
     {
-        line[i] = (char)tin_emufile_readuint8(file) ^ TIN_STRING_KEY;
+        line[i] = (char)tin_emufile_readuint8(femu) ^ TIN_STRING_KEY;
     }
     return tin_string_take(state, line, length, false);
 }
 
-static void tin_ioutil_writechunk(FILE* file, TinChunk* chunk);
-static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModule* module, TinChunk* chunk);
-
-static void tin_ioutil_writefunction(FILE* file, TinFunction* function)
+static void tin_ioutil_writefunction(FILE* fh, TinFunction* function)
 {
-    tin_ioutil_writechunk(file, &function->chunk);
-    tin_ioutil_writestring(file, function->name);
-    tin_ioutil_writeuint8(file, function->arg_count);
-    tin_ioutil_writeuint16(file, function->upvalue_count);
-    tin_ioutil_writeuint8(file, (uint8_t)function->vararg);
-    tin_ioutil_writeuint16(file, (uint16_t)function->maxslots);
+    tin_ioutil_writechunk(fh, &function->chunk);
+    tin_ioutil_writestring(fh, function->name);
+    tin_ioutil_writeuint8(fh, function->arg_count);
+    tin_ioutil_writeuint16(fh, function->upvalue_count);
+    tin_ioutil_writeuint8(fh, (uint8_t)function->vararg);
+    tin_ioutil_writeuint16(fh, (uint16_t)function->maxslots);
 }
 
-static TinFunction* tin_ioutil_readfunction(TinState* state, TinEmulatedFile* file, TinModule* module)
+static TinFunction* tin_ioutil_readfunction(TinState* state, TinEmulatedFile* femu, TinModule* module)
 {
     TinFunction* function;
     function = tin_object_makefunction(state, module);
-    tin_ioutil_readchunk(state, file, module, &function->chunk);
-    function->name = tin_emufile_readstring(state, file);
-    function->arg_count = tin_emufile_readuint8(file);
-    function->upvalue_count = tin_emufile_readuint16(file);
-    function->vararg = (bool)tin_emufile_readuint8(file);
-    function->maxslots = tin_emufile_readuint16(file);
+    tin_ioutil_readchunk(state, femu, module, &function->chunk);
+    function->name = tin_emufile_readstring(state, femu);
+    function->arg_count = tin_emufile_readuint8(femu);
+    function->upvalue_count = tin_emufile_readuint16(femu);
+    function->vararg = (bool)tin_emufile_readuint8(femu);
+    function->maxslots = tin_emufile_readuint16(femu);
     return function;
 }
 
-static void tin_ioutil_writechunk(FILE* file, TinChunk* chunk)
+static void tin_ioutil_writechunk(FILE* fh, TinChunk* chunk)
 {
     size_t i;
     size_t c;
     TinObjType type;
     TinValue constant;
-    tin_ioutil_writeuint32(file, chunk->count);
+    tin_ioutil_writeuint32(fh, chunk->count);
     for(i = 0; i < chunk->count; i++)
     {
-        tin_ioutil_writeuint8(file, chunk->code[i]);
+        tin_ioutil_writeuint8(fh, chunk->code[i]);
     }
     if(chunk->has_line_info)
     {
         c = chunk->line_count * 2 + 2;
-        tin_ioutil_writeuint32(file, c);
+        tin_ioutil_writeuint32(fh, c);
         for(i = 0; i < c; i++)
         {
-            tin_ioutil_writeuint16(file, chunk->lines[i]);
+            tin_ioutil_writeuint16(fh, chunk->lines[i]);
         }
     }
     else
     {
-        tin_ioutil_writeuint32(file, 0);
+        tin_ioutil_writeuint32(fh, 0);
     }
-    tin_ioutil_writeuint32(file, tin_vallist_count(&chunk->constants));
+    tin_ioutil_writeuint32(fh, tin_vallist_count(&chunk->constants));
     for(i = 0; i < tin_vallist_count(&chunk->constants); i++)
     {
         constant = tin_vallist_get(&chunk->constants, i);
         if(tin_value_isobject(constant))
         {
             type = tin_value_asobject(constant)->type;
-            tin_ioutil_writeuint8(file, (uint8_t)(type + 1));
+            tin_ioutil_writeuint8(fh, (uint8_t)(type + 1));
             switch(type)
             {
                 case TINTYPE_STRING:
                     {
-                        tin_ioutil_writestring(file, tin_value_asstring(constant));
+                        tin_ioutil_writestring(fh, tin_value_asstring(constant));
                     }
                     break;
                 case TINTYPE_FUNCTION:
                     {
-                        tin_ioutil_writefunction(file, tin_value_asfunction(constant));
+                        tin_ioutil_writefunction(fh, tin_value_asfunction(constant));
                     }
                     break;
                 default:
@@ -327,27 +335,27 @@ static void tin_ioutil_writechunk(FILE* file, TinChunk* chunk)
         }
         else
         {
-            tin_ioutil_writeuint8(file, 0);
-            tin_ioutil_writedouble(file, tin_value_asnumber(constant));
+            tin_ioutil_writeuint8(fh, 0);
+            tin_ioutil_writedouble(fh, tin_value_asnumber(constant));
         }
     }
 }
 
-static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModule* module, TinChunk* chunk)
+static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModule* module, TinChunk* chunk)
 {
     size_t i;
     size_t count;
     uint8_t type;
     tin_chunk_init(chunk);
-    count = tin_emufile_readuint32(file);
+    count = tin_emufile_readuint32(femu);
     chunk->code = (uint8_t*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(uint8_t) * count);
     chunk->count = count;
     chunk->capacity = count;
     for(i = 0; i < count; i++)
     {
-        chunk->code[i] = tin_emufile_readuint8(file);
+        chunk->code[i] = tin_emufile_readuint8(femu);
     }
-    count = tin_emufile_readuint32(file);
+    count = tin_emufile_readuint32(femu);
     if(count > 0)
     {
         chunk->lines = (uint16_t*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(uint16_t) * count);
@@ -355,14 +363,14 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModu
         chunk->line_capacity = count;
         for(i = 0; i < count; i++)
         {
-            chunk->lines[i] = tin_emufile_readuint16(file);
+            chunk->lines[i] = tin_emufile_readuint16(femu);
         }
     }
     else
     {
         chunk->has_line_info = false;
     }
-    count = tin_emufile_readuint32(file);
+    count = tin_emufile_readuint32(femu);
     /*
     chunk->constants.values = (TinValue*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(TinValue) * count);
     chunk->constants.count = count;
@@ -372,11 +380,11 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModu
     tin_vallist_ensuresize(state, &chunk->constants, count);
     for(i = 0; i < count; i++)
     {
-        type = tin_emufile_readuint8(file);
+        type = tin_emufile_readuint8(femu);
         if(type == 0)
         {
-            //chunk->constants.values[i] = tin_value_makenumber(vm->state, tin_emufile_readdouble(file));
-            tin_vallist_set(&chunk->constants, i, tin_value_makefloatnumber(state, tin_emufile_readdouble(file)));
+            //chunk->constants.values[i] = tin_value_makenumber(vm->state, tin_emufile_readdouble(femu));
+            tin_vallist_set(&chunk->constants, i, tin_value_makefloatnumber(state, tin_emufile_readdouble(femu)));
         }
         else
         {
@@ -384,15 +392,15 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModu
             {
                 case TINTYPE_STRING:
                     {
-                        //chunk->constants.values[i] = tin_value_fromobject(tin_emufile_readstring(state, file));
-                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_emufile_readstring(state, file)));
+                        //chunk->constants.values[i] = tin_value_fromobject(tin_emufile_readstring(state, femu));
+                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_emufile_readstring(state, femu)));
 
                     }
                     break;
                 case TINTYPE_FUNCTION:
                     {
-                        //chunk->constants.values[i] = tin_value_fromobject(tin_ioutil_readfunction(state, file, module));
-                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_ioutil_readfunction(state, file, module)));
+                        //chunk->constants.values[i] = tin_value_fromobject(tin_ioutil_readfunction(state, femu, module));
+                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_ioutil_readfunction(state, femu, module)));
                     }
                     break;
                 default:
@@ -405,15 +413,15 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* file, TinModu
     }
 }
 
-void tin_ioutil_writemodule(TinModule* module, FILE* file)
+void tin_ioutil_writemodule(TinModule* module, FILE* fh)
 {
     size_t i;
     bool disabled;
     TinTable* privates;
     disabled = tin_astopt_isoptenabled(TINOPTSTATE_PRIVATENAMES);
-    tin_ioutil_writestring(file, module->name);
-    tin_ioutil_writeuint16(file, module->private_count);
-    tin_ioutil_writeuint8(file, (uint8_t)disabled);
+    tin_ioutil_writestring(fh, module->name);
+    tin_ioutil_writeuint16(fh, module->private_count);
+    tin_ioutil_writeuint8(fh, (uint8_t)disabled);
     if(!disabled)
     {
         privates = &module->private_names->values;
@@ -421,12 +429,12 @@ void tin_ioutil_writemodule(TinModule* module, FILE* file)
         {
             if(privates->entries[i].key != NULL)
             {
-                tin_ioutil_writestring(file, privates->entries[i].key);
-                tin_ioutil_writeuint16(file, (uint16_t)tin_value_asnumber(privates->entries[i].value));
+                tin_ioutil_writestring(fh, privates->entries[i].key);
+                tin_ioutil_writeuint16(fh, (uint16_t)tin_value_asnumber(privates->entries[i].value));
             }
         }
     }
-    tin_ioutil_writefunction(file, module->main_function);
+    tin_ioutil_writefunction(fh, module->main_function);
 }
 
 TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
@@ -440,27 +448,27 @@ TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
     TinString* name;
     TinTable* privates;
     TinModule* module;
-    TinEmulatedFile file;
-    tin_emufile_init(&file, input, len);
-    if(tin_emufile_readuint16(&file) != TIN_BYTECODE_MAGIC_NUMBER)
+    TinEmulatedFile femu;
+    tin_emufile_init(&femu, input, len);
+    if(tin_emufile_readuint16(&femu) != TIN_BYTECODE_MAGIC_NUMBER)
     {
         tin_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown magic number");
         return NULL;
     }
-    bytecodeversion = tin_emufile_readuint8(&file);
+    bytecodeversion = tin_emufile_readuint8(&femu);
     if(bytecodeversion > TIN_BYTECODE_VERSION)
     {
         tin_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown bytecode version '%i'", (int)bytecodeversion);
         return NULL;
     }
-    modulecount = tin_emufile_readuint16(&file);
+    modulecount = tin_emufile_readuint16(&femu);
     TinModule* first = NULL;
     for(j = 0; j < modulecount; j++)
     {
-        module = tin_object_makemodule(state, tin_emufile_readstring(state, &file));
+        module = tin_object_makemodule(state, tin_emufile_readstring(state, &femu));
         privates = &module->private_names->values;
-        privatescount = tin_emufile_readuint16(&file);
-        enabled = !((bool)tin_emufile_readuint8(&file));
+        privatescount = tin_emufile_readuint16(&femu);
+        enabled = !((bool)tin_emufile_readuint8(&femu));
         module->privates = TIN_ALLOCATE(state, sizeof(TinValue), privatescount);
         module->private_count = privatescount;
         for(i = 0; i < privatescount; i++)
@@ -468,18 +476,18 @@ TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
             module->privates[i] = NULL_VALUE;
             if(enabled)
             {
-                name = tin_emufile_readstring(state, &file);
-                tin_table_set(state, privates, name, tin_value_makefixednumber(state, tin_emufile_readuint16(&file)));
+                name = tin_emufile_readstring(state, &femu);
+                tin_table_set(state, privates, name, tin_value_makefixednumber(state, tin_emufile_readuint16(&femu)));
             }
         }
-        module->main_function = tin_ioutil_readfunction(state, &file, module);
+        module->main_function = tin_ioutil_readfunction(state, &femu, module);
         tin_table_set(state, &state->vm->modules->values, module->name, tin_value_fromobject(module));
         if(j == 0)
         {
             first = module;
         }
     }
-    if(tin_emufile_readuint16(&file) != TIN_BYTECODE_END_NUMBER)
+    if(tin_emufile_readuint16(&femu) != TIN_BYTECODE_END_NUMBER)
     {
         tin_state_raiseerror(state, COMPILE_ERROR, "Failed to read compiled code, unknown end number");
         return NULL;
@@ -537,7 +545,7 @@ static TinValue objmethod_file_constructor(TinVM* vm, TinValue instance, size_t 
         }
         else
         {
-            path = tin_value_checkstring(vm, argv, argc, 0);
+            path = tin_args_checkstring(vm, argv, argc, 0);
             mode = tin_value_getstring(vm, argv, argc, 1, "r");
             hnd = fopen(path, mode);
             if(hnd == NULL)
@@ -572,7 +580,7 @@ static TinValue objmethod_file_close(TinVM* vm, TinValue instance, size_t argc, 
     return NULL_VALUE;
 }
 
-static TinValue objmethod_file_exists(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objstatic_file_exists(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     char* filename;
     filename = NULL;
@@ -582,11 +590,115 @@ static TinValue objmethod_file_exists(TinVM* vm, TinValue instance, size_t argc,
     }
     else
     {
-        filename = (char*)tin_value_checkstring(vm, argv, argc, 0);
+        filename = (char*)tin_args_checkstring(vm, argv, argc, 0);
     }
     return tin_value_makebool(vm->state, tin_fs_fileexists(filename));
 }
 
+static inline bool tin_util_makestat(TinVM* vm, const char* path, TinFileStat* st)
+{
+    int ifmt;
+    (void)vm;
+    if(stat(path, &st->st) == -1)
+    {
+        return false;
+    }
+    ifmt = (st->st.st_mode & S_IFMT);
+    st->isfile = (ifmt == S_IFREG);
+    st->isdir = (ifmt == S_IFDIR);
+    return true;
+}
+
+static inline bool tin_util_failstat(TinVM* vm, const char* path, TinFileStat* st)
+{
+    if(!tin_util_makestat(vm, path, st))
+    {
+        tin_state_raiseerror(vm->state, RUNTIME_ERROR, "failed to stat() '%s'", path);
+        return false;
+    }
+    return true;
+}
+
+static TinValue objstatic_file_isfile(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    TinFileStat st;
+    const char* path;
+    (void)instance;
+    path = tin_args_checkstring(vm, argv, argc, 0);
+    if(!tin_util_failstat(vm, path, &st))
+    {
+        return NULL_VALUE;
+    }
+    if(st.isfile)
+    {
+        return tin_value_makebool(vm->state, true);
+    }
+    return tin_value_makebool(vm->state, false);
+}
+
+static TinValue objstatic_file_isdir(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    TinFileStat st;
+    const char* path;
+    (void)instance;
+    path = tin_args_checkstring(vm, argv, argc, 0);
+    if(!tin_util_failstat(vm, path, &st))
+    {
+        return NULL_VALUE;
+    }
+    if(st.isdir)
+    {
+        return tin_value_makebool(vm->state, true);
+    }
+    return tin_value_makebool(vm->state, false);
+}
+
+static TinValue objstatic_file_stat(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    TinMap* map;
+    TinFileStat st;
+    const char* path;
+    (void)instance;
+    path = tin_args_checkstring(vm, argv, argc, 0);
+    if(!tin_util_failstat(vm, path, &st))
+    {
+        return NULL_VALUE;
+    }
+    map = tin_object_makemap(vm->state);
+    tin_map_setstr(vm->state, map, "path", tin_value_fromobject(tin_string_copy(vm->state, path, strlen(path))));
+    tin_map_setstr(vm->state, map, "isdir", tin_value_makebool(vm->state, st.isdir));
+    tin_map_setstr(vm->state, map, "isfile", tin_value_makebool(vm->state, st.isfile));
+    /*
+           struct stat {
+               dev_t     st_dev;         // ID of device containing file
+               ino_t     st_ino;         // Inode number
+               mode_t    st_mode;        // File type and mode
+               nlink_t   st_nlink;       // Number of hard links
+               uid_t     st_uid;         // User ID of owner
+               gid_t     st_gid;         // Group ID of owner
+               dev_t     st_rdev;        // Device ID (if special file)
+               off_t     st_size;        // Total size, in bytes
+               blksize_t st_blksize;     // Block size for filesystem I/O
+               blkcnt_t  st_blocks;      // Number of 512B blocks allocated
+
+           };
+    */
+    #define setnumfield(name, val) \
+        { \
+            tin_map_setstr(vm->state, map, name, tin_value_makefixednumber(vm->state, val)); \
+        }
+    {
+        setnumfield("device", st.st.st_dev);
+        setnumfield("inode", st.st.st_ino);
+        setnumfield("mode", st.st.st_mode);
+        setnumfield("links", st.st.st_nlink);
+        setnumfield("uid", st.st.st_uid);
+        setnumfield("gid", st.st.st_gid);
+        setnumfield("size", st.st.st_size);
+    }
+    #undef setnumfield
+    return tin_value_fromobject(map);
+}
 /*
  * ==
  * File writing
@@ -606,7 +718,7 @@ static TinValue objmethod_file_writebyte(TinVM* vm, TinValue instance, size_t ar
 {
     uint8_t rt;
     uint8_t byte;
-    byte = (uint8_t)tin_value_checknumber(vm, argv, argc, 0);
+    byte = (uint8_t)tin_args_checknumber(vm, argv, argc, 0);
     rt = tin_ioutil_writeuint8(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, byte);
     return tin_value_makefixednumber(vm->state, rt);
 }
@@ -615,7 +727,7 @@ static TinValue objmethod_file_writeshort(TinVM* vm, TinValue instance, size_t a
 {
     uint16_t rt;
     uint16_t shrt;
-    shrt = (uint16_t)tin_value_checknumber(vm, argv, argc, 0);
+    shrt = (uint16_t)tin_args_checknumber(vm, argv, argc, 0);
     rt = tin_ioutil_writeuint16(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, shrt);
     return tin_value_makefixednumber(vm->state, rt);
 }
@@ -624,7 +736,7 @@ static TinValue objmethod_file_writenumber(TinVM* vm, TinValue instance, size_t 
 {
     uint32_t rt;
     float num;
-    num = (float)tin_value_checknumber(vm, argv, argc, 0);
+    num = (float)tin_args_checknumber(vm, argv, argc, 0);
     rt = tin_ioutil_writeuint32(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, num);
     return tin_value_makefixednumber(vm->state, rt);
 }
@@ -633,7 +745,7 @@ static TinValue objmethod_file_writebool(TinVM* vm, TinValue instance, size_t ar
 {
     bool value;
     uint8_t rt;
-    value = tin_value_checkbool(vm, argv, argc, 0);
+    value = tin_args_checkbool(vm, argv, argc, 0);
     rt = tin_ioutil_writeuint8(((TinFileData*)tin_util_instancedataget(vm, instance))->handle, (uint8_t)value ? '1' : '0');
     return tin_value_makefixednumber(vm->state, rt);
 }
@@ -642,7 +754,7 @@ static TinValue objmethod_file_writestring(TinVM* vm, TinValue instance, size_t 
 {
     TinString* string;
     TinFileData* data;
-    if(tin_value_checkstring(vm, argv, argc, 0) == NULL)
+    if(tin_args_checkstring(vm, argv, argc, 0) == NULL)
     {
         return NULL_VALUE;
     }
@@ -731,7 +843,7 @@ static TinValue objmethod_file_readamount(TinVM* vm, TinValue instance, size_t a
         return objmethod_file_readall(vm, instance, argc, argv);
     }
     data = (TinFileData*)tin_util_instancedataget(vm, instance);
-    wantlen = tin_value_checknumber(vm, argv, argc, 0);
+    wantlen = tin_args_checknumber(vm, argv, argc, 0);
     /* storelen is the amount that is ultimately allocated */
     storelen = wantlen;
     /* try to get filesize (WITHOUT seeking, as that could deadlock) */
@@ -826,13 +938,14 @@ static TinValue objmethod_file_readbool(TinVM* vm, TinValue instance, size_t arg
 
 static TinValue objmethod_file_readstring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
+    TinFileData* data;
+    TinString* string;
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    TinFileData* data = (TinFileData*)tin_util_instancedataget(vm, instance);
-    TinString* string = tin_ioutil_readstring(vm->state, data->handle);
-
+    data = (TinFileData*)tin_util_instancedataget(vm, instance);
+    string = tin_ioutil_readstring(vm->state, data->handle);
     return string == NULL ? NULL_VALUE : tin_value_fromobject(string);
 }
 
@@ -849,7 +962,7 @@ static TinValue objmethod_file_getlastmodified(TinVM* vm, TinValue instance, siz
     }
     else
     {
-        filename = (char*)tin_value_checkstring(vm, argv, argc, 0);
+        filename = (char*)tin_args_checkstring(vm, argv, argc, 0);
     }
 
     if(stat(filename, &buffer) != 0)
@@ -870,7 +983,7 @@ static TinValue objmethod_file_getlastmodified(TinVM* vm, TinValue instance, siz
 
 static TinValue objfunction_directory_exists(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    const char* directoryname = tin_value_checkstring(vm, argv, argc, 0);
+    const char* directoryname = tin_args_checkstring(vm, argv, argc, 0);
     struct stat buffer;
     (void)vm;
     (void)instance;
@@ -879,35 +992,7 @@ static TinValue objfunction_directory_exists(TinVM* vm, TinValue instance, size_
     return tin_value_makebool(vm->state, stat(directoryname, &buffer) == 0 && S_ISDIR(buffer.st_mode));
 }
 
-static TinValue objfunction_directory_listfiles(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
-{
-    TinState* state;
-    TinArray* array;
-    (void)instance;
-    state = vm->state;
-    array = tin_object_makearray(state);
-    #if defined(__unix__) || defined(__linux__)
-    {
-        struct dirent* ep;
-        DIR* dir = opendir(tin_value_checkstring(vm, argv, argc, 0));
-        if(dir == NULL)
-        {
-            return tin_value_fromobject(array);
-        }
-        while((ep = readdir(dir)))
-        {
-            if(ep->d_type == DT_REG)
-            {
-                tin_vallist_push(state, &array->list, tin_value_makestring(state, ep->d_name));
-            }
-        }
-        closedir(dir);
-    }
-    #endif
-    return tin_value_fromobject(array);
-}
-
-static TinValue objfunction_directory_listdirs(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+static TinValue objstatic_directory_read(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     TinArray* array;
     TinState* state;
@@ -916,16 +1001,13 @@ static TinValue objfunction_directory_listdirs(TinVM* vm, TinValue instance, siz
     (void)instance;
     state = vm->state;
     array = tin_object_makearray(state);
-    if(tin_fs_diropen(&rd, tin_value_checkstring(vm, argv, argc, 0)))
+    if(tin_fs_diropen(&rd, tin_args_checkstring(vm, argv, argc, 0)))
     {
         while(true)
         {
             if(tin_fs_dirread(&rd, &ent))
             {
-                if(ent.isdir && ((strcmp(ent.name, ".") != 0) || (strcmp(ent.name, "..") != 0)))
-                {
-                    tin_vallist_push(state, &array->list, tin_value_makestring(state, ent.name));
-                }
+                tin_vallist_push(state, &array->list, tin_value_makestring(state, ent.name));
             }
             else
             {
@@ -995,8 +1077,11 @@ void tin_open_file_library(TinState* state)
     {
         klass = tin_object_makeclassname(state, "File");
         {
-            tin_class_bindstaticmethod(state, klass, "exists", objmethod_file_exists);
+            tin_class_bindstaticmethod(state, klass, "exists", objstatic_file_exists);
             tin_class_bindstaticmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
+            tin_class_bindstaticmethod(state, klass, "isFile", objstatic_file_isfile);
+            tin_class_bindstaticmethod(state, klass, "isDir", objstatic_file_isdir);
+            tin_class_bindstaticmethod(state, klass, "stat", objstatic_file_stat);
             tin_class_bindconstructor(state, klass, objmethod_file_constructor);
             tin_class_bindmethod(state, klass, "close", objmethod_file_close);
             tin_class_bindmethod(state, klass, "write", objmethod_file_write);
@@ -1013,9 +1098,8 @@ void tin_open_file_library(TinState* state)
             tin_class_bindmethod(state, klass, "readNumber", objmethod_file_readnumber);
             tin_class_bindmethod(state, klass, "readBool", objmethod_file_readbool);
             tin_class_bindmethod(state, klass, "readString", objmethod_file_readstring);
-
             tin_class_bindmethod(state, klass, "getLastModified", objmethod_file_getlastmodified);
-            tin_class_bindgetset(state, klass, "exists", objmethod_file_exists, NULL, false);
+            tin_class_bindgetset(state, klass, "exists", objstatic_file_exists, NULL, false);
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
         if(klass->super == NULL)
@@ -1024,11 +1108,10 @@ void tin_open_file_library(TinState* state)
         };
     }
     {
-        klass = tin_object_makeclassname(state, "Directory");
+        klass = tin_object_makeclassname(state, "Dir");
         {
             tin_class_bindstaticmethod(state, klass, "exists", objfunction_directory_exists);
-            tin_class_bindstaticmethod(state, klass, "listFiles", objfunction_directory_listfiles);
-            tin_class_bindstaticmethod(state, klass, "listDirectories", objfunction_directory_listdirs);
+            tin_class_bindstaticmethod(state, klass, "read", objstatic_directory_read);
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
         if(klass->super == NULL)
