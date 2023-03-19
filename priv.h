@@ -2,6 +2,13 @@
 #pragma once
 #include "tin.h"
 
+#if defined(__GNUC__)
+    #define TIN_VM_INLINE static inline
+#else
+    #define TIN_VM_INLINE static
+#endif
+
+
 enum TinOpCode
 {
 #define OPCODE(name, effect) name,

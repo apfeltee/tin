@@ -89,7 +89,6 @@ TinPrimitiveMethod* tin_class_bindstaticprimitive(TinState* state, TinClass* cl,
     return mth;
 }
 
-
 void tin_class_setstaticfield(TinState* state, TinClass* cl, const char* name, TinValue val)
 {
     TinString* nm;
@@ -125,19 +124,6 @@ TinField* tin_class_bindgetset(TinState* state, TinClass* cl, const char* name, 
     tin_table_set(state, tbl, nm, tin_value_fromobject(field)); 
     return field;
 }
-
-
-/*
-
-    #define TIN_INHERIT_CLASS(superklass)                                \
-        klass->super = (TinClass*)superklass;                            \
-        if(klass->init_method == NULL)                                    \
-        {                                                                 \
-            klass->init_method = superklass->init_method;                \
-        }                                                                 \
-        tin_table_add_all(state, &superklass->methods, &klass->methods); \
-        tin_table_add_all(state, &superklass->static_fields, &klass->static_fields);
-*/
 
 void tin_class_inheritfrom(TinState* state, TinClass* current, TinClass* other)
 {
@@ -191,7 +177,6 @@ static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, 
     return tin_value_makefixednumber(vm->state, fields ? value + mthcap : value);
 }
 
-
 static TinValue objfn_class_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     (void)argc;
@@ -205,7 +190,6 @@ static TinValue objfn_class_iteratorvalue(TinVM* vm, TinValue instance, size_t a
     fields = index >= mthcap;
     return util_table_iterator_key(fields ? &klass->static_fields : &klass->methods, fields ? index - mthcap : index);
 }
-
 
 static TinValue objfn_class_super(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {

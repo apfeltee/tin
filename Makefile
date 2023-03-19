@@ -1,7 +1,7 @@
 
 INCFLAGS =
 
-CC = gcc -Wall -Wextra -Wshadow
+CC = gcc -Wall -Wextra -Wshadow -Wunused-macros -Wunused-local-typedefs
 #CFLAGS = $(INCFLAGS) -Ofast -march=native -flto -ffast-math -funroll-loops
 CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3
 LDFLAGS = -flto -ldl -lm  -lreadline -lpthread

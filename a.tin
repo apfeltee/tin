@@ -1,3 +1,13 @@
 
-println(ARGV)
+f = function(a, b, c, d)
+{
+    println("a, b, c, d = ", [a, b, c, d])
+}
+
+b = function(a, ...)
+{
+    f(a, ...);
+}
+
+b(12, 34, 54, 42);
 

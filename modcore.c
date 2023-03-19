@@ -311,8 +311,13 @@ static TinValue cfn_print(TinVM* vm, size_t argc, TinValue* argv)
     }
     for(i = 0; i < argc; i++)
     {
-        sv = tin_value_tostring(vm->state, argv[i]);
-        written += fwrite(sv->data, sizeof(char), tin_string_getlength(sv), stdout);
+        #if 0
+            sv = tin_value_tostring(vm->state, argv[i]);
+            written += fwrite(sv->data, sizeof(char), tin_string_getlength(sv), stdout);
+        #else
+            //void tin_towriter_value(TinState *state, TinWriter *wr, TinValue value, bool withquot);
+            tin_towriter_value(vm->state, &vm->state->stdoutwriter, argv[i], false);
+        #endif
     }
     return tin_value_makefixednumber(vm->state, written);
 }

@@ -176,7 +176,6 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
     else if(tin_value_isreference(object))
     {
         slot = tin_value_asreference(object)->slot;
-
         if(slot == NULL)
         {
             return tin_string_copyconst(state, "null");

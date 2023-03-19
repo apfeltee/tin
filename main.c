@@ -19,11 +19,6 @@
 
 #include "tin.h"
 
-#define TIN_EXIT_CODE_ARGUMENT_ERROR 1
-#define TIN_EXIT_CODE_MEM_LEAK 2
-#define TIN_EXIT_CODE_RUNTIME_ERROR 70
-#define TIN_EXIT_CODE_COMPILE_ERROR 65
-
 enum
 {
     MAX_RESTARGS = 64,

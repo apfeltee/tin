@@ -2,7 +2,7 @@
 #include "priv.h"
 #include "sds.h"
 
-char* itoa(int value, char* result, int base)
+TIN_VM_INLINE char* itoa(int value, char* result, int base)
 {
     int tmp_value;
     char* ptr;
@@ -316,9 +316,10 @@ TinString* tin_string_makeempty(TinState* state, size_t length, bool reuse)
     string = (TinString*)tin_gcmem_allocobject(state, sizeof(TinString), TINTYPE_STRING, false);
     if(!reuse)
     {
+        //fprintf(stderr, "tin_string_makeempty: length=%d\n", length);
         string->data = sds_makeempty();
         /* reserving the required space may reduce number of allocations */
-        string->data = sds_allocroomfor(string->data, length);
+        string->data = sds_allocroomfor(string->data, length+1);
     }
     //string->data = NULL;
     string->hash = 0;
@@ -594,6 +595,8 @@ static TinValue objfn_string_plus(TinVM* vm, TinValue instance, size_t argc, Tin
     TinString* selfstr;
     TinString* result;
     TinValue value;
+    size_t selflen;
+    size_t otherlen;
     (void)argc;
     selfstr = tin_value_asstring(instance);
     value = argv[0];
@@ -606,7 +609,9 @@ static TinValue objfn_string_plus(TinVM* vm, TinValue instance, size_t argc, Tin
     {
         strval = tin_value_tostring(vm->state, value);
     }
-    result = tin_string_makeempty(vm->state, tin_string_getlength(selfstr) + tin_string_getlength(strval), false);
+    selflen = tin_string_getlength(selfstr);
+    otherlen = tin_string_getlength(strval);
+    result = tin_string_makeempty(vm->state, selflen + otherlen, false);
     tin_string_appendobj(result, selfstr);
     tin_string_appendobj(result, strval);
     tin_state_regstring(vm->state, result);
@@ -910,8 +915,14 @@ static TinValue objfn_string_substring(TinVM* vm, TinValue instance, size_t argc
 static TinValue objfn_string_byteat(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
     int idx;
+    TinString* self;
+    self = tin_value_asstring(instance);
     idx = tin_args_checknumber(vm, argv, argc, 0);
-    return tin_value_makefixednumber(vm->state, tin_value_asstring(instance)->data[idx]);
+    if(idx < tin_string_getlength(self))
+    {
+        return tin_value_makefixednumber(vm->state, self->data[idx]);
+    }
+    return tin_value_makefixednumber(vm->state, 0);
 }
 
 static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
