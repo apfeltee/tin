@@ -20,7 +20,6 @@
 #include <setjmp.h>
 #include <wchar.h>
 
-
 #define TIN_REPOSITORY "https://github.com/egordorichev/lit"
 
 #define TIN_VERSION_MAJOR 0

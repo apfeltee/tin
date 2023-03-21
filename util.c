@@ -178,7 +178,6 @@ unsigned int tin_util_numbertouint32(double n)
     return (unsigned int)tin_util_numbertoint32(n);
 }
 
-
 // http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2Float
 int tin_util_closestpowof2(int n)
 {
@@ -192,26 +191,32 @@ int tin_util_closestpowof2(int n)
     return n;
 }
 
-
 char* tin_util_patchfilename(char* filename)
 {
-    int i;
-    int namelength;
+    return filename;
+    size_t i;
+    size_t nmlen;
+    size_t extlen;
     char c;
-    namelength = strlen(filename);
+    const char* extsrc;
+    const char* extbin;
+    extsrc = ".tin";
+    extbin = ".tib";
+    extlen = 4;
+    nmlen = strlen(filename);
     // Check, if our filename ends with .lit or lbc, and remove it
-    if(namelength > 4 && (memcmp(filename + namelength - 4, ".lit", 4) == 0 || memcmp(filename + namelength - 4, ".lbc", 4) == 0))
+    if(nmlen > extlen && (memcmp(filename + nmlen - extlen, extsrc, extlen) == 0 || memcmp(filename + nmlen - extlen, extbin, extlen) == 0))
     {
-        filename[namelength - 4] = '\0';
-        namelength -= 4;
+        filename[nmlen - extlen] = '\0';
+        nmlen -= extlen;
     }
     // Check, if our filename starts with ./ and remove it (useless, and makes the module name be ..main)
-    if(namelength > 2 && memcmp(filename, "./", 2) == 0)
+    if(nmlen > 2 && memcmp(filename, "./", 2) == 0)
     {
         filename += 2;
-        namelength -= 2;
+        nmlen -= 2;
     }
-    for(i = 0; i < namelength; i++)
+    for(i = 0; i < nmlen; i++)
     {
         c = filename[i];
         if(c == '/' || c == '\\')
@@ -222,12 +227,17 @@ char* tin_util_patchfilename(char* filename)
     return filename;
 }
 
-char* tin_util_copystring(const char* string)
+char* tin_util_copystringn(const char* str, size_t len)
 {
-    size_t length;
-    char* newstring;
-    length = strlen(string) + 1;
-    newstring = (char*)malloc(length);
-    memcpy(newstring, string, length);
-    return newstring;
+    char* res;
+    res = (char*)malloc(len+1);
+    memset(res, 0, len+1);
+    memcpy(res, str, len);
+    return res;
 }
+
+char* tin_util_copystring(const char* str)
+{
+    return tin_util_copystringn(str, strlen(str));
+}
+

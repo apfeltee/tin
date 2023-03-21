@@ -762,7 +762,7 @@ TinModule* tin_state_compilemodule(TinState* state, TinString* module_name, cons
             total_t = t = clock();
         }
         tin_exprlist_init(&statements);
-        if(tin_astparser_parsesource(state->parser, module_name->data, code, &statements))
+        if(tin_astparser_parsesource(state->parser, module_name->data, code, len, &statements))
         {
             free_statements(state, &statements);
             return NULL;
@@ -907,14 +907,14 @@ static char* tin_util_readsource(TinState* state, const char* file, char** patch
     if(source == NULL)
     {
         tin_state_raiseerror(state, RUNTIME_ERROR, "failed to open file '%s' for reading", filename);
+        return NULL;
     }
     *dlen = len;
-    filename = tin_util_patchfilename(filename);
+    *patchedfilename = tin_util_patchfilename(filename);
     if(measurecompilationtime)
     {
         printf("reading source: %gms\n", lastsourcetime = (double)(clock() - t) / CLOCKS_PER_SEC * 1000);
     }
-    *patchedfilename = filename;
     return source;
 }
 
@@ -924,14 +924,15 @@ TinInterpretResult tin_state_execfile(TinState* state, const char* file)
     char* source;
     char* patchedfilename;
     TinInterpretResult result;
+    patchedfilename = NULL;
     source = tin_util_readsource(state, file, &patchedfilename, &len);
     if(source == NULL)
     {
         return INTERPRET_RUNTIME_FAIL;
     }
     result = tin_state_execsource(state, patchedfilename, source, len);
-    free((void*)source);
     free(patchedfilename);
+    free(source);
     return result;
 }
 

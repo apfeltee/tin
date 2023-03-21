@@ -74,12 +74,12 @@ const char *tin_astopt_getoptleveldescr(TinAstOptLevel level);
 const char *tin_astparser_token2name(int t);
 void tin_astparser_init(TinState *state, TinAstParser *parser);
 void tin_astparser_destroy(TinAstParser *parser);
-bool tin_astparser_parsesource(TinAstParser *parser, const char *filename, const char *source, TinAstExprList *statements);
+bool tin_astparser_parsesource(TinAstParser *parser, const char *filename, const char *source, size_t srclength, TinAstExprList *statements);
 /* ccscan.c */
 void tin_bytelist_init(TinAstByteList *bl);
 void tin_bytelist_destroy(TinState *state, TinAstByteList *bl);
 void tin_bytelist_push(TinState *state, TinAstByteList *bl, uint8_t value);
-void tin_astlex_init(TinState *state, TinAstScanner *scanner, const char *filename, const char *source);
+void tin_astlex_init(TinState *state, TinAstScanner *scanner, const char *filename, const char *source, size_t srclength);
 TinAstToken tin_astlex_scantoken(TinAstScanner *scanner);
 /* chunk.c */
 void tin_chunk_init(TinChunk *chunk);

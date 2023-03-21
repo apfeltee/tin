@@ -101,245 +101,245 @@ void tin_ast_destroystmtlist(TinState* state, TinAstExprList* statements)
     tin_exprlist_destroy(state, statements);
 }
 
-void tin_ast_destroyexpression(TinState* state, TinAstExpression* expression)
+void tin_ast_destroyexpression(TinState* state, TinAstExpression* expr)
 {
-    if(expression == NULL)
+    if(expr == NULL)
     {
         return;
     }
-    switch(expression->type)
+    switch(expr->type)
     {
         case TINEXPR_LITERAL:
             {
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstLiteralExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstLiteralExpr), 0);
             }
             break;
         case TINEXPR_BINARY:
             {
-                TinAstBinaryExpr* expr = (TinAstBinaryExpr*)expression;
-                if(!expr->ignore_left)
+                TinAstBinaryExpr* herex = (TinAstBinaryExpr*)expr;
+                if(!herex->ignore_left)
                 {
-                    tin_ast_destroyexpression(state, expr->left);
+                    tin_ast_destroyexpression(state, herex->left);
                 }
-                tin_ast_destroyexpression(state, expr->right);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstBinaryExpr), 0);
+                tin_ast_destroyexpression(state, herex->right);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstBinaryExpr), 0);
             }
             break;
 
         case TINEXPR_UNARY:
             {
-                tin_ast_destroyexpression(state, ((TinAstUnaryExpr*)expression)->right);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstUnaryExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstUnaryExpr*)expr)->right);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstUnaryExpr), 0);
             }
             break;
         case TINEXPR_VAREXPR:
             {
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstVarExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstVarExpr), 0);
             }
             break;
         case TINEXPR_ASSIGN:
             {
-                TinAstAssignExpr* expr = (TinAstAssignExpr*)expression;
-                tin_ast_destroyexpression(state, expr->to);
-                tin_ast_destroyexpression(state, expr->value);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstAssignExpr), 0);
+                TinAstAssignExpr* herex = (TinAstAssignExpr*)expr;
+                tin_ast_destroyexpression(state, herex->to);
+                tin_ast_destroyexpression(state, herex->value);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstAssignExpr), 0);
             }
             break;
         case TINEXPR_CALL:
             {
-                TinAstCallExpr* expr = (TinAstCallExpr*)expression;
-                tin_ast_destroyexpression(state, expr->callee);
-                tin_ast_destroyexpression(state, expr->init);
-                tin_ast_destroyexprlist(state, &expr->args);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstCallExpr), 0);
+                TinAstCallExpr* herex = (TinAstCallExpr*)expr;
+                tin_ast_destroyexpression(state, herex->callee);
+                tin_ast_destroyexpression(state, herex->init);
+                tin_ast_destroyexprlist(state, &herex->args);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstCallExpr), 0);
             }
             break;
 
         case TINEXPR_GET:
         {
-            tin_ast_destroyexpression(state, ((TinAstGetExpr*)expression)->where);
-            tin_gcmem_memrealloc(state, expression, sizeof(TinAstGetExpr), 0);
+            tin_ast_destroyexpression(state, ((TinAstGetExpr*)expr)->where);
+            tin_gcmem_memrealloc(state, expr, sizeof(TinAstGetExpr), 0);
             break;
         }
 
         case TINEXPR_SET:
         {
-            TinAstSetExpr* expr = (TinAstSetExpr*)expression;
+            TinAstSetExpr* herex = (TinAstSetExpr*)expr;
 
-            tin_ast_destroyexpression(state, expr->where);
-            tin_ast_destroyexpression(state, expr->value);
+            tin_ast_destroyexpression(state, herex->where);
+            tin_ast_destroyexpression(state, herex->value);
 
-            tin_gcmem_memrealloc(state, expression, sizeof(TinAstSetExpr), 0);
+            tin_gcmem_memrealloc(state, expr, sizeof(TinAstSetExpr), 0);
             break;
         }
 
         case TINEXPR_LAMBDA:
             {
-                TinAstFunctionExpr* expr = (TinAstFunctionExpr*)expression;
-                tin_paramlist_destroyvalues(state, &expr->parameters);
-                tin_ast_destroyexpression(state, expr->body);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstFunctionExpr), 0);
+                TinAstFunctionExpr* herex = (TinAstFunctionExpr*)expr;
+                tin_paramlist_destroyvalues(state, &herex->parameters);
+                tin_ast_destroyexpression(state, herex->body);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstFunctionExpr), 0);
             }
             break;
         case TINEXPR_ARRAY:
             {
-                tin_ast_destroyexprlist(state, &((TinAstArrayExpr*)expression)->values);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstArrayExpr), 0);
+                tin_ast_destroyexprlist(state, &((TinAstArrayExpr*)expr)->values);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstArrayExpr), 0);
             }
             break;
         case TINEXPR_OBJECT:
             {
-                TinAstObjectExpr* map = (TinAstObjectExpr*)expression;
+                TinAstObjectExpr* map = (TinAstObjectExpr*)expr;
                 tin_ast_destroyexprlist(state, &map->keys);
                 tin_ast_destroyexprlist(state, &map->values);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstObjectExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstObjectExpr), 0);
             }
             break;
         case TINEXPR_SUBSCRIPT:
             {
-                TinAstIndexExpr* expr = (TinAstIndexExpr*)expression;
-                tin_ast_destroyexpression(state, expr->array);
-                tin_ast_destroyexpression(state, expr->index);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstIndexExpr), 0);
+                TinAstIndexExpr* herex = (TinAstIndexExpr*)expr;
+                tin_ast_destroyexpression(state, herex->array);
+                tin_ast_destroyexpression(state, herex->index);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstIndexExpr), 0);
             }
             break;
         case TINEXPR_THIS:
             {
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstThisExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstThisExpr), 0);
             }
             break;
         case TINEXPR_SUPER:
             {
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstSuperExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstSuperExpr), 0);
             }
             break;
         case TINEXPR_RANGE:
             {
-                TinAstRangeExpr* expr = (TinAstRangeExpr*)expression;
-                tin_ast_destroyexpression(state, expr->from);
-                tin_ast_destroyexpression(state, expr->to);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstRangeExpr), 0);
+                TinAstRangeExpr* herex = (TinAstRangeExpr*)expr;
+                tin_ast_destroyexpression(state, herex->from);
+                tin_ast_destroyexpression(state, herex->to);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstRangeExpr), 0);
             }
             break;
         case TINEXPR_TERNARY:
             {
-                TinAstTernaryExpr* expr = (TinAstTernaryExpr*)expression;
-                tin_ast_destroyexpression(state, expr->condition);
-                tin_ast_destroyexpression(state, expr->ifbranch);
-                tin_ast_destroyexpression(state, expr->elsebranch);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstTernaryExpr), 0);
+                TinAstTernaryExpr* herex = (TinAstTernaryExpr*)expr;
+                tin_ast_destroyexpression(state, herex->condition);
+                tin_ast_destroyexpression(state, herex->ifbranch);
+                tin_ast_destroyexpression(state, herex->elsebranch);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstTernaryExpr), 0);
             }
             break;
         case TINEXPR_INTERPOLATION:
             {
-                tin_ast_destroyexprlist(state, &((TinAstStrInterExpr*)expression)->expressions);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstStrInterExpr), 0);
+                tin_ast_destroyexprlist(state, &((TinAstStrInterExpr*)expr)->expressions);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstStrInterExpr), 0);
             }
             break;
         case TINEXPR_REFERENCE:
             {
-                tin_ast_destroyexpression(state, ((TinAstRefExpr*)expression)->to);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstRefExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstRefExpr*)expr)->to);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstRefExpr), 0);
             }
             break;
         case TINEXPR_EXPRESSION:
             {
-                tin_ast_destroyexpression(state, ((TinAstExprExpr*)expression)->expression);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstExprExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstExprExpr*)expr)->expression);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstExprExpr), 0);
             }
             break;
         case TINEXPR_BLOCK:
             {
-                tin_ast_destroystmtlist(state, &((TinAstBlockExpr*)expression)->statements);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstBlockExpr), 0);
+                tin_ast_destroystmtlist(state, &((TinAstBlockExpr*)expr)->statements);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstBlockExpr), 0);
             }
             break;
         case TINEXPR_VARSTMT:
             {
-                tin_ast_destroyexpression(state, ((TinAstAssignVarExpr*)expression)->init);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstAssignVarExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstAssignVarExpr*)expr)->init);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstAssignVarExpr), 0);
             }
             break;
         case TINEXPR_IFSTMT:
             {
-                TinAstIfExpr* stmt = (TinAstIfExpr*)expression;
+                TinAstIfExpr* stmt = (TinAstIfExpr*)expr;
                 tin_ast_destroyexpression(state, stmt->condition);
                 tin_ast_destroyexpression(state, stmt->ifbranch);
                 tin_ast_destroy_allocdexprlist(state, stmt->elseifconds);
                 tin_ast_destry_allocdstmtlist(state, stmt->elseifbranches);
                 tin_ast_destroyexpression(state, stmt->elsebranch);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstIfExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstIfExpr), 0);
             }
             break;
         case TINEXPR_WHILE:
             {
-                TinAstWhileExpr* stmt = (TinAstWhileExpr*)expression;
+                TinAstWhileExpr* stmt = (TinAstWhileExpr*)expr;
                 tin_ast_destroyexpression(state, stmt->condition);
                 tin_ast_destroyexpression(state, stmt->body);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstWhileExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstWhileExpr), 0);
             }
             break;
         case TINEXPR_FOR:
             {
-                TinAstForExpr* stmt = (TinAstForExpr*)expression;
+                TinAstForExpr* stmt = (TinAstForExpr*)expr;
                 tin_ast_destroyexpression(state, stmt->increment);
                 tin_ast_destroyexpression(state, stmt->condition);
                 tin_ast_destroyexpression(state, stmt->init);
 
                 tin_ast_destroyexpression(state, stmt->var);
                 tin_ast_destroyexpression(state, stmt->body);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstForExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstForExpr), 0);
             }
             break;
         case TINEXPR_CONTINUE:
             {
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstContinueExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstContinueExpr), 0);
             }
             break;
         case TINEXPR_BREAK:
             {
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstBreakExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstBreakExpr), 0);
             }
             break;
         case TINEXPR_FUNCTION:
             {
-                TinAstFunctionExpr* stmt = (TinAstFunctionExpr*)expression;
+                TinAstFunctionExpr* stmt = (TinAstFunctionExpr*)expr;
                 tin_ast_destroyexpression(state, stmt->body);
                 tin_paramlist_destroyvalues(state, &stmt->parameters);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstFunctionExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstFunctionExpr), 0);
             }
             break;
         case TINEXPR_RETURN:
             {
-                tin_ast_destroyexpression(state, ((TinAstReturnExpr*)expression)->expression);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstReturnExpr), 0);
+                tin_ast_destroyexpression(state, ((TinAstReturnExpr*)expr)->expression);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstReturnExpr), 0);
             }
             break;
         case TINEXPR_METHOD:
             {
-                TinAstMethodExpr* stmt = (TinAstMethodExpr*)expression;
+                TinAstMethodExpr* stmt = (TinAstMethodExpr*)expr;
                 tin_paramlist_destroyvalues(state, &stmt->parameters);
                 tin_ast_destroyexpression(state, stmt->body);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstMethodExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstMethodExpr), 0);
             }
             break;
         case TINEXPR_CLASS:
             {
-                tin_ast_destroystmtlist(state, &((TinAstClassExpr*)expression)->fields);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstClassExpr), 0);
+                tin_ast_destroystmtlist(state, &((TinAstClassExpr*)expr)->fields);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstClassExpr), 0);
             }
             break;
         case TINEXPR_FIELD:
             {
-                TinAstFieldExpr* stmt = (TinAstFieldExpr*)expression;
+                TinAstFieldExpr* stmt = (TinAstFieldExpr*)expr;
                 tin_ast_destroyexpression(state, stmt->getter);
                 tin_ast_destroyexpression(state, stmt->setter);
-                tin_gcmem_memrealloc(state, expression, sizeof(TinAstFieldExpr), 0);
+                tin_gcmem_memrealloc(state, expr, sizeof(TinAstFieldExpr), 0);
             }
             break;
         default:
             {
-                tin_state_raiseerror(state, COMPILE_ERROR, "Unknown expression type %d", (int)expression->type);
+                tin_state_raiseerror(state, COMPILE_ERROR, "Unknown expression type %d", (int)expr->type);
             }
             break;
     }
@@ -356,117 +356,117 @@ static TinAstExpression* tin_ast_allocexpr(TinState* state, uint64_t line, size_
 
 TinAstLiteralExpr* tin_ast_make_literalexpr(TinState* state, size_t line, TinValue value)
 {
-    TinAstLiteralExpr* expression;
-    expression = (TinAstLiteralExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstLiteralExpr), TINEXPR_LITERAL);
-    expression->value = value;
-    return expression;
+    TinAstLiteralExpr* expr;
+    expr = (TinAstLiteralExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstLiteralExpr), TINEXPR_LITERAL);
+    expr->value = value;
+    return expr;
 }
 
 TinAstBinaryExpr* tin_ast_make_binaryexpr(TinState* state, size_t line, TinAstExpression* left, TinAstExpression* right, TinAstTokType op)
 {
-    TinAstBinaryExpr* expression;
-    expression = (TinAstBinaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstBinaryExpr), TINEXPR_BINARY);
-    expression->left = left;
-    expression->right = right;
-    expression->op = op;
-    expression->ignore_left = false;
-    return expression;
+    TinAstBinaryExpr* expr;
+    expr = (TinAstBinaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstBinaryExpr), TINEXPR_BINARY);
+    expr->left = left;
+    expr->right = right;
+    expr->op = op;
+    expr->ignore_left = false;
+    return expr;
 }
 
 TinAstUnaryExpr* tin_ast_make_unaryexpr(TinState* state, size_t line, TinAstExpression* right, TinAstTokType op)
 {
-    TinAstUnaryExpr* expression;
-    expression = (TinAstUnaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstUnaryExpr), TINEXPR_UNARY);
-    expression->right = right;
-    expression->op = op;
-    return expression;
+    TinAstUnaryExpr* expr;
+    expr = (TinAstUnaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstUnaryExpr), TINEXPR_UNARY);
+    expr->right = right;
+    expr->op = op;
+    return expr;
 }
 
 TinAstVarExpr* tin_ast_make_varexpr(TinState* state, size_t line, const char* name, size_t length)
 {
-    TinAstVarExpr* expression;
-    expression = (TinAstVarExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstVarExpr), TINEXPR_VAREXPR);
-    expression->name = name;
-    expression->length = length;
-    return expression;
+    TinAstVarExpr* expr;
+    expr = (TinAstVarExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstVarExpr), TINEXPR_VAREXPR);
+    expr->name = name;
+    expr->length = length;
+    return expr;
 }
 
 TinAstAssignExpr* tin_ast_make_assignexpr(TinState* state, size_t line, TinAstExpression* to, TinAstExpression* value)
 {
-    TinAstAssignExpr* expression;
-    expression = (TinAstAssignExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstAssignExpr), TINEXPR_ASSIGN);
-    expression->to = to;
-    expression->value = value;
-    return expression;
+    TinAstAssignExpr* expr;
+    expr = (TinAstAssignExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstAssignExpr), TINEXPR_ASSIGN);
+    expr->to = to;
+    expr->value = value;
+    return expr;
 }
 
 TinAstCallExpr* tin_ast_make_callexpr(TinState* state, size_t line, TinAstExpression* callee)
 {
-    TinAstCallExpr* expression;
-    expression = (TinAstCallExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstCallExpr), TINEXPR_CALL);
-    expression->callee = callee;
-    expression->init = NULL;
-    tin_exprlist_init(&expression->args);
-    return expression;
+    TinAstCallExpr* expr;
+    expr = (TinAstCallExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstCallExpr), TINEXPR_CALL);
+    expr->callee = callee;
+    expr->init = NULL;
+    tin_exprlist_init(&expr->args);
+    return expr;
 }
 
 TinAstGetExpr* tin_ast_make_getexpr(TinState* state, size_t line, TinAstExpression* where, const char* name, size_t length, bool questionable, bool ignoreresult)
 {
-    TinAstGetExpr* expression;
-    expression = (TinAstGetExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstGetExpr), TINEXPR_GET);
-    expression->where = where;
-    expression->name = name;
-    expression->length = length;
-    expression->ignemit = false;
-    expression->jump = questionable ? 0 : -1;
-    expression->ignresult = ignoreresult;
-    return expression;
+    TinAstGetExpr* expr;
+    expr = (TinAstGetExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstGetExpr), TINEXPR_GET);
+    expr->where = where;
+    expr->name = name;
+    expr->length = length;
+    expr->ignemit = false;
+    expr->jump = questionable ? 0 : -1;
+    expr->ignresult = ignoreresult;
+    return expr;
 }
 
 TinAstSetExpr* tin_ast_make_setexpr(TinState* state, size_t line, TinAstExpression* where, const char* name, size_t length, TinAstExpression* value)
 {
-    TinAstSetExpr* expression;
-    expression = (TinAstSetExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstSetExpr), TINEXPR_SET);
-    expression->where = where;
-    expression->name = name;
-    expression->length = length;
-    expression->value = value;
-    return expression;
+    TinAstSetExpr* expr;
+    expr = (TinAstSetExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstSetExpr), TINEXPR_SET);
+    expr->where = where;
+    expr->name = name;
+    expr->length = length;
+    expr->value = value;
+    return expr;
 }
 
 TinAstFunctionExpr* tin_ast_make_lambdaexpr(TinState* state, size_t line)
 {
-    TinAstFunctionExpr* expression;
-    expression = (TinAstFunctionExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstFunctionExpr), TINEXPR_LAMBDA);
-    expression->body = NULL;
-    tin_paramlist_init(&expression->parameters);
-    return expression;
+    TinAstFunctionExpr* expr;
+    expr = (TinAstFunctionExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstFunctionExpr), TINEXPR_LAMBDA);
+    expr->body = NULL;
+    tin_paramlist_init(&expr->parameters);
+    return expr;
 }
 
 TinAstArrayExpr* tin_ast_make_arrayexpr(TinState* state, size_t line)
 {
-    TinAstArrayExpr* expression;
-    expression = (TinAstArrayExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstArrayExpr), TINEXPR_ARRAY);
-    tin_exprlist_init(&expression->values);
-    return expression;
+    TinAstArrayExpr* expr;
+    expr = (TinAstArrayExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstArrayExpr), TINEXPR_ARRAY);
+    tin_exprlist_init(&expr->values);
+    return expr;
 }
 
 TinAstObjectExpr* tin_ast_make_objectexpr(TinState* state, size_t line)
 {
-    TinAstObjectExpr* expression;
-    expression = (TinAstObjectExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstObjectExpr), TINEXPR_OBJECT);
-    tin_exprlist_init(&expression->keys);
-    tin_exprlist_init(&expression->values);
-    return expression;
+    TinAstObjectExpr* expr;
+    expr = (TinAstObjectExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstObjectExpr), TINEXPR_OBJECT);
+    tin_exprlist_init(&expr->keys);
+    tin_exprlist_init(&expr->values);
+    return expr;
 }
 
 TinAstIndexExpr* tin_ast_make_subscriptexpr(TinState* state, size_t line, TinAstExpression* array, TinAstExpression* index)
 {
-    TinAstIndexExpr* expression;
-    expression = (TinAstIndexExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstIndexExpr), TINEXPR_SUBSCRIPT);
-    expression->array = array;
-    expression->index = index;
-    return expression;
+    TinAstIndexExpr* expr;
+    expr = (TinAstIndexExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstIndexExpr), TINEXPR_SUBSCRIPT);
+    expr->array = array;
+    expr->index = index;
+    return expr;
 }
 
 TinAstThisExpr* tin_ast_make_thisexpr(TinState* state, size_t line)
@@ -476,51 +476,48 @@ TinAstThisExpr* tin_ast_make_thisexpr(TinState* state, size_t line)
 
 TinAstSuperExpr* tin_ast_make_superexpr(TinState* state, size_t line, TinString* method, bool ignoreresult)
 {
-    TinAstSuperExpr* expression;
-    expression = (TinAstSuperExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstSuperExpr), TINEXPR_SUPER);
-    expression->method = method;
-    expression->ignemit = false;
-    expression->ignresult = ignoreresult;
-    return expression;
+    TinAstSuperExpr* expr;
+    expr = (TinAstSuperExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstSuperExpr), TINEXPR_SUPER);
+    expr->method = method;
+    expr->ignemit = false;
+    expr->ignresult = ignoreresult;
+    return expr;
 }
 
 TinAstRangeExpr* tin_ast_make_rangeexpr(TinState* state, size_t line, TinAstExpression* from, TinAstExpression* to)
 {
-    TinAstRangeExpr* expression;
-    expression = (TinAstRangeExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstRangeExpr), TINEXPR_RANGE);
-    expression->from = from;
-    expression->to = to;
-    return expression;
+    TinAstRangeExpr* expr;
+    expr = (TinAstRangeExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstRangeExpr), TINEXPR_RANGE);
+    expr->from = from;
+    expr->to = to;
+    return expr;
 }
 
 TinAstTernaryExpr* tin_ast_make_ternaryexpr(TinState* state, size_t line, TinAstExpression* condition, TinAstExpression* ifbranch, TinAstExpression* elsebranch)
 {
-    TinAstTernaryExpr* expression;
-    expression = (TinAstTernaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstTernaryExpr), TINEXPR_TERNARY);
-    expression->condition = condition;
-    expression->ifbranch = ifbranch;
-    expression->elsebranch = elsebranch;
-
-    return expression;
+    TinAstTernaryExpr* expr;
+    expr = (TinAstTernaryExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstTernaryExpr), TINEXPR_TERNARY);
+    expr->condition = condition;
+    expr->ifbranch = ifbranch;
+    expr->elsebranch = elsebranch;
+    return expr;
 }
 
 TinAstStrInterExpr* tin_ast_make_strinterpolexpr(TinState* state, size_t line)
 {
-    TinAstStrInterExpr* expression;
-    expression = (TinAstStrInterExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstStrInterExpr), TINEXPR_INTERPOLATION);
-    tin_exprlist_init(&expression->expressions);
-    return expression;
+    TinAstStrInterExpr* expr;
+    expr = (TinAstStrInterExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstStrInterExpr), TINEXPR_INTERPOLATION);
+    tin_exprlist_init(&expr->expressions);
+    return expr;
 }
 
 TinAstRefExpr* tin_ast_make_referenceexpr(TinState* state, size_t line, TinAstExpression* to)
 {
-    TinAstRefExpr* expression;
-    expression = (TinAstRefExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstRefExpr), TINEXPR_REFERENCE);
-    expression->to = to;
-    return expression;
+    TinAstRefExpr* expr;
+    expr = (TinAstRefExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstRefExpr), TINEXPR_REFERENCE);
+    expr->to = to;
+    return expr;
 }
-
-
 
 static TinAstExpression* tin_ast_allocstmt(TinState* state, uint64_t line, size_t size, TinAstExprType type)
 {
@@ -531,32 +528,32 @@ static TinAstExpression* tin_ast_allocstmt(TinState* state, uint64_t line, size_
     return object;
 }
 
-TinAstExprExpr* tin_ast_make_exprstmt(TinState* state, size_t line, TinAstExpression* expression)
+TinAstExprExpr* tin_ast_make_exprstmt(TinState* state, size_t line, TinAstExpression* expr)
 {
-    TinAstExprExpr* statement;
-    statement = (TinAstExprExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstExprExpr), TINEXPR_EXPRESSION);
-    statement->expression = expression;
-    statement->pop = true;
-    return statement;
+    TinAstExprExpr* stmt;
+    stmt = (TinAstExprExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstExprExpr), TINEXPR_EXPRESSION);
+    stmt->expression = expr;
+    stmt->pop = true;
+    return stmt;
 }
 
 TinAstBlockExpr* tin_ast_make_blockexpr(TinState* state, size_t line)
 {
-    TinAstBlockExpr* statement;
-    statement = (TinAstBlockExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstBlockExpr), TINEXPR_BLOCK);
-    tin_exprlist_init(&statement->statements);
-    return statement;
+    TinAstBlockExpr* stmt;
+    stmt = (TinAstBlockExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstBlockExpr), TINEXPR_BLOCK);
+    tin_exprlist_init(&stmt->statements);
+    return stmt;
 }
 
 TinAstAssignVarExpr* tin_ast_make_assignvarexpr(TinState* state, size_t line, const char* name, size_t length, TinAstExpression* init, bool constant)
 {
-    TinAstAssignVarExpr* statement;
-    statement = (TinAstAssignVarExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstAssignVarExpr), TINEXPR_VARSTMT);
-    statement->name = name;
-    statement->length = length;
-    statement->init = init;
-    statement->constant = constant;
-    return statement;
+    TinAstAssignVarExpr* stmt;
+    stmt = (TinAstAssignVarExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstAssignVarExpr), TINEXPR_VARSTMT);
+    stmt->name = name;
+    stmt->length = length;
+    stmt->init = init;
+    stmt->constant = constant;
+    return stmt;
 }
 
 TinAstIfExpr* tin_ast_make_ifexpr(TinState* state,
@@ -567,23 +564,23 @@ TinAstIfExpr* tin_ast_make_ifexpr(TinState* state,
                                         TinAstExprList* elseifconditions,
                                         TinAstExprList* elseifbranches)
 {
-    TinAstIfExpr* statement;
-    statement = (TinAstIfExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstIfExpr), TINEXPR_IFSTMT);
-    statement->condition = condition;
-    statement->ifbranch = ifbranch;
-    statement->elsebranch = elsebranch;
-    statement->elseifconds = elseifconditions;
-    statement->elseifbranches = elseifbranches;
-    return statement;
+    TinAstIfExpr* stmt;
+    stmt = (TinAstIfExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstIfExpr), TINEXPR_IFSTMT);
+    stmt->condition = condition;
+    stmt->ifbranch = ifbranch;
+    stmt->elsebranch = elsebranch;
+    stmt->elseifconds = elseifconditions;
+    stmt->elseifbranches = elseifbranches;
+    return stmt;
 }
 
 TinAstWhileExpr* tin_ast_make_whileexpr(TinState* state, size_t line, TinAstExpression* condition, TinAstExpression* body)
 {
-    TinAstWhileExpr* statement;
-    statement = (TinAstWhileExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstWhileExpr), TINEXPR_WHILE);
-    statement->condition = condition;
-    statement->body = body;
-    return statement;
+    TinAstWhileExpr* stmt;
+    stmt = (TinAstWhileExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstWhileExpr), TINEXPR_WHILE);
+    stmt->condition = condition;
+    stmt->body = body;
+    return stmt;
 }
 
 TinAstForExpr* tin_ast_make_forexpr(TinState* state,
@@ -595,15 +592,15 @@ TinAstForExpr* tin_ast_make_forexpr(TinState* state,
                                           TinAstExpression* body,
                                           bool cstyle)
 {
-    TinAstForExpr* statement;
-    statement = (TinAstForExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstForExpr), TINEXPR_FOR);
-    statement->init = init;
-    statement->var = var;
-    statement->condition = condition;
-    statement->increment = increment;
-    statement->body = body;
-    statement->cstyle = cstyle;
-    return statement;
+    TinAstForExpr* stmt;
+    stmt = (TinAstForExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstForExpr), TINEXPR_FOR);
+    stmt->init = init;
+    stmt->var = var;
+    stmt->condition = condition;
+    stmt->increment = increment;
+    stmt->body = body;
+    stmt->cstyle = cstyle;
+    return stmt;
 }
 
 TinAstContinueExpr* tin_ast_make_continueexpr(TinState* state, size_t line)
@@ -627,44 +624,44 @@ TinAstFunctionExpr* tin_ast_make_funcexpr(TinState* state, size_t line, const ch
     return function;
 }
 
-TinAstReturnExpr* tin_ast_make_returnexpr(TinState* state, size_t line, TinAstExpression* expression)
+TinAstReturnExpr* tin_ast_make_returnexpr(TinState* state, size_t line, TinAstExpression* expr)
 {
-    TinAstReturnExpr* statement;
-    statement = (TinAstReturnExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstReturnExpr), TINEXPR_RETURN);
-    statement->expression = expression;
-    return statement;
+    TinAstReturnExpr* stmt;
+    stmt = (TinAstReturnExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstReturnExpr), TINEXPR_RETURN);
+    stmt->expression = expr;
+    return stmt;
 }
 
 TinAstMethodExpr* tin_ast_make_methodexpr(TinState* state, size_t line, TinString* name, bool isstatic)
 {
-    TinAstMethodExpr* statement;
-    statement = (TinAstMethodExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstMethodExpr), TINEXPR_METHOD);
-    statement->name = name;
-    statement->body = NULL;
-    statement->isstatic = isstatic;
-    tin_paramlist_init(&statement->parameters);
-    return statement;
+    TinAstMethodExpr* stmt;
+    stmt = (TinAstMethodExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstMethodExpr), TINEXPR_METHOD);
+    stmt->name = name;
+    stmt->body = NULL;
+    stmt->isstatic = isstatic;
+    tin_paramlist_init(&stmt->parameters);
+    return stmt;
 }
 
 TinAstClassExpr* tin_ast_make_classexpr(TinState* state, size_t line, TinString* name, TinString* parent)
 {
-    TinAstClassExpr* statement;
-    statement = (TinAstClassExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstClassExpr), TINEXPR_CLASS);
-    statement->name = name;
-    statement->parent = parent;
-    tin_exprlist_init(&statement->fields);
-    return statement;
+    TinAstClassExpr* stmt;
+    stmt = (TinAstClassExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstClassExpr), TINEXPR_CLASS);
+    stmt->name = name;
+    stmt->parent = parent;
+    tin_exprlist_init(&stmt->fields);
+    return stmt;
 }
 
 TinAstFieldExpr* tin_ast_make_fieldexpr(TinState* state, size_t line, TinString* name, TinAstExpression* getter, TinAstExpression* setter, bool isstatic)
 {
-    TinAstFieldExpr* statement;
-    statement = (TinAstFieldExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstFieldExpr), TINEXPR_FIELD);
-    statement->name = name;
-    statement->getter = getter;
-    statement->setter = setter;
-    statement->isstatic = isstatic;
-    return statement;
+    TinAstFieldExpr* stmt;
+    stmt = (TinAstFieldExpr*)tin_ast_allocstmt(state, line, sizeof(TinAstFieldExpr), TINEXPR_FIELD);
+    stmt->name = name;
+    stmt->getter = getter;
+    stmt->setter = setter;
+    stmt->isstatic = isstatic;
+    return stmt;
 }
 
 TinAstExprList* tin_ast_allocexprlist(TinState* state)

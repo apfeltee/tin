@@ -573,6 +573,7 @@ struct TinAstScanner
     TinState* state;
     size_t braces[TIN_MAX_INTERPOLATION_NESTING];
     size_t numbraces;
+    size_t srclength;
     bool haderror;
 };
 

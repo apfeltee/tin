@@ -463,6 +463,16 @@ static TinValue objfn_instance_iteratorvalue(TinVM* vm, TinValue instance, size_
     return util_table_iterator_key(&self->fields, index);
 }
 
+static TinValue objfn_instance_dump(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    TinWriter tw;
+    TinString* ts;
+    tin_writer_init_string(vm->state, &tw);
+    tin_towriter_value(vm->state, &tw, instance, true);
+    ts = tin_writer_get_string(&tw);
+    return tin_value_fromobject(ts);
+}
+
 void tin_state_openobjectlibrary(TinState* state)
 {
     TinClass* klass;
@@ -477,6 +487,8 @@ void tin_state_openobjectlibrary(TinState* state)
         #endif
         tin_class_bindmethod(state, klass, "toString", objfn_instance_tostring);
         tin_class_bindmethod(state, klass, "toMap", objfn_instance_tomap);
+        tin_class_bindmethod(state, klass, "dump", objfn_instance_dump);
+        
         tin_class_bindmethod(state, klass, "iterator", objfn_instance_iterator);
         tin_class_bindmethod(state, klass, "iteratorValue", objfn_instance_iteratorvalue);
         state->primobjectclass = klass;

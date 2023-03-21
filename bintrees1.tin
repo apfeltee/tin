@@ -1,0 +1,87 @@
+/**
+ * This program stresses method calls, memory sustainability
+ * and looping.
+ *
+ * Part of Promit Test Suit, location /test/Benchmark/BinaryTrees.Promit
+ * 
+ * Created by SD Asif Hossein in 21th June, 2022 (Tuesday) at 01:31 PM (UTC +06).
+ */
+
+// This program doesn't make that much sense.
+// But hey, atleast it can benchmark.
+
+class Tree {
+	init(value, depth) {
+		// Set the value and depth.
+
+		this.depth = depth;
+		this.value = value;
+
+		if(depth > 0)
+        {
+            // Create left and right nodes.
+            this.left  = Tree(value - 1, depth - 1);
+            this.right = Tree(2 * value + 1, depth - 1);
+        }
+        else
+        {
+            this.left  = null;
+            this.right = null;
+        }
+    }
+
+	check()
+    {
+        // If current tree/node is a leaf node, just
+        // return the value.
+        if(!this.left)
+            return this.value;
+        return this.value + this.right.check() - this.left.check();
+    }
+};
+
+var minDepth = 4;
+var maxDepth = 14/1;
+
+var stretchDepth = maxDepth + 1;
+
+println($"Min depth : {minDepth}, max depth : {maxDepth} and stretched depth : {stretchDepth}");
+println("Starting benchmark...");
+
+
+println($"Check 1 : {Tree(0, stretchDepth).check()}");
+
+// Long lived tree will be benchmarked later.
+
+var long_lived_tree = Tree(0, maxDepth);
+
+// Maximum number of trees/nodes (BT) in max depth.
+
+var trees = 1;
+
+for(var i = 0; i < maxDepth; i++) 
+	trees *= 2;
+
+var check_count = 2;
+
+for(var i = minDepth ; i < maxDepth; i += 2)
+{
+    var check = 0;
+
+    for(var j = 0; j < trees; j++) 
+    {
+        check += Tree(j, i).check() + Tree(-j, i).check();    
+    }
+    println($"Number of trees : {trees * 2}");
+    println($"Current running depth : {i}");
+    println($"Check {check_count++} : {check}");
+    trees /= 4;
+}
+
+// Checking long_lived_tree, which been there for long.
+// The "long_lived_tree" variable checks the sustainability.
+
+println($"Long lived tree depth : {maxDepth}");
+println($"Check {check_count} : {long_lived_tree.check()}");
+
+println("Benchmarking finished!");

@@ -155,7 +155,7 @@
 #define tin_vmmac_invokemethod(instance, mthname, argc) \
     if(tin_value_isnull(instance)) \
     { \
-        fprintf(stderr, "mthname=<%s>\n", mthname);\
+        /*fprintf(stderr, "mthname=<%s>\n", mthname); */\
         tin_vmmac_raiseerrorfmtcont("cannot call method '%s' of null-instance", mthname); \
     } \
     TinClass* klass = tin_state_getclassfor(est->state, instance); \
@@ -1454,7 +1454,7 @@ TIN_VM_INLINE bool tin_vmdo_objectpushfield(TinExecState* est, TinValue* finalre
     if(tin_value_ismap(operand))
     {
         tmap = tin_value_asmap(operand);
-        fprintf(stderr, "peek1=%s\n", tin_tostring_typename(peek1));
+        //fprintf(stderr, "peek1=%s\n", tin_tostring_typename(peek1));
         tin_table_set(est->state, &tmap->values, tin_value_asstring(peek1), peek0);
     }
     else if(tin_value_isinstance(operand))
@@ -1598,7 +1598,7 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
     receiver = tin_vmintern_peek(est, argc);
     if(tin_value_isnull(receiver))
     {
-        tin_vmmac_raiseerrorfmtnocont("cannot index a null value with '%s'", mthname->data);
+        tin_vmmac_raiseerrorfmtnocont("invokeignoring: cannot index a null value with '%s'", mthname->data);
     }
     tin_vmintern_writeframe(est, est->ip);
     if(tin_value_isclass(receiver))
@@ -1618,7 +1618,7 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
         }
         else
         {
-            tin_vmmac_raiseerrorfmtnocont("cannot call undefined method '%s' of class '%s'", mthname->data, tin_value_asclass(receiver)->name->data)
+            tin_vmmac_raiseerrorfmtnocont("invokeignoring: cannot call undefined method '%s' of class '%s'", mthname->data, tin_value_asclass(receiver)->name->data)
         }
         return true;
     }
@@ -1647,7 +1647,7 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
         }
         else
         {
-            tin_vmmac_raiseerrorfmtnocont("cannot call undefined method '%s' of class '%s'", mthname->data, instance->klass->name->data)
+            tin_vmmac_raiseerrorfmtnocont("invokeignoring: cannot call undefined method '%s' of class '%s'", mthname->data, instance->klass->name->data)
         }
         return true;
     }
@@ -1672,7 +1672,7 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
         }
         else
         {
-            tin_vmmac_raiseerrorfmtnocont("cannot call undefined method '%s' of class '%s'", mthname->data, type->name->data)
+            tin_vmmac_raiseerrorfmtnocont("invokeignoring: cannot call undefined method '%s' of class '%s'", mthname->data, type->name->data)
         }
         return true;
     }
@@ -1692,9 +1692,10 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
     argc = tin_vmintern_readbyte(est);
     mthname = tin_vmintern_readstringlong(est);
     receiver = tin_vmintern_peek(est, argc);
+    
     if(tin_value_isnull(receiver))
     {
-        tin_vmmac_raiseerrorfmtnocont("cannot index a null value with '%s'", mthname->data);
+        tin_vmmac_raiseerrorfmtnocont("invokemethod: cannot index a null value with '%s'", mthname->data);
     }
     tin_vmintern_writeframe(est, est->ip);
     if(tin_value_isclass(receiver))
@@ -1706,7 +1707,7 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
         }
         else
         {
-            tin_vmmac_raiseerrorfmtnocont("cannot call undefined method '%s' of class '%s'", mthname->data, tin_value_asclass(receiver)->name->data)
+            tin_vmmac_raiseerrorfmtnocont("invokemethod: cannot call undefined method '%s' of class '%s'", mthname->data, tin_value_asclass(receiver)->name->data)
         }
         return true;
     }
@@ -1727,7 +1728,7 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
         }
         else
         {
-            tin_vmmac_raiseerrorfmtnocont("cannot call undefined method '%s' of class '%s'", mthname->data, instance->klass->name->data)
+            tin_vmmac_raiseerrorfmtnocont("invokemethod: cannot call undefined method '%s' of class '%s'", mthname->data, instance->klass->name->data)
         }
         return true;
     }
@@ -1744,7 +1745,7 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
         }
         else
         {
-            tin_vmmac_raiseerrorfmtnocont("cannot call undefined method '%s' of class '%s'", mthname->data, type->name->data)
+            tin_vmmac_raiseerrorfmtnocont("invokemethod: cannot call undefined method '%s' of class '%s'", mthname->data, type->name->data)
         }
         return true;
     }

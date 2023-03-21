@@ -269,7 +269,6 @@ void tin_towriter_functail(TinState* state, TinWriter* wr, TinString* name, TinM
     tin_writer_writeformat(wr, " %s>", suffix);
 }
 
-
 void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool withquot)
 {
     size_t size;
@@ -679,7 +678,6 @@ const char* tin_tostring_optok(TinAstTokType t)
 
 #define as_type(varname, fromname, tname) \
     tname* varname = (tname*)fromname
-
 
 struct TinAstWriterState
 {
