@@ -771,6 +771,7 @@ static TinValue objmethod_file_writestring(TinVM* vm, TinValue instance, size_t 
 
 static long tin_util_filesize(FILE* fh)
 {
+    int r;
     int fd;
     struct stat sb;
     fd = fileno(fh);
@@ -778,7 +779,14 @@ static long tin_util_filesize(FILE* fh)
     {
         return -1;
     }
-    if(fstat(fd, &sb) == -1)
+    /* visualstudio is being a little bitch */
+    #if defined(__cplusplus)
+        //r = fstat(fd, reinterpret_cast<struct stat*>(&sb));
+        r = -1;
+    #else
+        r = fstat(fd, (struct stat* const)&sb);
+    #endif
+    if(r == -1)
     {
         return -1;
     }

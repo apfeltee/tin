@@ -168,11 +168,16 @@
 
 
 #define PUSH(value) (*fiber->stack_top++ = value)
-#define RETURN_OK(r) return (TinInterpretResult){ TINSTATE_OK, r };
 
-#define RETURN_RUNTIME_ERROR(state) return (TinInterpretResult){ TINSTATE_RUNTIMEERROR, tin_value_makenull(state) };
+#if defined(__cplusplus)
+    #define TIN_MAKESTATUS(code, value) TinInterpretResult{code, value}
+#else
+    #define TIN_MAKESTATUS(code, value) (TinInterpretResult){code, value}
+#endif
 
-#define INTERPRET_RUNTIME_FAIL(state) ((TinInterpretResult){ TINSTATE_INVALID, tin_value_makenull(state) })
+#define RETURN_OK(r) return TIN_MAKESTATUS(TINSTATE_OK, r)
+#define RETURN_RUNTIME_ERROR(state) return TIN_MAKESTATUS(TINSTATE_RUNTIMEERROR, tin_value_makenull(state))
+#define INTERPRET_RUNTIME_FAIL(state) (TIN_MAKESTATUS(TINSTATE_INVALID, tin_value_makenull(state)))
 
 enum TinAstExprType
 {

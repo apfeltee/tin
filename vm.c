@@ -1764,9 +1764,9 @@ TinInterpretResult tin_vm_execfiber(TinState* state, TinFiber* fiber)
     TinValue finalresult;
     if(!tin_vmintern_execfiber(state, fiber, &finalresult))
     {
-        return (TinInterpretResult){ TINSTATE_RUNTIMEERROR, tin_value_makenull(state) };
+        return TIN_MAKESTATUS(TINSTATE_RUNTIMEERROR, tin_value_makenull(state));
     }
-    return (TinInterpretResult){ TINSTATE_OK, finalresult };
+    return TIN_MAKESTATUS(TINSTATE_OK, finalresult);
 }
 
 bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* finalresult)

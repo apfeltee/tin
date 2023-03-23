@@ -583,7 +583,7 @@ TinInterpretResult tin_state_findandcallmethod(TinState* state, TinValue callee,
     {
         return tin_state_callmethod(state, callee, mthval, argv, argc, ignfiber);
     }
-    return (TinInterpretResult){ TINSTATE_INVALID, tin_value_makenull(state) };
+    return TIN_MAKESTATUS(TINSTATE_INVALID, tin_value_makenull(state));
 }
 
 void tin_state_pushroot(TinState* state, TinObject* object)
@@ -822,7 +822,7 @@ TinInterpretResult tin_state_internexecsource(TinState* state, TinString* module
     module = tin_state_compilemodule(state, module_name, code, len);
     if(module == NULL)
     {
-        return (TinInterpretResult){ TINSTATE_COMPILEERROR, tin_value_makenull(state) };
+        return TIN_MAKESTATUS(TINSTATE_COMPILEERROR, tin_value_makenull(state));
     }
     
     result = tin_vm_execmodule(state, module);
@@ -958,7 +958,7 @@ TinInterpretResult tin_state_dumpfile(TinState* state, const char* file)
     else
     {
         tin_disassemble_module(state, module, source);
-        result = (TinInterpretResult){ TINSTATE_OK, tin_value_makenull(state) };
+        result = TIN_MAKESTATUS(TINSTATE_OK, tin_value_makenull(state));
     }
     free((void*)source);
     free((void*)patchedfilename);

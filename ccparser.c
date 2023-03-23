@@ -459,6 +459,15 @@ static TinAstExpression* tin_astparser_parselambda(TinAstParser* prs, TinAstFunc
     return (TinAstExpression*)lambda;
 }
 
+static inline TinAstParameter tin_astparser_makeparam(const char* name, size_t length, TinAstExpression* defexpr)
+{
+    TinAstParameter tp;
+    tp.name = name;
+    tp.length = length;
+    tp.defaultexpr = defexpr;
+    return tp;
+}
+
 static void tin_astparser_parseparameters(TinAstParser* prs, TinAstParamList* parameters)
 {
     bool haddefault;
@@ -471,7 +480,7 @@ static void tin_astparser_parseparameters(TinAstParser* prs, TinAstParamList* pa
         // Vararg ...
         if(tin_astparser_match(prs, TINTOK_TRIPLEDOT))
         {
-            tin_paramlist_push(prs->state, parameters, (TinAstParameter){ "...", 3, NULL });
+            tin_paramlist_push(prs->state, parameters, tin_astparser_makeparam("...", 3, NULL));
             return;
         }
         tin_astparser_consume(prs, TINTOK_IDENT, "argument name");
@@ -487,7 +496,7 @@ static void tin_astparser_parseparameters(TinAstParser* prs, TinAstParamList* pa
         {
             tin_astparser_raiseerror(prs, "default arguments must always be in the end of the argument list.");
         }
-        tin_paramlist_push(prs->state, parameters, (TinAstParameter){ argname, arglength, defexpr });
+        tin_paramlist_push(prs->state, parameters, tin_astparser_makeparam(argname, arglength, defexpr));
         if(!tin_astparser_match(prs, TINTOK_COMMA))
         {
             break;
@@ -542,7 +551,7 @@ static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* prs, b
             {
                 defvalue = tin_astparser_parseexpression(prs, true);
             }
-            tin_paramlist_push(state, &lambda->parameters, (TinAstParameter){ firstargstart, firstarglength, defvalue });
+            tin_paramlist_push(state, &lambda->parameters, tin_astparser_makeparam(firstargstart, firstarglength, defvalue));
             if(!hadvararg && prs->previous.type == TINTOK_COMMA)
             {
                 do
@@ -569,7 +578,7 @@ static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* prs, b
                     {
                         tin_astparser_raiseerror(prs, "default arguments must always be in the end of the argument list.");
                     }
-                    tin_paramlist_push(state, &lambda->parameters, (TinAstParameter){ argname, arglength, defexpr });
+                    tin_paramlist_push(state, &lambda->parameters, tin_astparser_makeparam(argname, arglength, defexpr));
                     if(stop)
                     {
                         break;

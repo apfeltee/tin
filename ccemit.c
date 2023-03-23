@@ -291,6 +291,17 @@ static void tin_astemit_emitbyteorshort(TinAstEmitter* emt, uint16_t line, uint8
     }
 }
 
+static inline TinAstLocal tin_compiler_makelocal(const char* name, size_t length, int depth, bool captured, bool constant)
+{
+    TinAstLocal tl;
+    tl.name = name;
+    tl.length = length;
+    tl.depth = depth;
+    tl.captured = captured;
+    tl.constant = constant;
+    return tl;
+}
+
 static void tin_compiler_compiler(TinAstEmitter* emt, TinAstCompiler* compiler, TinAstFuncType type)
 {
     const char* name;
@@ -314,11 +325,11 @@ static void tin_compiler_compiler(TinAstEmitter* emt, TinAstCompiler* compiler, 
     }
     if(type == TINFUNC_METHOD || type == TINFUNC_STATICMETHOD || type == TINFUNC_CONSTRUCTOR)
     {
-        tin_loclist_push(emt->state, &compiler->locals, (TinAstLocal){ "this", 4, -1, false, false });
+        tin_loclist_push(emt->state, &compiler->locals, tin_compiler_makelocal("this", 4, -1, false, false));
     }
     else
     {
-        tin_loclist_push(emt->state, &compiler->locals, (TinAstLocal){ "", 0, -1, false, false });
+        tin_loclist_push(emt->state, &compiler->locals, tin_compiler_makelocal("", 0, -1, false, false));
     }
     compiler->slots = 1;
     compiler->maxslots = 1;
@@ -421,6 +432,14 @@ static size_t tin_astemit_emitconstant(TinAstEmitter* emt, size_t line, TinValue
     return constant;
 }
 
+static inline TinAstPrivate tin_astemit_makeprivate(bool initialized, bool constant)
+{
+    TinAstPrivate tv;
+    tv.initialized = initialized;
+    tv.constant = constant;
+    return tv;
+}
+
 static int tin_astemit_addprivate(TinAstEmitter* emt, const char* name, size_t length, size_t line, bool constant)
 {
     int index;
@@ -444,7 +463,7 @@ static int tin_astemit_addprivate(TinAstEmitter* emt, const char* name, size_t l
     }
     state = emt->state;
     index = (int)privates->count;
-    tin_privlist_push(state, privates, (TinAstPrivate){ false, constant });
+    tin_privlist_push(state, privates, tin_astemit_makeprivate(false, constant));
     tin_table_set(state, privnames, tin_string_copy(state, name, length), tin_value_makefixednumber(state, index));
     emt->module->private_count++;
     return index;
@@ -495,7 +514,7 @@ static int tin_astemit_addlocal(TinAstEmitter* emt, const char* name, size_t len
             tin_astemit_raiseerror(emt, line, "variable '%.*s' was already declared in this scope", length, name);
         }
     }
-    tin_loclist_push(emt->state, locals, (TinAstLocal){ name, length, UINT16_MAX, false, constant });
+    tin_loclist_push(emt->state, locals, tin_compiler_makelocal(name, length, UINT16_MAX, false, constant));
     return (((int)locals->count) - 1);
 }
 
@@ -2248,7 +2267,7 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
     {
         privates = &emt->privates;
         privates->count = oldprivatescnt - 1;
-        tin_privlist_push(state, privates, (TinAstPrivate){ true, false });
+        tin_privlist_push(state, privates, tin_astemit_makeprivate(true, false));
         for(i = 0; i < oldprivatescnt; i++)
         {
             privates->values[i].initialized = true;

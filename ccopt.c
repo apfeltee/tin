@@ -134,9 +134,15 @@ static void tin_astopt_endscope(TinAstOptimizer* optimizer)
 
 static TinVariable* tin_astopt_addvar(TinAstOptimizer* optimizer, const char* name, size_t length, bool constant, TinAstExpression** declaration)
 {
-    tin_varlist_push(optimizer->state, &optimizer->variables,
-                        (TinVariable){ name, length, optimizer->depth, constant, optimizer->mark_used, tin_value_makenull(optimizer->state), declaration });
-
+    TinVariable tv;
+    tv.name = name;
+    tv.length = length;
+    tv.depth = optimizer->depth;
+    tv.constant = constant;
+    tv.used = optimizer->mark_used;
+    tv.constvalue = tin_value_makenull(optimizer->state);
+    tv.declaration = declaration;
+    tin_varlist_push(optimizer->state, &optimizer->variables, tv);
     return &optimizer->variables.values[optimizer->variables.count - 1];
 }
 
