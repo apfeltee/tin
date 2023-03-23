@@ -170,15 +170,270 @@
 #define PUSH(value) (*fiber->stack_top++ = value)
 #define RETURN_OK(r) return (TinInterpretResult){ TINSTATE_OK, r };
 
-#define RETURN_RUNTIME_ERROR() return (TinInterpretResult){ TINSTATE_RUNTIMEERROR, NULL_VALUE };
+#define RETURN_RUNTIME_ERROR(state) return (TinInterpretResult){ TINSTATE_RUNTIMEERROR, tin_value_makenull(state) };
 
-#define INTERPRET_RUNTIME_FAIL ((TinInterpretResult){ TINSTATE_INVALID, NULL_VALUE })
+#define INTERPRET_RUNTIME_FAIL(state) ((TinInterpretResult){ TINSTATE_INVALID, tin_value_makenull(state) })
+
+enum TinAstExprType
+{
+    TINEXPR_LITERAL,
+    TINEXPR_BINARY,
+    TINEXPR_UNARY,
+    TINEXPR_VAREXPR,
+    TINEXPR_ASSIGN,
+    TINEXPR_CALL,
+    TINEXPR_SET,
+    TINEXPR_GET,
+    TINEXPR_LAMBDA,
+    TINEXPR_ARRAY,
+    TINEXPR_OBJECT,
+    TINEXPR_SUBSCRIPT,
+    TINEXPR_THIS,
+    TINEXPR_SUPER,
+    TINEXPR_RANGE,
+    TINEXPR_TERNARY,
+    TINEXPR_INTERPOLATION,
+    TINEXPR_REFERENCE,
+    TINEXPR_EXPRESSION,
+    TINEXPR_BLOCK,
+    TINEXPR_IFSTMT,
+    TINEXPR_WHILE,
+    TINEXPR_FOR,
+    TINEXPR_VARSTMT,
+    TINEXPR_CONTINUE,
+    TINEXPR_BREAK,
+    TINEXPR_FUNCTION,
+    TINEXPR_RETURN,
+    TINEXPR_METHOD,
+    TINEXPR_CLASS,
+    TINEXPR_FIELD
+};
+
+enum TinAstPrecedence
+{
+    TINPREC_NONE,
+    TINPREC_ASSIGNMENT,// =
+    TINPREC_OR,// ||
+    TINPREC_AND,// &&
+    TINPREC_BOR,// | ^
+    TINPREC_BAND,// &
+    TINPREC_SHIFT,// << >>
+    TINPREC_EQUALITY,// == !=
+    TINPREC_COMPARISON,// < > <= >=
+    TINPREC_COMPOUND,// += -= *= /= ++ --
+    TINPREC_TERM,// + -
+    TINPREC_FACTOR,// * /
+    TINPREC_IS,// is
+    TINPREC_RANGE,// ..
+    TINPREC_UNARY,// ! - ~
+    TINPREC_NULL,// ??
+    TINPREC_CALL,// . ()
+    TINPREC_PRIMARY
+};
+
+enum TinAstTokType
+{
+    TINTOK_NEWLINE,
+
+    // Single-character tokens.
+    TINTOK_PARENOPEN,
+    TINTOK_PARENCLOSE,
+    TINTOK_BRACEOPEN,
+    TINTOK_BRACECLOSE,
+    TINTOK_BRACKETOPEN,
+    TINTOK_BRACKETCLOSE,
+    TINTOK_COMMA,
+    TINTOK_SEMICOLON,
+    TINTOK_COLON,
+
+    // One or two character tokens.
+    TINTOK_ASSIGNEQUAL,
+    TINTOK_BAR,
+    TINTOK_DOUBLEBAR,
+    TINTOK_AMPERSANDEQUAL,
+    TINTOK_AMPERSAND,
+    TINTOK_DOUBLEAMPERSAND,
+    TINTOK_BANG,
+    TINTOK_BANGEQUAL,
+    TINTOK_ASSIGN,
+    TINTOK_EQUAL,
+    TINTOK_GREATERTHAN,
+    TINTOK_GREATEREQUAL,
+    TINTOK_SHIFTRIGHT,
+    TINTOK_LESSTHAN,
+    TINTOK_LESSEQUAL,
+    TINTOK_SHIFTLEFT,
+    TINTOK_PLUS,
+    TINTOK_PLUSEQUAL,
+    TINTOK_DOUBLEPLUS,
+    TINTOK_MINUS,
+    TINTOK_MINUSEQUAL,
+    TINTOK_DOUBLEMINUS,
+    TINTOK_STAR,
+    TINTOK_STAREQUAL,
+    TINTOK_DOUBLESTAR,
+    TINTOK_SLASH,
+    TINTOK_SLASHEQUAL,
+    TINTOK_QUESTION,
+    TINTOK_DOUBLEQUESTION,
+    TINTOK_PERCENT,
+    TINTOK_PERCENTEQUAL,
+    TINTOK_ARROW,
+    TINTOK_SMALLARROW,
+    TINTOK_TILDE,
+    TINTOK_CARET,
+    TINTOK_CARETEQUAL,
+    TINTOK_DOT,
+    TINTOK_DOUBLEDOT,
+    TINTOK_TRIPLEDOT,
+    TINTOK_SHARP,
+    TINTOK_SHARPEQUAL,
+
+    // Literals.
+    TINTOK_IDENT,
+    TINTOK_STRING,
+    TINTOK_STRINTERPOL,
+    TINTOK_NUMBER,
+
+    // Keywords.
+    TINTOK_KWCLASS,
+    TINTOK_KWELSE,
+    TINTOK_KWFALSE,
+    TINTOK_KWFOR,
+    TINTOK_KWFUNCTION,
+    TINTOK_KWIF,
+    TINTOK_KWNULL,
+    TINTOK_KWRETURN,
+    TINTOK_KWSUPER,
+    TINTOK_KWTHIS,
+    TINTOK_KWTRUE,
+    TINTOK_KWVAR,
+    TINTOK_KWWHILE,
+    TINTOK_KWCONTINUE,
+    TINTOK_KWBREAK,
+    TINTOK_KWNEW,
+    TINTOK_KWEXPORT,
+    TINTOK_KWIS,
+    TINTOK_KWSTATIC,
+    TINTOK_KWOPERATOR,
+    TINTOK_KWGET,
+    TINTOK_KWSET,
+    TINTOK_KWIN,
+    TINTOK_KWCONST,
+    TINTOK_KWREF,
+
+    TINTOK_ERROR,
+    TINTOK_EOF
+};
+
+enum TinAstFuncType
+{
+    TINFUNC_REGULAR,
+    TINFUNC_SCRIPT,
+    TINFUNC_METHOD,
+    TINFUNC_STATICMETHOD,
+    TINFUNC_CONSTRUCTOR
+};
 
 
+enum TinOpCode
+{
+    OP_POP,
+    OP_RETURN,
+    OP_CONSTVALUE,
+    OP_CONSTLONG,
+    OP_VALTRUE,
+    OP_VALFALSE,
+    OP_VALNULL,
+    OP_VALARRAY,
+    OP_VALOBJECT,
+    OP_RANGE,
+    OP_NEGATE,
+    OP_NOT,
+    OP_MATHADD,
+    OP_MATHSUB,
+    OP_MATHMULT,
+    OP_MATHPOWER,
+    OP_MATHDIV,
+    OP_MATHFLOORDIV,
+    OP_MATHMOD,
+    OP_BINAND,
+    OP_BINOR,
+    OP_BINXOR,
+    OP_LEFTSHIFT,
+    OP_RIGHTSHIFT,
+    OP_BINNOT,
+    OP_EQUAL,
+    OP_GREATERTHAN,
+    OP_GREATEREQUAL,
+    OP_LESSTHAN,
+    OP_LESSEQUAL,
+    OP_GLOBALSET,
+    OP_GLOBALGET,
+    OP_LOCALSET,
+    OP_LOCALGET,
+    OP_LOCALLONGSET,
+    OP_LOCALLONGGET,
+    OP_PRIVATESET,
+    OP_PRIVATEGET,
+    OP_PRIVATELONGSET,
+    OP_PRIVATELONGGET,
+    OP_UPVALSET,
+    OP_UPVALGET,
 
-#define NULL_VALUE ((TinValue){.type=TINVAL_NULL})
-#define TRUE_VALUE ((TinValue){.type=TINVAL_BOOL, .boolval=true})
-#define FALSE_VALUE ((TinValue){.type=TINVAL_BOOL, .boolval=false})
+    OP_JUMPIFFALSE,
+    OP_JUMPIFNULL,
+    OP_JUMPIFNULLPOP,
+    OP_JUMPALWAYS,
+    OP_JUMPBACK,
+    OP_AND,
+    OP_OR,
+    OP_NULLOR,
+
+    OP_MAKECLOSURE,
+    OP_UPVALCLOSE,
+
+    OP_MAKECLASS,
+    OP_FIELDGET,
+    OP_FIELDSET,
+
+    // [array] [index] -> [value]
+    OP_GETINDEX,
+    // [array] [index] [value] -> [value]
+    OP_SETINDEX,
+    // [array] [value] -> [array]
+    OP_ARRAYPUSHVALUE,
+    // [map] [slot] [value] -> [map]
+    OP_OBJECTPUSHFIELD,
+
+    // [class] [method] -> [class]
+    OP_MAKEMETHOD,
+    // [class] [method] -> [class]
+    OP_FIELDSTATIC,
+    OP_FIELDDEFINE,
+    OP_CLASSINHERIT,
+    // [instance] [class] -> [bool]
+    OP_ISCLASS,
+    OP_GETSUPERMETHOD,
+
+    // Varying stack effect
+    OP_CALLFUNCTION,
+    OP_INVOKEMETHOD,
+    OP_INVOKESUPER,
+    OP_INVOKEIGNORING,
+    OP_INVOKESUPERIGNORING,
+    OP_POPLOCALS,
+    OP_VARARG,
+
+    OP_REFGLOBAL,
+    OP_REFPRIVATE,
+    OP_REFLOCAL,
+    OP_REFUPVAL,
+    OP_REFFIELD,
+
+    OP_REFSET,
+};
+
 
 enum TinObjType
 {
@@ -251,6 +506,7 @@ enum TinAstOptType
     TINOPTSTATE_CFOR,
     TINOPTSTATE_TOTAL
 };
+
 
 
 typedef enum /**/ TinValType TinValType;
@@ -848,7 +1104,6 @@ static inline bool tin_value_isbool(TinValue v)
     return v.type == TINVAL_BOOL;
 }
 
-
 static inline bool tin_value_isnumber(TinValue v)
 {
     return v.type == TINVAL_NUMBER;
@@ -867,7 +1122,6 @@ static inline bool tin_value_isfalsey(TinValue v)
         (tin_value_isnumber(v) && tin_value_asnumber(v) == 0)
     );
 }
-
 
 static inline bool tin_value_ismap(TinValue value)
 {
@@ -1022,24 +1276,33 @@ static inline TinReference* tin_value_asreference(TinValue v)
     return (TinReference*)tin_value_asobject(v);
 }
 
-static inline TinValue tin_value_makefalse(TinState* state)
+static inline void tin_value_setnull(TinValue* tv)
 {
-    (void)state;
-    return FALSE_VALUE;
+    tv->type = TINVAL_NULL;
+    tv->isfixednumber = false;
+    tv->numfixedval = 0;
+    tv->numfloatval = 0;
+    tv->boolval = false;
 }
 
-static inline TinValue tin_value_maketrue(TinState* state)
+static inline TinValue tin_value_makebool(TinState* state, bool b) 
 {
+    TinValue tv;
     (void)state;
-    return TRUE_VALUE;
+    tin_value_setnull(&tv);
+    tv.type = TINVAL_BOOL;
+    tv.boolval = b;
+    return tv;
 }
 
 static inline TinValue tin_value_makenull(TinState* state)
 {
+    TinValue tv;
     (void)state;
-    return NULL_VALUE;
+    tin_value_setnull(&tv);
+    tv.type = TINVAL_NULL;
+    return tv;
 }
-
 
 static inline TinValue tin_value_makestring(TinState* state, const char* text)
 {

@@ -221,7 +221,7 @@ TinInterpretResult tin_state_callinstancemethod(TinState* state, TinValue callee
     {
         return tin_state_callvalue(state, mthval, argv, argc, false);
     }
-    return INTERPRET_RUNTIME_FAIL;    
+    return INTERPRET_RUNTIME_FAIL(state);    
 }
 
 
@@ -384,7 +384,7 @@ static inline TinInterpretResult execute_call(TinState* state, TinCallFrame* fra
     TinInterpretResult result;
     if(frame == NULL)
     {
-        RETURN_RUNTIME_ERROR();
+        RETURN_RUNTIME_ERROR(state);
     }
     fiber = state->vm->fiber;
     result = tin_vm_execfiber(state, fiber);
@@ -406,7 +406,7 @@ TinInterpretResult tin_state_callclosure(TinState* state, TinClosure* callee, Ti
     frame = setup_call(state, callee->function, argv, argc, ignfiber);
     if(frame == NULL)
     {
-        RETURN_RUNTIME_ERROR();
+        RETURN_RUNTIME_ERROR(state);
     }
     frame->closure = callee;
     return execute_call(state, frame);
@@ -432,7 +432,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
     {
         if(tin_vm_setexitjump(state->vm))
         {
-            RETURN_RUNTIME_ERROR();
+            RETURN_RUNTIME_ERROR(state);
         }
         type = tin_value_type(callee);
 
@@ -456,7 +456,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
         {
             if(tin_state_ensurefiber(vm, fiber))
             {
-                RETURN_RUNTIME_ERROR();
+                RETURN_RUNTIME_ERROR(state);
             }
         }
         tin_fiber_ensurestack(state, fiber, 3 + argc + (int)(fiber->stack_top - fiber->stack));
@@ -554,7 +554,7 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
         tin_vm_raiseerror(vm, "can only tin_vm_callcallable functions and classes");
     }
 
-    RETURN_RUNTIME_ERROR();
+    RETURN_RUNTIME_ERROR(state);
 }
 
 TinInterpretResult tin_state_callvalue(TinState* state, TinValue callee, TinValue* argv, uint8_t argc, bool ignfiber)
@@ -575,7 +575,7 @@ TinInterpretResult tin_state_findandcallmethod(TinState* state, TinValue callee,
         if(!ignfiber)
         {
             tin_vm_raiseerror(vm, "no fiber to run on");
-            RETURN_RUNTIME_ERROR();
+            RETURN_RUNTIME_ERROR(state);
         }
     }
     klass = tin_state_getclassfor(state, callee);
@@ -850,7 +850,7 @@ bool tin_state_compileandsave(TinState* state, char* files[], size_t numfiles, c
     TinString* module_name;
     TinModule* module;
     TinModule** compiledmodules;
-    compiledmodules = TIN_ALLOCATE(state, sizeof(TinModule*), numfiles+1);
+    compiledmodules = (TinModule**)TIN_ALLOCATE(state, sizeof(TinModule*), numfiles+1);
     tin_astopt_setoptlevel(TINOPTLEVEL_EXTREME);
     for(i = 0; i < numfiles; i++)
     {
@@ -928,7 +928,7 @@ TinInterpretResult tin_state_execfile(TinState* state, const char* file)
     source = tin_util_readsource(state, file, &patchedfilename, &len);
     if(source == NULL)
     {
-        return INTERPRET_RUNTIME_FAIL;
+        return INTERPRET_RUNTIME_FAIL(state);
     }
     result = tin_state_execsource(state, patchedfilename, source, len);
     free(patchedfilename);
@@ -947,13 +947,13 @@ TinInterpretResult tin_state_dumpfile(TinState* state, const char* file)
     source = tin_util_readsource(state, file, &patchedfilename, &len);
     if(source == NULL)
     {
-        return INTERPRET_RUNTIME_FAIL;
+        return INTERPRET_RUNTIME_FAIL(state);
     }
     module_name = tin_string_copy(state, patchedfilename, strlen(patchedfilename));
     module = tin_state_compilemodule(state, module_name, source, len);
     if(module == NULL)
     {
-        result = INTERPRET_RUNTIME_FAIL;
+        result = INTERPRET_RUNTIME_FAIL(state);
     }
     else
     {

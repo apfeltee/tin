@@ -18,15 +18,6 @@ TinObject* tin_value_asobject(TinValue v)
     return v.obj;
 }
 
-TinValue tin_value_makebool(TinState* state, bool b) 
-{
-    (void)state;
-    if(!b)
-    {
-        return FALSE_VALUE;
-    }
-    return TRUE_VALUE;
-}
 
 TinObjType tin_value_type(TinValue v)
 {
@@ -96,12 +87,6 @@ bool tin_value_compare(TinState* state, const TinValue a, const TinValue b)
         inret = tin_state_callinstancemethod(state, a, tin_string_copyconst(state, "=="), args, 1);
         if(inret.type == TINSTATE_OK)
         {
-            /*
-            if(tin_value_makebool(state, inret.result.) == TRUE_VALUE)
-            {
-                return true;
-            }
-            */
             return false;
         }
     }

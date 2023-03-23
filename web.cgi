@@ -1,13 +1,38 @@
 #!./run
 
+/*
+* this is stupid, and only really for testing.
+*/
+
 class CGI
 {
     constructor()
     {
+        this.m_params = {}
+        this.m_pinfo = []
+        pinf = System.getenv("PATH_INFO");
+        if(pinf != null)
+        {
+            this.m_pinfo = pinf.split("/").filter((s) => s.length > 0)
+        }
+        STDERR.write("pinf=%p, m_pinfo = %p\n".format(pinf, this.m_pinfo))
     }
 
-    beginHeaders()
+    pathIsIndex()
     {
+        return ((this.m_pinfo.length == 0) || this.pathIs("index"));
+    }
+
+    pathIs(p)
+    {
+        return (this.m_pinfo[0] == p);
+    }
+
+    beginHeaders(code)
+    {
+        //STDOUT.write("HTTP/1.1 %d OK\r\n".format(code))
+        STDOUT.write("Status: %d\r\n".format(code))
+        
     }
 
     endHeaders()
@@ -76,16 +101,22 @@ class App
         this.cgi = new CGI()
     }
 
-    sendPage(ctype)
+    sendPage(ctype, code)
     {
-        this.cgi.beginHeaders()
+        this.cgi.beginHeaders(code)
         this.cgi.sendHeader("Content-Type", ctype)
         this.cgi.endHeaders()
     }
 
+    sendError(code)
+    {
+        this.sendPage("text/html", code)
+        STDOUT.write("no such page.")
+    }
+
     sendIndex()
     {
-        this.sendPage("text/html")
+        this.sendPage("text/html", 200)
         gh = new HTMLGen(STDOUT)
         gh.tag("html", {}, ()=>
         {
@@ -112,13 +143,18 @@ class App
             })
         })
     }
+
+    main()
+    {
+        if(this.cgi.pathIsIndex())
+        {
+            this.sendIndex()
+        }
+        else
+        {
+            this.sendError(404);
+        }
+    }
 }
 
-function main()
-{
-    var app = new App()
-    app.sendIndex()
-}
-
-
-main()
+App().main()

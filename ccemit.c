@@ -59,7 +59,7 @@ void tin_privlist_push(TinState* state, TinAstPrivList* array, TinAstPrivate val
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinAstPrivate), oldcapacity, array->capacity);
+        array->values = (TinAstPrivate*)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstPrivate), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -84,7 +84,7 @@ void tin_loclist_push(TinState* state, TinAstLocList* array, TinAstLocal value)
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinAstLocal), oldcapacity, array->capacity);
+        array->values = (TinAstLocal*)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstLocal), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -133,9 +133,84 @@ static void tin_astemit_emit1byte(TinAstEmitter* emt, uint16_t line, uint8_t byt
 
 static const int8_t stack_effects[] =
 {
-#define OPCODE(_, effect) effect,
-#include "opcodes.inc"
-#undef OPCODE
+    /* OP_POP */ -1,
+    /* OP_RETURN */ 0,
+    /* OP_CONSTVALUE */ 1,
+    /* OP_CONSTLONG */ 1,
+    /* OP_VALTRUE */ 1,
+    /* OP_VALFALSE */ 1,
+    /* OP_VALNULL */ 1,
+    /* OP_VALARRAY */ 1,
+    /* OP_VALOBJECT */ 1,
+    /* OP_RANGE */ -1,
+    /* OP_NEGATE */ 0,
+    /* OP_NOT */ 0,
+    /* OP_MATHADD */ -1,
+    /* OP_MATHSUB */ -1,
+    /* OP_MATHMULT */ -1,
+    /* OP_MATHPOWER */ -1,
+    /* OP_MATHDIV */ -1,
+    /* OP_MATHFLOORDIV */ -1,
+    /* OP_MATHMOD */ -1,
+    /* OP_BINAND */ -1,
+    /* OP_BINOR */ -1,
+    /* OP_BINXOR */ -1,
+    /* OP_LEFTSHIFT */ -1,
+    /* OP_RIGHTSHIFT */ -1,
+    /* OP_BINNOT */ 0,
+    /* OP_EQUAL */ -1,
+    /* OP_GREATERTHAN */ -1,
+    /* OP_GREATEREQUAL */ -1,
+    /* OP_LESSTHAN */ -1,
+    /* OP_LESSEQUAL */ -1,
+    /* OP_GLOBALSET */ 0,
+    /* OP_GLOBALGET */ 1,
+    /* OP_LOCALSET */ 0,
+    /* OP_LOCALGET */ 1,
+    /* OP_LOCALLONGSET */ 0,
+    /* OP_LOCALLONGGET */ 1,
+    /* OP_PRIVATESET */ 0,
+    /* OP_PRIVATEGET */ 1,
+    /* OP_PRIVATELONGSET */ 0,
+    /* OP_PRIVATELONGGET */ 1,
+    /* OP_UPVALSET */ 0,
+    /* OP_UPVALGET */ 1,
+    /* OP_JUMPIFFALSE */ -1,
+    /* OP_JUMPIFNULL */ 0,
+    /* OP_JUMPIFNULLPOP */ -1,
+    /* OP_JUMPALWAYS */ 0,
+    /* OP_JUMPBACK */ 0,
+    /* OP_AND */ -1,
+    /* OP_OR */ -1,
+    /* OP_NULLOR */ -1,
+    /* OP_MAKECLOSURE */ 1,
+    /* OP_UPVALCLOSE */ -1,
+    /* OP_MAKECLASS */ 1,
+    /* OP_FIELDGET */ -1,
+    /* OP_FIELDSET */ -2,
+    /* OP_GETINDEX */ -1,
+    /* OP_SETINDEX */ -2,
+    /* OP_ARRAYPUSHVALUE */ -1,
+    /* OP_OBJECTPUSHFIELD */ -2,
+    /* OP_MAKEMETHOD */ -1,
+    /* OP_FIELDSTATIC */ -1,
+    /* OP_FIELDDEFINE */ -1,
+    /* OP_CLASSINHERIT */ 0,
+    /* OP_ISCLASS */ -1,
+    /* OP_GETSUPERMETHOD */ 0,
+    /* OP_CALLFUNCTION */ 0,
+    /* OP_INVOKEMETHOD */ 0,
+    /* OP_INVOKESUPER */ 0,
+    /* OP_INVOKEIGNORING */ 0,
+    /* OP_INVOKESUPERIGNORING */ 0,
+    /* OP_POPLOCALS */ 0,
+    /* OP_VARARG */ 0,
+    /* OP_REFGLOBAL */ 1,
+    /* OP_REFPRIVATE */ 0,
+    /* OP_REFLOCAL */ 1,
+    /* OP_REFUPVAL */ 1,
+    /* OP_REFFIELD */ -1,
+    /* OP_REFSET */ -1,
 };
 
 static void tin_astemit_emit2bytes(TinAstEmitter* emt, uint16_t line, uint8_t a, uint8_t b)
@@ -2195,18 +2270,18 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
     if(isnew)
     {
         total = emt->privates.count;
-        module->privates = TIN_ALLOCATE(emt->state, sizeof(TinValue), total);
+        module->privates = (TinValue*)TIN_ALLOCATE(emt->state, sizeof(TinValue), total);
         for(i = 0; i < total; i++)
         {
-            module->privates[i] = NULL_VALUE;
+            module->privates[i] = tin_value_makenull(emt->state);
         }
     }
     else
     {
-        module->privates = TIN_GROW_ARRAY(emt->state, module->privates, sizeof(TinValue), oldprivatescnt, module->private_count);
+        module->privates = (TinValue*)TIN_GROW_ARRAY(emt->state, module->privates, sizeof(TinValue), oldprivatescnt, module->private_count);
         for(i = oldprivatescnt; i < module->private_count; i++)
         {
-            module->privates[i] = NULL_VALUE;
+            module->privates[i] = tin_value_makenull(emt->state);
         }
     }
     tin_privlist_destroy(emt->state, &emt->privates);

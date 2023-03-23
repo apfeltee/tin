@@ -199,7 +199,7 @@ static TinValue random_setSeed(TinVM* vm, TinValue instance, size_t argc, TinVal
     {
         *data = time(NULL);
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue random_int(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -268,9 +268,9 @@ static TinValue random_chance(TinVM* vm, TinValue instance, size_t argc, TinValu
     c = tin_value_getnumber(vm, argv, argc, 0, 50);
     if((((float)rand_r((unsigned int*)extract_random_data(vm->state, instance))) / ((float)(RAND_MAX-1)) * 100) <= c)
     {
-        return TRUE_VALUE;
+        return tin_value_makebool(vm->state, true);
     }
-    return FALSE_VALUE;
+    return tin_value_makebool(vm->state, false);
 }
 
 static TinValue pickrand_map(TinVM* vm, int randoffset, TinValue* av0)
@@ -287,7 +287,7 @@ static TinValue pickrand_map(TinVM* vm, int randoffset, TinValue* av0)
     capacity = map->values.capacity;
     if(length == 0)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     target = randoffset % length;
     fidx = 0;
@@ -302,7 +302,7 @@ static TinValue pickrand_map(TinVM* vm, int randoffset, TinValue* av0)
             fidx++;
         }
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue pickrand_array(TinVM* vm, int randoffset, TinValue* av0)
@@ -312,7 +312,7 @@ static TinValue pickrand_array(TinVM* vm, int randoffset, TinValue* av0)
     array = tin_value_asarray(*av0);
     if(tin_vallist_count(&array->list) == 0)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_vallist_get(&array->list, randoffset % tin_vallist_count(&array->list));
 }
@@ -341,7 +341,7 @@ static TinValue random_pick(TinVM* vm, TinValue instance, size_t argc, TinValue*
         return argv[randoffset % argc];
     }
 
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 void tin_open_math_library(TinState* state)

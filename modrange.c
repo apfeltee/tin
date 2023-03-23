@@ -24,7 +24,7 @@ static TinValue objfn_range_iterator(TinVM* vm, TinValue instance, size_t argc, 
         number = tin_value_asnumber(argv[0]);
         if((range->to > range->from) ? (number >= range->to) : (number >= range->from))
         {
-            return NULL_VALUE;
+            return tin_value_makenull(vm->state);
         }
         number += (((range->from - range->to) > 0) ? -1 : 1);
     }

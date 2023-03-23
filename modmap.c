@@ -54,11 +54,11 @@ static void adjust_capacity(TinState* state, TinTable* table, int capacity)
     TinTabEntry* destination;
     TinTabEntry* entries;
     TinTabEntry* entry;
-    entries = TIN_ALLOCATE(state, sizeof(TinTabEntry), capacity + 1);
+    entries = (TinTabEntry*)TIN_ALLOCATE(state, sizeof(TinTabEntry), capacity + 1);
     for(i = 0; i <= capacity; i++)
     {
         entries[i].key = NULL;
-        entries[i].value = NULL_VALUE;
+        entries[i].value = tin_value_makenull(state);
     }
     table->count = 0;
     for(i = 0; i <= table->capacity; i++)
@@ -230,7 +230,7 @@ TinValue util_table_iterator_key(TinTable* table, int index)
 {
     if(table->capacity <= index)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(table->state);
     }
     return tin_value_fromobject(table->entries[index].key);
 }
@@ -321,7 +321,7 @@ static TinValue objfn_map_subscript(TinVM* vm, TinValue instance, size_t argc, T
     }
     if(!tin_table_get(&map->values, index, &value))
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return value;
 }
@@ -334,7 +334,7 @@ static TinValue objfn_map_addall(TinVM* vm, TinValue instance, size_t argc, TinV
         tin_vm_raiseexitingerror(vm, "expected map as the argument");
     }
     tin_map_add_all(vm->state, tin_value_asmap(argv[0]), tin_value_asmap(instance));
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 
@@ -344,7 +344,7 @@ static TinValue objfn_map_clear(TinVM* vm, TinValue instance, size_t argc, TinVa
     (void)argv;
     (void)argc;
     tin_value_asmap(instance)->values.count = 0;
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_map_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -357,7 +357,7 @@ static TinValue objfn_map_iterator(TinVM* vm, TinValue instance, size_t argc, Ti
     value = util_table_iterator(&tin_value_asmap(instance)->values, index);
     if(value == -1)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_makefixednumber(vm->state, value);
 }

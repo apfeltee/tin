@@ -30,7 +30,7 @@ void tin_chunk_push(TinState* state, TinChunk* chunk, uint8_t byte, uint16_t lin
     {
         oldcapacity = chunk->capacity;
         chunk->capacity = TIN_GROW_CAPACITY(oldcapacity + 2);
-        chunk->code = TIN_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity + 2);
+        chunk->code = (uint8_t*)TIN_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity + 2);
     }
     chunk->code[chunk->count] = byte;
     chunk->count++;
@@ -42,7 +42,7 @@ void tin_chunk_push(TinState* state, TinChunk* chunk, uint8_t byte, uint16_t lin
     {
         oldcapacity = chunk->line_capacity;
         chunk->line_capacity = TIN_GROW_CAPACITY(chunk->line_capacity + 2);
-        chunk->lines = TIN_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity + 2);
+        chunk->lines = (uint16_t*)TIN_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity + 2);
         if(oldcapacity == 0)
         {
             chunk->lines[0] = 0;
@@ -119,13 +119,13 @@ void tin_chunk_shrink(TinState* state, TinChunk* chunk)
     {
         oldcapacity = chunk->capacity;
         chunk->capacity = chunk->count;
-        chunk->code = TIN_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity);
+        chunk->code = (uint8_t*)TIN_GROW_ARRAY(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity);
     }
     if(chunk->line_capacity > chunk->line_count)
     {
         oldcapacity = chunk->line_capacity;
         chunk->line_capacity = chunk->line_count + 2;
-        chunk->lines = TIN_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity);
+        chunk->lines = (uint16_t*)TIN_GROW_ARRAY(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity);
     }
 }
 

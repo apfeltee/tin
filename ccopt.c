@@ -9,7 +9,7 @@
         tin_astopt_optdbg("translating constant binary expression of '" # op "' to constant value"); \
         return tin_value_makenumber(optimizer->state, tin_value_asnumber(a) op tin_value_asnumber(b)); \
     } \
-    return NULL_VALUE;
+    return tin_value_makenull(optimizer->state);
 
 #define optc_do_bitwise_op(op) \
     if(tin_value_isnumber(a) && tin_value_isnumber(b)) \
@@ -17,7 +17,7 @@
         tin_astopt_optdbg("translating constant bitwise expression of '" #op "' to constant value"); \
         return tin_value_makenumber(optimizer->state, (int)tin_value_asnumber(a) op(int) tin_value_asnumber(b)); \
     } \
-    return NULL_VALUE;
+    return tin_value_makenull(optimizer->state);
 
 #define optc_do_fn_op(fn, tokstr) \
     if(tin_value_isnumber(a) && tin_value_isnumber(b)) \
@@ -25,7 +25,7 @@
         tin_astopt_optdbg("translating constant expression of '" tokstr "' to constant value via tin_vm_callcallable to '" #fn "'"); \
         return tin_value_makenumber(optimizer->state, fn(tin_value_asnumber(a), tin_value_asnumber(b))); \
     } \
-    return NULL_VALUE;
+    return tin_value_makenull(optimizer->state);
 
 
 
@@ -93,7 +93,7 @@ void tin_varlist_push(TinState* state, TinVarList* array, TinVariable value)
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinVariable), oldcapacity, array->capacity);
+        array->values = (TinVariable*)TIN_GROW_ARRAY(state, array->values, sizeof(TinVariable), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -135,7 +135,7 @@ static void tin_astopt_endscope(TinAstOptimizer* optimizer)
 static TinVariable* tin_astopt_addvar(TinAstOptimizer* optimizer, const char* name, size_t length, bool constant, TinAstExpression** declaration)
 {
     tin_varlist_push(optimizer->state, &optimizer->variables,
-                        (TinVariable){ name, length, optimizer->depth, constant, optimizer->mark_used, NULL_VALUE, declaration });
+                        (TinVariable){ name, length, optimizer->depth, constant, optimizer->mark_used, tin_value_makenull(optimizer->state), declaration });
 
     return &optimizer->variables.values[optimizer->variables.count - 1];
 }
@@ -195,7 +195,7 @@ static TinValue tin_astopt_evalunaryop(TinAstOptimizer* optimizer, TinValue valu
             }
             break;
     }
-    return NULL_VALUE;
+    return tin_value_makenull(optimizer->state);
 }
 
 static TinValue tin_astopt_evalbinaryop(TinAstOptimizer* optimizer, TinValue a, TinValue b, TinAstTokType op)
@@ -283,7 +283,7 @@ static TinValue tin_astopt_evalbinaryop(TinAstOptimizer* optimizer, TinValue a, 
                 {
                     return tin_value_makenumber(optimizer->state, floor(tin_value_asnumber(a) / tin_value_asnumber(b)));
                 }
-                return NULL_VALUE;
+                return tin_value_makenull(optimizer->state);
             }
             break;
         case TINTOK_EQUAL:
@@ -302,7 +302,7 @@ static TinValue tin_astopt_evalbinaryop(TinAstOptimizer* optimizer, TinValue a, 
             }
             break;
     }
-    return NULL_VALUE;
+    return tin_value_makenull(optimizer->state);
 }
 
 static TinValue tin_astopt_attemptoptbinary(TinAstOptimizer* optimizer, TinAstBinaryExpr* expression, TinValue value, bool left)
@@ -345,7 +345,7 @@ static TinValue tin_astopt_attemptoptbinary(TinAstOptimizer* optimizer, TinAstBi
             expression->right = NULL;
         }
     }
-    return NULL_VALUE;
+    return tin_value_makenull(optimizer->state);
 }
 
 static TinValue tin_astopt_evalexpr(TinAstOptimizer* optimizer, TinAstExpression* expression)
@@ -357,7 +357,7 @@ static TinValue tin_astopt_evalexpr(TinAstOptimizer* optimizer, TinAstExpression
     TinValue branch;
     if(expression == NULL)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(optimizer->state);
     }
     switch(expression->type)
     {
@@ -397,11 +397,11 @@ static TinValue tin_astopt_evalexpr(TinAstOptimizer* optimizer, TinAstExpression
             break;
         default:
             {
-                return NULL_VALUE;
+                return tin_value_makenull(optimizer->state);
             }
             break;
     }
-    return NULL_VALUE;
+    return tin_value_makenull(optimizer->state);
 }
 
 static void tin_astopt_optexprlist(TinAstOptimizer* optimizer, TinAstExprList* expressions)
@@ -505,7 +505,7 @@ static void tin_astopt_optifstmt(TinState* state, TinAstOptimizer* optimizer, Ti
     tin_astopt_optexpression(optimizer, &stmt->ifbranch);
     empty = tin_astopt_isoptenabled(TINOPTSTATE_EMPTYBODY);
     dead = tin_astopt_isoptenabled(TINOPTSTATE_UNREACHABLECODE);
-    optimized = empty ? tin_astopt_evalexpr(optimizer, stmt->condition) : NULL_VALUE;
+    optimized = empty ? tin_astopt_evalexpr(optimizer, stmt->condition) : tin_value_makenull(optimizer->state);
     if((!tin_value_isnull(optimized) && tin_value_isfalsey(optimized)) || (dead && tin_astopt_isemptyexpr(stmt->ifbranch)))
     {
         tin_ast_destroyexpression(state, stmt->condition);
@@ -765,7 +765,7 @@ static void tin_astopt_optexpression(TinAstOptimizer* optimizer, TinAstExpressio
                     variable->used = true;
 
                     // Not checking here for the enable-ness of constant-folding, since if its off
-                    // the constvalue would be NULL_VALUE anyway (:thinkaboutit:)
+                    // the constvalue would be NULL anyway (:thinkaboutit:)
                     if(variable->constant && !tin_value_isnull(variable->constvalue))
                     {
                         *slot = (TinAstExpression*)tin_ast_make_literalexpr(state, expression->line, variable->constvalue);

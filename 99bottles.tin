@@ -1,72 +1,64 @@
 
 function song()
 {
-    var state = {}
-    state["bottlesOfBeer"] = function(i)
+    var bottlesOfBeer = function(i)
     {
         return ""+i+" bottles of beer";
     };
-    state["bottlesOfBeerOnTheWall"] = function(i)
+    var bottlesOfBeerOnTheWall = function(i)
     {
-        return state["bottlesOfBeer"](i)+" on the wall";
+        return bottlesOfBeer(i)+" on the wall";
     };
-    state["takeOneDown"] = function()
+    var takeOneDown = function()
     {
         return "Take one down and pass it around, ";
     };
-    state["createVerse"] = function(first,second)
-    {
-        println(first, second);
-    };
-    state["getNormalVerseFunction"] = function(i)
+    var getNormalVerseFunction = function(i)
     {
         return function()
         {
-            state["createVerse"](
-                state["bottlesOfBeerOnTheWall"](i)+", "+state["bottlesOfBeer"](i),
-                state["takeOneDown"]()+state["bottlesOfBeerOnTheWall"](i-1)+"."
+            println(
+                bottlesOfBeerOnTheWall(i), ", ", bottlesOfBeer(i),
+                takeOneDown(), bottlesOfBeerOnTheWall(i-1), "."
             );
         };
     };
-    state["verse"] = [];
+    verse = [];
     for(var i = 3; i < 100; i++ )
     {
-        state["verse"][i] = state["getNormalVerseFunction"](i);
+        verse[i] = getNormalVerseFunction(i);
     }
-    state["verse"][2] = function()
+    verse[2] = function()
     {
-       state["createVerse"](
-            state["bottlesOfBeerOnTheWall"](2)+", "+state["bottlesOfBeer"](2),
-            state["takeOneDown"]()+"1 bottle of beer."
+       println(
+            bottlesOfBeerOnTheWall(2), ", ", bottlesOfBeer(2),
+            takeOneDown(), "1 bottle of beer."
         );
     };
-    state["verse"][1] = function()
+    verse[1] = function()
     {
-        state["createVerse"](
+        println(
             "1 bottle of beer on the wall, 1 bottle of beer.",
-            state["takeOneDown"]()+state["bottlesOfBeerOnTheWall"]("no more")+"."
+            takeOneDown(), bottlesOfBeerOnTheWall("no more"), "."
         );
     };
-    state["verse"][0] = function()
+    verse[0] = function()
     {
-        state["createVerse"](
-            state["bottlesOfBeerOnTheWall"]("No more")+", "+state["bottlesOfBeer"]("no more"),
-            "Go to the store and buy some more, "+state["bottlesOfBeerOnTheWall"](99)+"."
+        println(
+            bottlesOfBeerOnTheWall("No more"), ", ", bottlesOfBeer("no more"),
+            "Go to the store and buy some more, ", bottlesOfBeerOnTheWall(99), "."
         );
     };
-    state["getDom"] = function()
+    return function()
     {
         for( var i = 10; i >= 0 ; i-- )
         {
-            state["verse"][i]();
+            verse[i]();
         }
     };
-    return state
 };
 
-r = song()
-println(r)
-r["getDom"]()
+song()();
 
 
 

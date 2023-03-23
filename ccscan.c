@@ -25,7 +25,7 @@ void tin_bytelist_push(TinState* state, TinAstByteList* bl, uint8_t value)
     {
         oldcap = bl->capacity;
         bl->capacity = TIN_GROW_CAPACITY(oldcap);
-        bl->values = TIN_GROW_ARRAY(state, bl->values, sizeof(uint8_t), oldcap, bl->capacity);
+        bl->values = (uint8_t*)TIN_GROW_ARRAY(state, bl->values, sizeof(uint8_t), oldcap, bl->capacity);
     }
     bl->values[bl->count] = value;
     bl->count++;

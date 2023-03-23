@@ -65,7 +65,7 @@ void tin_datalist_push(TinState* state, TinDataList* dl, intptr_t value)
     {
         oldcapacity = dl->capacity;
         dl->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        dl->values = TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
+        dl->values = (intptr_t*)TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
     }
     dl->values[dl->count] = value;
     dl->count++;
@@ -79,7 +79,7 @@ void tin_datalist_ensuresize(TinState* state, TinDataList* dl, size_t size)
     {
         oldcapacity = dl->capacity;
         dl->capacity = size;
-        dl->values = TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, size);
+        dl->values = (intptr_t*)TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, size);
         for(i = oldcapacity; i < size; i++)
         {
             dl->values[i] = 0;
@@ -138,22 +138,22 @@ void tin_vallist_deccount(TinValList* vl)
 
 void tin_vallist_ensuresize(TinState* state, TinValList* vl, size_t size)
 {
-        size_t i;
-        size_t oldcapacity;
-        if(vl->capacity < size)
+    size_t i;
+    size_t oldcapacity;
+    if(vl->capacity < size)
+    {
+        oldcapacity = vl->capacity;
+        vl->capacity = size;
+        vl->values = (TinValue*)TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, size);
+        for(i = oldcapacity; i < size; i++)
         {
-            oldcapacity = vl->capacity;
-            vl->capacity = size;
-            vl->values = TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, size);
-            for(i = oldcapacity; i < size; i++)
-            {
-                vl->values[i] = NULL_VALUE;
-            }
+            vl->values[i] = tin_value_makenull(state);
         }
-        if(vl->count < size)
-        {
-            vl->count = size;
-        }
+    }
+    if(vl->count < size)
+    {
+        vl->count = size;
+    }
 }
 
 
@@ -170,15 +170,15 @@ TinValue tin_vallist_get(TinValList* vl, size_t idx)
 
 void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
 {
-        size_t oldcapacity;
-        if(vl->capacity < vl->count + 1)
-        {
-            oldcapacity = vl->capacity;
-            vl->capacity = TIN_GROW_CAPACITY(oldcapacity);
-            vl->values = TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, vl->capacity);
-        }
-        vl->values[vl->count] = value;
-        vl->count++;
+    size_t oldcapacity;
+    if(vl->capacity < vl->count + 1)
+    {
+        oldcapacity = vl->capacity;
+        vl->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        vl->values = (TinValue*)TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, vl->capacity);
+    }
+    vl->values[vl->count] = value;
+    vl->count++;
 }
 
 /* ---- Array object instance functions */
@@ -190,7 +190,6 @@ TinArray* tin_object_makearray(TinState* state)
     tin_vallist_init(&array->list);
     return array;
 }
-
 
 size_t tin_array_count(TinArray* arr)
 {
@@ -207,7 +206,7 @@ TinValue tin_array_pop(TinState* state, TinArray* arr)
         tin_vallist_deccount(&arr->list);
         return val;
     }
-    return NULL_VALUE;
+    return tin_value_makenull(state);
 }
 
 int tin_array_indexof(TinArray* array, TinValue value)
@@ -225,7 +224,7 @@ int tin_array_indexof(TinArray* array, TinValue value)
     return -1;
 }
 
-TinValue tin_array_removeat(TinArray* array, size_t index)
+TinValue tin_array_removeat(TinState* state, TinArray* array, size_t index)
 {
     size_t i;
     size_t count;
@@ -235,12 +234,12 @@ TinValue tin_array_removeat(TinArray* array, size_t index)
     count = tin_vallist_count(vl);
     if(index >= count)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(state);
     }
     value = tin_vallist_get(vl, index);
     if(index == count - 1)
     {
-        tin_vallist_set(vl, index, NULL_VALUE);
+        tin_vallist_set(vl, index, tin_value_makenull(state));
     }
     else
     {
@@ -248,7 +247,7 @@ TinValue tin_array_removeat(TinArray* array, size_t index)
         {
             tin_vallist_set(vl, i, tin_vallist_get(vl, i + 1));
         }
-        tin_vallist_set(vl, count - 1, NULL_VALUE);
+        tin_vallist_set(vl, count - 1, tin_value_makenull(state));
     }
     tin_vallist_deccount(vl);
     return value;
@@ -266,7 +265,7 @@ TinValue tin_array_get(TinState* state, TinArray* array, size_t idx)
     {
         return tin_vallist_get(&array->list, idx);
     }
-    return NULL_VALUE;
+    return tin_value_makenull(state);
 }
 
 void tin_array_set(TinState* state, TinArray* array, size_t idx, TinValue val)
@@ -357,7 +356,7 @@ static TinValue objfn_array_subscript(TinVM* vm, TinValue instance, size_t argc,
             return objfn_array_splice(vm, tin_value_asarray(instance), (int)range->from, (int)range->to);
         }
         tin_vm_raiseexitingerror(vm, "array index must be a number");
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     vl = &tin_value_asarray(instance)->list;
     index = tin_value_asnumber(argv[0]);
@@ -367,7 +366,7 @@ static TinValue objfn_array_subscript(TinVM* vm, TinValue instance, size_t argc,
     }
     if(tin_vallist_capacity(vl) <= (size_t)index)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_vallist_get(vl, index);
 }
@@ -390,15 +389,15 @@ static TinValue objfn_array_compare(TinVM* vm, TinValue instance, size_t argc, T
             {
                 if(!tin_value_compare(vm->state, tin_vallist_get(&self->list, i), tin_vallist_get(&other->list, i)))
                 {
-                    return FALSE_VALUE;
+                    return tin_value_makebool(vm->state, false);
                 }
             }
-            return TRUE_VALUE;
+            return tin_value_makebool(vm->state, true);
         }
-        return FALSE_VALUE;
+        return tin_value_makebool(vm->state, false);
     }
     tin_vm_raiseexitingerror(vm, "can only compare array to another array or null");
-    return FALSE_VALUE;
+    return tin_value_makebool(vm->state, false);
 }
 
 
@@ -409,7 +408,7 @@ static TinValue objfn_array_add(TinVM* vm, TinValue instance, size_t argc, TinVa
     {
         tin_array_push(vm->state, tin_value_asarray(instance), argv[i]);
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 
@@ -440,7 +439,7 @@ static TinValue objfn_array_insert(TinVM* vm, TinValue instance, size_t argc, Ti
         }
     }
     tin_vallist_set(vl, index, value);
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_array_addall(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -459,7 +458,7 @@ static TinValue objfn_array_addall(TinVM* vm, TinValue instance, size_t argc, Ti
     {
         tin_array_push(vm->state, array, tin_vallist_get(&toadd->list, i));
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_array_indexof(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -468,7 +467,7 @@ static TinValue objfn_array_indexof(TinVM* vm, TinValue instance, size_t argc, T
     int index = tin_array_indexof(tin_value_asarray(instance), argv[0]);
     if(index == -1)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_makefixednumber(vm->state, index);
 }
@@ -482,9 +481,9 @@ static TinValue objfn_array_remove(TinVM* vm, TinValue instance, size_t argc, Ti
     index = tin_array_indexof(array, argv[0]);
     if(index != -1)
     {
-        return tin_array_removeat(array, (size_t)index);
+        return tin_array_removeat(vm->state, array, (size_t)index);
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_array_removeat(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -493,9 +492,9 @@ static TinValue objfn_array_removeat(TinVM* vm, TinValue instance, size_t argc, 
     index = tin_args_checknumber(vm, argv, argc, 0);
     if(index < 0)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
-    return tin_array_removeat(tin_value_asarray(instance), (size_t)index);
+    return tin_array_removeat(vm->state, tin_value_asarray(instance), (size_t)index);
 }
 
 static TinValue objfn_array_contains(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -510,7 +509,7 @@ static TinValue objfn_array_clear(TinVM* vm, TinValue instance, size_t argc, Tin
     (void)argc;
     (void)argv;
     tin_vallist_clear(&tin_value_asarray(instance)->list);
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_array_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -526,13 +525,13 @@ static TinValue objfn_array_iterator(TinVM* vm, TinValue instance, size_t argc, 
         number = tin_value_asnumber(argv[0]);
         if(number >= (int)tin_vallist_count(&array->list) - 1)
         {
-            return NULL_VALUE;
+            return tin_value_makenull(vm->state);
         }
         number++;
     }
     if(tin_vallist_count(&array->list) == 0)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_makefixednumber(vm->state, number);
 }
@@ -545,7 +544,7 @@ static TinValue objfn_array_iteratorvalue(TinVM* vm, TinValue instance, size_t a
     vl = &tin_value_asarray(instance)->list;
     if(tin_vallist_count(vl) <= index)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_vallist_get(vl, index);
 }
@@ -560,7 +559,6 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
     TinValList* vl;
     TinString* string;
     TinString* joinee;
-    TinString** strings;
     (void)argc;
     (void)argv;
     joinee = NULL;
@@ -570,18 +568,6 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
         joinee = tin_value_asstring(argv[0]);
     }
     vl = &tin_value_asarray(instance)->list;
-    //TinString* strings[vl->count];
-    strings = TIN_ALLOCATE(vm->state, sizeof(TinString*), tin_vallist_count(vl)+1);
-    for(i = 0; i < tin_vallist_count(vl); i++)
-    {
-        string = tin_value_tostring(vm->state, tin_vallist_get(vl, i));
-        strings[i] = string;
-        length += tin_string_getlength(string);
-        if(joinee != NULL)
-        {
-            length += tin_string_getlength(joinee);
-        }
-    }
     jlen = 0;
     index = 0;
     chars = sds_makeempty();
@@ -592,13 +578,12 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
     }
     for(i = 0; i < tin_vallist_count(vl); i++)
     {
-        string = strings[i];
+        string = tin_value_tostring(vm->state, tin_vallist_get(vl, i));
         memcpy(chars + index, string->data, tin_string_getlength(string));
         chars = sds_appendlen(chars, string->data, tin_string_getlength(string));
         index += tin_string_getlength(string);
         if(joinee != NULL)
         {
-            
             //if((i+1) < vl->count)
             {
                 chars = sds_appendlen(chars, joinee->data, jlen);
@@ -606,7 +591,6 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
             index += jlen;
         }
     }
-    TIN_FREE(vm->state, sizeof(TinString*), strings);
     return tin_value_fromobject(tin_string_take(vm->state, chars, length, true));
 }
 
@@ -690,13 +674,13 @@ static TinValue objfn_array_map(TinVM* vm, TinValue instance, size_t argc, TinVa
     if(argc == 0)
     {
         tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.map requires a function");
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     callable = argv[0];
     if(!tin_value_iscallablefunction(callable))
     {
         tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.map cannot call first argument");
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     self = tin_value_asarray(instance);
     len = tin_array_count(self);
@@ -709,7 +693,7 @@ static TinValue objfn_array_map(TinVM* vm, TinValue instance, size_t argc, TinVa
         if(tr.type != TINSTATE_OK)
         {
             tin_state_raiseerror(vm->state, RUNTIME_ERROR, "call failed");
-            return NULL_VALUE;
+            return tin_value_makenull(vm->state);
         }
         tin_array_set(vm->state, self, i, tr.result);
     }
@@ -731,13 +715,13 @@ static TinValue objfn_array_filter(TinVM* vm, TinValue instance, size_t argc, Ti
     if(argc == 0)
     {
         tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.filter requires a function");
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     callable = argv[0];
     if(!tin_value_iscallablefunction(callable))
     {
         tin_state_raiseerror(vm->state, RUNTIME_ERROR, "Array.filter cannot call first argument");
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     self = tin_value_asarray(instance);
     len = tin_array_count(self);
@@ -751,7 +735,7 @@ static TinValue objfn_array_filter(TinVM* vm, TinValue instance, size_t argc, Ti
         if(tr.type != TINSTATE_OK)
         {
             tin_state_raiseerror(vm->state, RUNTIME_ERROR, "call failed");
-            return NULL_VALUE;
+            return tin_value_makenull(vm->state);
         }
         if(tin_value_asbool(tr.result))
         {

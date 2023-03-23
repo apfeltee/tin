@@ -177,7 +177,7 @@ static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, 
     {
         if(fields)
         {
-            return NULL_VALUE;
+            return tin_value_makenull(vm->state);
         }
         index++;
         fields = true;
@@ -185,7 +185,7 @@ static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, 
     }
     if(value == -1)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_makefixednumber(vm->state, fields ? value + mthcap : value);
 }
@@ -223,7 +223,7 @@ static TinValue objfn_class_super(TinVM* vm, TinValue instance, size_t argc, Tin
     }
     if(super == NULL)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_fromobject(super);
 }
@@ -256,7 +256,7 @@ static TinValue objfn_class_subscript(TinVM* vm, TinValue instance, size_t argc,
     {
         return value;
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_class_compare(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -273,11 +273,11 @@ static TinValue objfn_class_compare(TinVM* vm, TinValue instance, size_t argc, T
         {
             if(selfclass == otherclass)
             {
-                return TRUE_VALUE;
+                return tin_value_makebool(vm->state, true);
             }
         }
     }
-    return FALSE_VALUE;
+    return tin_value_makebool(vm->state, false);
 }
 
 static TinValue objfn_class_name(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)

@@ -191,12 +191,12 @@
         tin_vmintern_drop(est); \
         if(tin_value_isnull(b)) \
         { \
-            *(est->fiber->stack_top - 1) = TRUE_VALUE; \
+            *(est->fiber->stack_top - 1) = tin_value_makebool(est->state, true); \
         } \
         else \
         { \
             tin_vmmac_raiseerrorfmtcont("cannot use op %s on a null value", opstring); \
-            *(est->fiber->stack_top - 1) = FALSE_VALUE;\
+            *(est->fiber->stack_top - 1) = tin_value_makebool(est->state, false);\
         } \
     } \
     else \
@@ -307,10 +307,6 @@ TIN_VM_INLINE TinValue tin_vmintern_peek(TinExecState* est, short distance)
 {
     int ofs;
     ofs = ((-1) - distance);
-    if(ofs < 0)
-    {
-        //return NULL_VALUE;
-    }
     return est->fiber->stack_top[ofs];
 }
 
@@ -1802,10 +1798,86 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
     #ifdef TIN_USE_COMPUTEDGOTO
         static void* dispatchtable[] =
         {
-            #define OPCODE(name, effect) &&name,
-            #include "opcodes.inc"
-            #undef OPCODE
+            &&OP_POP,
+            &&OP_RETURN,
+            &&OP_CONSTVALUE,
+            &&OP_CONSTLONG,
+            &&OP_VALTRUE,
+            &&OP_VALFALSE,
+            &&OP_VALNULL,
+            &&OP_VALARRAY,
+            &&OP_VALOBJECT,
+            &&OP_RANGE,
+            &&OP_NEGATE,
+            &&OP_NOT,
+            &&OP_MATHADD,
+            &&OP_MATHSUB,
+            &&OP_MATHMULT,
+            &&OP_MATHPOWER,
+            &&OP_MATHDIV,
+            &&OP_MATHFLOORDIV,
+            &&OP_MATHMOD,
+            &&OP_BINAND,
+            &&OP_BINOR,
+            &&OP_BINXOR,
+            &&OP_LEFTSHIFT,
+            &&OP_RIGHTSHIFT,
+            &&OP_BINNOT,
+            &&OP_EQUAL,
+            &&OP_GREATERTHAN,
+            &&OP_GREATEREQUAL,
+            &&OP_LESSTHAN,
+            &&OP_LESSEQUAL,
+            &&OP_GLOBALSET,
+            &&OP_GLOBALGET,
+            &&OP_LOCALSET,
+            &&OP_LOCALGET,
+            &&OP_LOCALLONGSET,
+            &&OP_LOCALLONGGET,
+            &&OP_PRIVATESET,
+            &&OP_PRIVATEGET,
+            &&OP_PRIVATELONGSET,
+            &&OP_PRIVATELONGGET,
+            &&OP_UPVALSET,
+            &&OP_UPVALGET,
+            &&OP_JUMPIFFALSE,
+            &&OP_JUMPIFNULL,
+            &&OP_JUMPIFNULLPOP,
+            &&OP_JUMPALWAYS,
+            &&OP_JUMPBACK,
+            &&OP_AND,
+            &&OP_OR,
+            &&OP_NULLOR,
+            &&OP_MAKECLOSURE,
+            &&OP_UPVALCLOSE,
+            &&OP_MAKECLASS,
+            &&OP_FIELDGET,
+            &&OP_FIELDSET,
+            &&OP_GETINDEX,
+            &&OP_SETINDEX,
+            &&OP_ARRAYPUSHVALUE,
+            &&OP_OBJECTPUSHFIELD,
+            &&OP_MAKEMETHOD,
+            &&OP_FIELDSTATIC,
+            &&OP_FIELDDEFINE,
+            &&OP_CLASSINHERIT,
+            &&OP_ISCLASS,
+            &&OP_GETSUPERMETHOD,
+            &&OP_CALLFUNCTION,
+            &&OP_INVOKEMETHOD,
+            &&OP_INVOKESUPER,
+            &&OP_INVOKEIGNORING,
+            &&OP_INVOKESUPERIGNORING,
+            &&OP_POPLOCALS,
+            &&OP_VARARG,
+            &&OP_REFGLOBAL,
+            &&OP_REFPRIVATE,
+            &&OP_REFLOCAL,
+            &&OP_REFUPVAL,
+            &&OP_REFFIELD,
+            &&OP_REFSET,
         };
+
     #endif
 #ifdef TIN_TRACE_EXECUTION
     tin_vmmac_traceframe(est->fiber);
@@ -1918,17 +1990,17 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
             }
             op_case(OP_VALTRUE)
             {
-                tin_vmintern_push(est, TRUE_VALUE);
+                tin_vmintern_push(est, tin_value_makebool(est->state, true));
                 continue;
             }
             op_case(OP_VALFALSE)
             {
-                tin_vmintern_push(est, FALSE_VALUE);
+                tin_vmintern_push(est, tin_value_makebool(est->state, false));
                 continue;
             }
             op_case(OP_VALNULL)
             {
-                tin_vmintern_push(est, tin_value_makenull(est->vm->state));
+                tin_vmintern_push(est, tin_value_makenull(est->state));
                 continue;
             }
             op_case(OP_VALARRAY)
@@ -2398,7 +2470,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 if(tin_value_isnull(instval))
                 {
                     tin_vmintern_dropn(est, 2);
-                    tin_vmintern_push(est, FALSE_VALUE);
+                    tin_vmintern_push(est, tin_value_makebool(est->state, false));
 
                     continue;
                 }

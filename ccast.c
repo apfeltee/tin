@@ -21,7 +21,7 @@ void tin_exprlist_push(TinState* state, TinAstExprList* array, TinAstExpression*
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinAstExpression*), oldcapacity, array->capacity);
+        array->values = (TinAstExpression**)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstExpression*), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -57,7 +57,7 @@ void tin_paramlist_push(TinState* state, TinAstParamList* array, TinAstParameter
     {
         size_t oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = TIN_GROW_ARRAY(state, array->values, sizeof(TinAstParameter), oldcapacity, array->capacity);
+        array->values = (TinAstParameter*)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstParameter), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;

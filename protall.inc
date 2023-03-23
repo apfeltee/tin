@@ -10,7 +10,7 @@ void tin_paramlist_push(TinState *state, TinAstParamList *array, TinAstParameter
 void tin_paramlist_destroyvalues(TinState *state, TinAstParamList *parameters);
 void tin_ast_destroyexprlist(TinState *state, TinAstExprList *expressions);
 void tin_ast_destroystmtlist(TinState *state, TinAstExprList *statements);
-void tin_ast_destroyexpression(TinState *state, TinAstExpression *expression);
+void tin_ast_destroyexpression(TinState *state, TinAstExpression *expr);
 TinAstLiteralExpr *tin_ast_make_literalexpr(TinState *state, size_t line, TinValue value);
 TinAstBinaryExpr *tin_ast_make_binaryexpr(TinState *state, size_t line, TinAstExpression *left, TinAstExpression *right, TinAstTokType op);
 TinAstUnaryExpr *tin_ast_make_unaryexpr(TinState *state, size_t line, TinAstExpression *right, TinAstTokType op);
@@ -29,7 +29,7 @@ TinAstRangeExpr *tin_ast_make_rangeexpr(TinState *state, size_t line, TinAstExpr
 TinAstTernaryExpr *tin_ast_make_ternaryexpr(TinState *state, size_t line, TinAstExpression *condition, TinAstExpression *ifbranch, TinAstExpression *elsebranch);
 TinAstStrInterExpr *tin_ast_make_strinterpolexpr(TinState *state, size_t line);
 TinAstRefExpr *tin_ast_make_referenceexpr(TinState *state, size_t line, TinAstExpression *to);
-TinAstExprExpr *tin_ast_make_exprstmt(TinState *state, size_t line, TinAstExpression *expression);
+TinAstExprExpr *tin_ast_make_exprstmt(TinState *state, size_t line, TinAstExpression *expr);
 TinAstBlockExpr *tin_ast_make_blockexpr(TinState *state, size_t line);
 TinAstAssignVarExpr *tin_ast_make_assignvarexpr(TinState *state, size_t line, const char *name, size_t length, TinAstExpression *init, bool constant);
 TinAstIfExpr *tin_ast_make_ifexpr(TinState *state, size_t line, TinAstExpression *condition, TinAstExpression *ifbranch, TinAstExpression *elsebranch, TinAstExprList *elseifconditions, TinAstExprList *elseifbranches);
@@ -38,7 +38,7 @@ TinAstForExpr *tin_ast_make_forexpr(TinState *state, size_t line, TinAstExpressi
 TinAstContinueExpr *tin_ast_make_continueexpr(TinState *state, size_t line);
 TinAstBreakExpr *tin_ast_make_breakexpr(TinState *state, size_t line);
 TinAstFunctionExpr *tin_ast_make_funcexpr(TinState *state, size_t line, const char *name, size_t length);
-TinAstReturnExpr *tin_ast_make_returnexpr(TinState *state, size_t line, TinAstExpression *expression);
+TinAstReturnExpr *tin_ast_make_returnexpr(TinState *state, size_t line, TinAstExpression *expr);
 TinAstMethodExpr *tin_ast_make_methodexpr(TinState *state, size_t line, TinString *name, bool isstatic);
 TinAstClassExpr *tin_ast_make_classexpr(TinState *state, size_t line, TinString *name, TinString *parent);
 TinAstFieldExpr *tin_ast_make_fieldexpr(TinState *state, size_t line, TinString *name, TinAstExpression *getter, TinAstExpression *setter, bool isstatic);
@@ -53,9 +53,9 @@ void tin_privlist_push(TinState *state, TinAstPrivList *array, TinAstPrivate val
 void tin_loclist_init(TinAstLocList *array);
 void tin_loclist_destroy(TinState *state, TinAstLocList *array);
 void tin_loclist_push(TinState *state, TinAstLocList *array, TinAstLocal value);
-void tin_astemit_init(TinState *state, TinAstEmitter *emitter);
-void tin_astemit_destroy(TinAstEmitter *emitter);
-TinModule *tin_astemit_modemit(TinAstEmitter *emitter, TinAstExprList *statements, TinString *module_name);
+void tin_astemit_init(TinState *state, TinAstEmitter *emt);
+void tin_astemit_destroy(TinAstEmitter *emt);
+TinModule *tin_astemit_modemit(TinAstEmitter *emt, TinAstExprList *statements, TinString *module_name);
 /* ccopt.c */
 void tin_astopt_optdbg(const char *fmt, ...);
 void tin_varlist_init(TinVarList *array);
@@ -72,15 +72,15 @@ const char *tin_astopt_getoptdescr(TinAstOptType optimization);
 const char *tin_astopt_getoptleveldescr(TinAstOptLevel level);
 /* ccparser.c */
 const char *tin_astparser_token2name(int t);
-void tin_astparser_init(TinState *state, TinAstParser *parser);
-void tin_astparser_destroy(TinAstParser *parser);
-bool tin_astparser_parsesource(TinAstParser *parser, const char *filename, const char *source, size_t srclength, TinAstExprList *statements);
+void tin_astparser_init(TinState *state, TinAstParser *prs);
+void tin_astparser_destroy(TinAstParser *prs);
+bool tin_astparser_parsesource(TinAstParser *prs, const char *filename, const char *source, size_t srclength, TinAstExprList *statements);
 /* ccscan.c */
 void tin_bytelist_init(TinAstByteList *bl);
 void tin_bytelist_destroy(TinState *state, TinAstByteList *bl);
 void tin_bytelist_push(TinState *state, TinAstByteList *bl, uint8_t value);
-void tin_astlex_init(TinState *state, TinAstScanner *scanner, const char *filename, const char *source, size_t srclength);
-TinAstToken tin_astlex_scantoken(TinAstScanner *scanner);
+void tin_astlex_init(TinState *state, TinAstScanner *scn, const char *filename, const char *source, size_t srclength);
+TinAstToken tin_astlex_scantoken(TinAstScanner *scn);
 /* chunk.c */
 void tin_chunk_init(TinChunk *chunk);
 void tin_chunk_destroy(TinState *state, TinChunk *chunk);
@@ -142,7 +142,7 @@ TinArray *tin_object_makearray(TinState *state);
 size_t tin_array_count(TinArray *arr);
 TinValue tin_array_pop(TinState *state, TinArray *arr);
 int tin_array_indexof(TinArray *array, TinValue value);
-TinValue tin_array_removeat(TinArray *array, size_t index);
+TinValue tin_array_removeat(TinState *state, TinArray *array, size_t index);
 void tin_array_push(TinState *state, TinArray *array, TinValue val);
 TinValue tin_array_get(TinState *state, TinArray *array, size_t idx);
 void tin_array_set(TinState *state, TinArray *array, size_t idx, TinValue val);
@@ -326,11 +326,11 @@ int tin_util_numbertoint32(double n);
 unsigned int tin_util_numbertouint32(double n);
 int tin_util_closestpowof2(int n);
 char *tin_util_patchfilename(char *filename);
-char *tin_util_copystring(const char *string);
+char *tin_util_copystringn(const char *str, size_t len);
+char *tin_util_copystring(const char *str);
 /* value.c */
 TinValue tin_value_fromobject_actual(TinObject *obj);
 TinObject *tin_value_asobject(TinValue v);
-TinValue tin_value_makebool(TinState *state, bool b);
 TinObjType tin_value_type(TinValue v);
 TinValue tin_value_makenumber(TinState *state, double num);
 TinValue tin_value_makefloatnumber(TinState *state, double num);

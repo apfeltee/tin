@@ -10,7 +10,7 @@ static TinValue access_private(TinVM* vm, TinMap* map, TinString* name, TinValue
     id = tin_string_copyconst(vm->state, "_module");
     if(!tin_table_get(&map->values, id, &value) || !tin_value_ismodule(value))
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     module = tin_value_asmodule(value);
     if(id == name)
@@ -30,7 +30,7 @@ static TinValue access_private(TinVM* vm, TinMap* map, TinString* name, TinValue
             return module->privates[index];
         }
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_module_privates(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)

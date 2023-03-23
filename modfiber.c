@@ -10,8 +10,8 @@ TinFiber* tin_object_makefiber(TinState* state, TinModule* module, TinFunction* 
     TinFiber* fiber;
     // Allocate in advance, just in case GC is triggered
     stack_capacity = function == NULL ? 1 : (size_t)tin_util_closestpowof2(function->maxslots + 1);
-    stack = TIN_ALLOCATE(state, sizeof(TinValue), stack_capacity);
-    frames = TIN_ALLOCATE(state, sizeof(TinCallFrame), TIN_INITIAL_CALL_FRAMES);
+    stack = (TinValue*)TIN_ALLOCATE(state, sizeof(TinValue), stack_capacity);
+    frames = (TinCallFrame*)TIN_ALLOCATE(state, sizeof(TinCallFrame), TIN_INITIAL_CALL_FRAMES);
     fiber = (TinFiber*)tin_gcmem_allocobject(state, sizeof(TinFiber), TINTYPE_FIBER, false);
     if(module != NULL)
     {
@@ -30,7 +30,7 @@ TinFiber* tin_object_makefiber(TinState* state, TinModule* module, TinFunction* 
     fiber->arg_count = 0;
     fiber->module = module;
     fiber->catcher = false;
-    fiber->errorval = NULL_VALUE;
+    fiber->errorval = tin_value_makenull(state);
     fiber->open_upvalues = NULL;
     fiber->abort = false;
     frame = &fiber->frames[0];
@@ -143,8 +143,8 @@ static bool objfn_fiber_yield(TinVM* vm, TinValue instance, size_t argc, TinValu
     fiber = vm->fiber;
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
-    argv[-1] = NULL_VALUE;
+    vm->fiber->stack_top[-1] = argc == 0 ? tin_value_makenull(vm->state) : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
+    argv[-1] = tin_value_makenull(vm->state);
     return true;
 }
 
@@ -162,8 +162,8 @@ static bool objfn_fiber_yeet(TinVM* vm, TinValue instance, size_t argc, TinValue
     fiber = vm->fiber;
     vm->fiber = vm->fiber->parent;
     vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? NULL_VALUE : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
-    argv[-1] = NULL_VALUE;
+    vm->fiber->stack_top[-1] = argc == 0 ? tin_value_makenull(vm->state) : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
+    argv[-1] = tin_value_makenull(vm->state);
     return true;
 }
 
@@ -172,7 +172,7 @@ static bool objfn_fiber_abort(TinVM* vm, TinValue instance, size_t argc, TinValu
     (void)instance;
     tin_vm_handleruntimeerror(vm, argc == 0 ? tin_string_copyconst(vm->state, "Fiber was aborted") :
     tin_value_tostring(vm->state, argv[0]));
-    argv[-1] = NULL_VALUE;
+    argv[-1] = tin_value_makenull(vm->state);
     return true;
 }
 

@@ -9,7 +9,7 @@ TinUpvalue* tin_object_makeupvalue(TinState* state, TinValue* slot)
     TinUpvalue* upvalue;
     upvalue = (TinUpvalue*)tin_gcmem_allocobject(state, sizeof(TinUpvalue), TINTYPE_UPVALUE, false);
     upvalue->location = slot;
-    upvalue->closed = NULL_VALUE;
+    upvalue->closed = tin_value_makenull(state);
     upvalue->next = NULL;
     return upvalue;
 }
@@ -19,7 +19,7 @@ TinModule* tin_object_makemodule(TinState* state, TinString* name)
     TinModule* module;
     module = (TinModule*)tin_gcmem_allocobject(state, sizeof(TinModule), TINTYPE_MODULE, false);
     module->name = name;
-    module->return_value = NULL_VALUE;
+    module->return_value = tin_value_makenull(state);
     module->main_function = NULL;
     module->privates = NULL;
     module->ran = false;
@@ -289,7 +289,7 @@ TinValue tin_function_getname(TinVM* vm, TinValue instance)
             break;
         default:
             {
-                //return NULL_VALUE;
+                //return tin_value_makenull(vm->state);
             }
             break;
     }
@@ -318,7 +318,7 @@ static TinValue objfn_instance_super(TinVM* vm, TinValue instance, size_t argc, 
     cl = tin_state_getclassfor(vm->state, instance)->super;
     if(cl == NULL)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_fromobject(cl);
 }
@@ -431,7 +431,7 @@ static TinValue objfn_instance_subscript(TinVM* vm, TinValue instance, size_t ar
     {
         return value;
     }
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_instance_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -448,7 +448,7 @@ static TinValue objfn_instance_iterator(TinVM* vm, TinValue instance, size_t arg
     value = util_table_iterator(&self->fields, index);
     if(value == -1)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_makefixednumber(vm->state, value);
 }
@@ -467,6 +467,8 @@ static TinValue objfn_instance_dump(TinVM* vm, TinValue instance, size_t argc, T
 {
     TinWriter tw;
     TinString* ts;
+    (void)argc;
+    (void)argv;
     tin_writer_init_string(vm->state, &tw);
     tin_towriter_value(vm->state, &tw, instance, true);
     ts = tin_writer_get_string(&tw);

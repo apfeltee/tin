@@ -22,7 +22,7 @@ TinClosure* tin_object_makeclosure(TinState* state, TinFunction* function)
     TinUpvalue** upvalues;
     closure = (TinClosure*)tin_gcmem_allocobject(state, sizeof(TinClosure), TINTYPE_CLOSURE, false);
     tin_state_pushroot(state, (TinObject*)closure);
-    upvalues = TIN_ALLOCATE(state, sizeof(TinUpvalue*), function->upvalue_count);
+    upvalues = (TinUpvalue**)TIN_ALLOCATE(state, sizeof(TinUpvalue*), function->upvalue_count);
     tin_state_poproot(state);
     for(i = 0; i < function->upvalue_count; i++)
     {

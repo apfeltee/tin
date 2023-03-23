@@ -469,11 +469,11 @@ TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
         privates = &module->private_names->values;
         privatescount = tin_emufile_readuint16(&femu);
         enabled = !((bool)tin_emufile_readuint8(&femu));
-        module->privates = TIN_ALLOCATE(state, sizeof(TinValue), privatescount);
+        module->privates = (TinValue*)TIN_ALLOCATE(state, sizeof(TinValue), privatescount);
         module->private_count = privatescount;
         for(i = 0; i < privatescount; i++)
         {
-            module->privates[i] = NULL_VALUE;
+            module->privates[i] = tin_value_makenull(state);
             if(enabled)
             {
                 name = tin_emufile_readstring(state, &femu);
@@ -561,7 +561,7 @@ static TinValue objmethod_file_constructor(TinVM* vm, TinValue instance, size_t 
     else
     {
         tin_vm_raiseexitingerror(vm, "File() expects either string|string, or userdata|string");
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return instance;
 }
@@ -577,7 +577,7 @@ static TinValue objmethod_file_close(TinVM* vm, TinValue instance, size_t argc, 
     fclose(data->handle);
     data->handle = NULL;
     data->isopen = false;
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objstatic_file_exists(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -627,7 +627,7 @@ static TinValue objstatic_file_isfile(TinVM* vm, TinValue instance, size_t argc,
     path = tin_args_checkstring(vm, argv, argc, 0);
     if(!tin_util_failstat(vm, path, &st))
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     if(st.isfile)
     {
@@ -644,7 +644,7 @@ static TinValue objstatic_file_isdir(TinVM* vm, TinValue instance, size_t argc, 
     path = tin_args_checkstring(vm, argv, argc, 0);
     if(!tin_util_failstat(vm, path, &st))
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     if(st.isdir)
     {
@@ -662,7 +662,7 @@ static TinValue objstatic_file_stat(TinVM* vm, TinValue instance, size_t argc, T
     path = tin_args_checkstring(vm, argv, argc, 0);
     if(!tin_util_failstat(vm, path, &st))
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     map = tin_object_makemap(vm->state);
     tin_map_setstr(vm->state, map, "path", tin_value_fromobject(tin_string_copy(vm->state, path, strlen(path))));
@@ -756,12 +756,12 @@ static TinValue objmethod_file_writestring(TinVM* vm, TinValue instance, size_t 
     TinFileData* data;
     if(tin_args_checkstring(vm, argv, argc, 0) == NULL)
     {
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     string = tin_value_asstring(argv[0]);
     data = (TinFileData*)tin_util_instancedataget(vm, instance);
     tin_ioutil_writestring(data->handle, string);
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 /*
@@ -870,7 +870,7 @@ static TinValue objmethod_file_readamount(TinVM* vm, TinValue instance, size_t a
     if(actuallen == 0)
     {
         tin_state_raiseerror(vm->state, RUNTIME_ERROR, "fread failed");
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     /* important: until sds_internincrlength is called, the string is zero-length. */
     sds_internincrlength(result->data, actuallen);
@@ -891,11 +891,11 @@ static TinValue objmethod_file_readline(TinVM* vm, TinValue instance, size_t arg
     TinFileData* data;
     maxlength = (size_t)tin_value_getnumber(vm, argv, argc, 0, 128);
     data = (TinFileData*)tin_util_instancedataget(vm, instance);
-    line = TIN_ALLOCATE(vm->state, sizeof(char), maxlength + 1);
+    line = (char*)TIN_ALLOCATE(vm->state, sizeof(char), maxlength + 1);
     if(!fgets(line, maxlength, data->handle))
     {
         TIN_FREE(vm->state, sizeof(char), line);
-        return NULL_VALUE;
+        return tin_value_makenull(vm->state);
     }
     return tin_value_fromobject(tin_string_take(vm->state, line, strlen(line) - 1, false));
 }
@@ -946,7 +946,7 @@ static TinValue objmethod_file_readstring(TinVM* vm, TinValue instance, size_t a
     (void)argv;
     data = (TinFileData*)tin_util_instancedataget(vm, instance);
     string = tin_ioutil_readstring(vm->state, data->handle);
-    return string == NULL ? NULL_VALUE : tin_value_fromobject(string);
+    return string == NULL ? tin_value_makenull(vm->state) : tin_value_fromobject(string);
 }
 
 static TinValue objmethod_file_getlastmodified(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -1039,7 +1039,7 @@ static void tin_userfile_makehandle(TinState* state, TinValue fileval, const cha
     oldfiber = state->vm->fiber;
     state->vm->fiber = tin_object_makefiber(state, state->last_module, NULL);
     {
-        hstd = TIN_ALLOCATE(state, sizeof(TinStdioHandle), 1);
+        hstd = (TinStdioHandle*)TIN_ALLOCATE(state, sizeof(TinStdioHandle), 1);
         hstd->handle = hnd;
         hstd->name = name;
         hstd->canread = canread;

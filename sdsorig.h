@@ -42,9 +42,9 @@
 #include <assert.h>
 #include <limits.h>
 
-#define sds_actualmalloc malloc
-#define sds_actualrealloc realloc
-#define sds_actualfree free
+#define s_malloc malloc
+#define s_realloc realloc
+#define s_free free
 
 #define SDS_LLSTR_SIZE 21
 
@@ -57,7 +57,7 @@
 #define SDS_TYPE_64 4
 #define SDS_TYPE_MASK 7
 #define SDS_TYPE_BITS 3
-#define SDS_HDR_VAR(T, s) T* sh = (T*)(void*)((s) - (sizeof(T)));
+#define SDS_HDR_VAR(T, s) T* sh = (void*)((s) - (sizeof(T)));
 #define SDS_HDR(T, s) ((T*)((s) - (sizeof(T))))
 #define SDS_TYPE_5_LEN(f) ((f) >> SDS_TYPE_BITS)
 
@@ -83,39 +83,39 @@ typedef struct sdshead64_t sdshead64_t;
 struct SDS_ATTRIBUTE((__packed__)) sdshead5_t
 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
-    char* data;
+    char buf[];
 };
 
 struct SDS_ATTRIBUTE((__packed__)) sdshead8_t
 {
-    uint8_t length; /* used */
-    uint8_t capacity; /* excluding the header and null terminator */
+    uint8_t len; /* used */
+    uint8_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char* data;
+    char buf[];
 };
 
 struct SDS_ATTRIBUTE((__packed__)) sdshead16_t
 {
-    uint16_t length; /* used */
-    uint16_t capacity; /* excluding the header and null terminator */
+    uint16_t len; /* used */
+    uint16_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char* data;
+    char buf[];
 };
 
 struct SDS_ATTRIBUTE((__packed__)) sdshead32_t
 {
-    uint32_t length; /* used */
-    uint32_t capacity; /* excluding the header and null terminator */
+    uint32_t len; /* used */
+    uint32_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char* data;
+    char buf[];
 };
 
 struct SDS_ATTRIBUTE((__packed__)) sdshead64_t
 {
-    uint64_t length; /* used */
-    uint64_t capacity; /* excluding the header and null terminator */
+    uint64_t len; /* used */
+    uint64_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char* data;
+    char buf[];
 };
 
 static inline sdstring_t sds_makelength(const void* init, size_t initlen);
@@ -181,22 +181,22 @@ static inline size_t sds_getlength(const sdstring_t s)
             break;
         case SDS_TYPE_8:
             {
-                return SDS_HDR(sdshead8_t, s)->length;
+                return SDS_HDR(sdshead8_t, s)->len;
             }
             break;
         case SDS_TYPE_16:
             {
-                return SDS_HDR(sdshead16_t, s)->length;
+                return SDS_HDR(sdshead16_t, s)->len;
             }
             break;
         case SDS_TYPE_32:
             {
-                return SDS_HDR(sdshead32_t, s)->length;
+                return SDS_HDR(sdshead32_t, s)->len;
             }
             break;
         case SDS_TYPE_64:
             {
-                return SDS_HDR(sdshead64_t, s)->length;
+                return SDS_HDR(sdshead64_t, s)->len;
             }
             break;
     }
@@ -216,25 +216,25 @@ static inline size_t sds_getcapacity(const sdstring_t s)
         case SDS_TYPE_8:
             {
                 SDS_HDR_VAR(sdshead8_t, s);
-                return sh->capacity - sh->length;
+                return sh->alloc - sh->len;
             }
             break;
         case SDS_TYPE_16:
             {
                 SDS_HDR_VAR(sdshead16_t, s);
-                return sh->capacity - sh->length;
+                return sh->alloc - sh->len;
             }
             break;
         case SDS_TYPE_32:
             {
                 SDS_HDR_VAR(sdshead32_t, s);
-                return sh->capacity - sh->length;
+                return sh->alloc - sh->len;
             }
             break;
         case SDS_TYPE_64:
             {
                 SDS_HDR_VAR(sdshead64_t, s);
-                return sh->capacity - sh->length;
+                return sh->alloc - sh->len;
             }
             break;
     }
@@ -243,36 +243,26 @@ static inline size_t sds_getcapacity(const sdstring_t s)
 
 static inline void sds_setlength(sdstring_t s, size_t newlen)
 {
-    unsigned char* fp;
-    unsigned char flags;
-    flags = s[-1];
+    unsigned char flags = s[-1];
     switch(flags & SDS_TYPE_MASK)
     {
         case SDS_TYPE_5:
-            {
-                fp = ((unsigned char*)s) - 1;
-                *fp = SDS_TYPE_5 | (newlen << SDS_TYPE_BITS);
-            }
-            break;
+        {
+            unsigned char* fp = ((unsigned char*)s) - 1;
+            *fp = SDS_TYPE_5 | (newlen << SDS_TYPE_BITS);
+        }
+        break;
         case SDS_TYPE_8:
-            {
-                SDS_HDR(sdshead8_t, s)->length = newlen;
-            }
+            SDS_HDR(sdshead8_t, s)->len = newlen;
             break;
         case SDS_TYPE_16:
-            {
-                SDS_HDR(sdshead16_t, s)->length = newlen;
-            }
+            SDS_HDR(sdshead16_t, s)->len = newlen;
             break;
         case SDS_TYPE_32:
-            {
-                SDS_HDR(sdshead32_t, s)->length = newlen;
-            }
+            SDS_HDR(sdshead32_t, s)->len = newlen;
             break;
         case SDS_TYPE_64:
-            {
-                SDS_HDR(sdshead64_t, s)->length = newlen;
-            }
+            SDS_HDR(sdshead64_t, s)->len = newlen;
             break;
     }
 }
@@ -286,101 +276,67 @@ static inline void sds_increaselength(sdstring_t s, size_t inc)
     switch(flags & SDS_TYPE_MASK)
     {
         case SDS_TYPE_5:
-            {
-                fp = ((unsigned char*)s) - 1;
-                newlen = SDS_TYPE_5_LEN(flags) + inc;
-                *fp = SDS_TYPE_5 | (newlen << SDS_TYPE_BITS);
-            }
-            break;
+        {
+            fp = ((unsigned char*)s) - 1;
+            newlen = SDS_TYPE_5_LEN(flags) + inc;
+            *fp = SDS_TYPE_5 | (newlen << SDS_TYPE_BITS);
+        }
+        break;
         case SDS_TYPE_8:
-            {
-                SDS_HDR(sdshead8_t, s)->length += inc;
-            }
+            SDS_HDR(sdshead8_t, s)->len += inc;
             break;
         case SDS_TYPE_16:
-            {
-                SDS_HDR(sdshead16_t, s)->length += inc;
-            }
+            SDS_HDR(sdshead16_t, s)->len += inc;
             break;
         case SDS_TYPE_32:
-            {
-                SDS_HDR(sdshead32_t, s)->length += inc;
-            }
+            SDS_HDR(sdshead32_t, s)->len += inc;
             break;
         case SDS_TYPE_64:
-            {
-                SDS_HDR(sdshead64_t, s)->length += inc;
-            }
+            SDS_HDR(sdshead64_t, s)->len += inc;
             break;
     }
 }
 
-/* sds_getallocatedsize() = sds_getcapacity() + sds_getlength() */
-static inline size_t sds_getallocatedsize(const sdstring_t s)
+/* sds_alloc() = sds_getcapacity() + sds_getlength() */
+static inline size_t sds_alloc(const sdstring_t s)
 {
     unsigned char flags;
     flags = s[-1];
     switch(flags & SDS_TYPE_MASK)
     {
         case SDS_TYPE_5:
-            {
-                return SDS_TYPE_5_LEN(flags);
-            }
-            break;
+            return SDS_TYPE_5_LEN(flags);
         case SDS_TYPE_8:
-            {
-                return SDS_HDR(sdshead8_t, s)->capacity;
-            }
-            break;
+            return SDS_HDR(sdshead8_t, s)->alloc;
         case SDS_TYPE_16:
-            {
-                return SDS_HDR(sdshead16_t, s)->capacity;
-            }
-            break;
+            return SDS_HDR(sdshead16_t, s)->alloc;
         case SDS_TYPE_32:
-            {
-                return SDS_HDR(sdshead32_t, s)->capacity;
-            }
-            break;
+            return SDS_HDR(sdshead32_t, s)->alloc;
         case SDS_TYPE_64:
-            {
-                return SDS_HDR(sdshead64_t, s)->capacity;
-            }
-            break;
+            return SDS_HDR(sdshead64_t, s)->alloc;
     }
     return 0;
 }
 
 static inline void sds_setalloc(sdstring_t s, size_t newlen)
 {
-    unsigned char flags;
-    flags = s[-1];
+    unsigned char flags = s[-1];
     switch(flags & SDS_TYPE_MASK)
     {
         case SDS_TYPE_5:
-            {
-                /* Nothing to do, this type has no total allocation info. */
-            }
+            /* Nothing to do, this type has no total allocation info. */
             break;
         case SDS_TYPE_8:
-            {
-                SDS_HDR(sdshead8_t, s)->capacity = newlen;
-            }
+            SDS_HDR(sdshead8_t, s)->alloc = newlen;
             break;
         case SDS_TYPE_16:
-            {
-                SDS_HDR(sdshead16_t, s)->capacity = newlen;
-            }
+            SDS_HDR(sdshead16_t, s)->alloc = newlen;
             break;
         case SDS_TYPE_32:
-            {
-                SDS_HDR(sdshead32_t, s)->capacity = newlen;
-            }
+            SDS_HDR(sdshead32_t, s)->alloc = newlen;
             break;
         case SDS_TYPE_64:
-            {
-                SDS_HDR(sdshead64_t, s)->capacity = newlen;
-            }
+            SDS_HDR(sdshead64_t, s)->alloc = newlen;
             break;
     }
 }
@@ -390,30 +346,15 @@ static inline int sds_getheadersize(char type)
     switch(type & SDS_TYPE_MASK)
     {
         case SDS_TYPE_5:
-            {
-                return sizeof(sdshead5_t);
-            }
-            break;
+            return sizeof(sdshead5_t);
         case SDS_TYPE_8:
-            {
-                return sizeof(sdshead8_t);
-            }
-            break;
+            return sizeof(sdshead8_t);
         case SDS_TYPE_16:
-            {
-                return sizeof(sdshead16_t);
-            }
-            break;
+            return sizeof(sdshead16_t);
         case SDS_TYPE_32:
-            {
-                return sizeof(sdshead32_t);
-            }
-            break;
+            return sizeof(sdshead32_t);
         case SDS_TYPE_64:
-            {
-                return sizeof(sdshead64_t);
-            }
-            break;
+            return sizeof(sdshead64_t);
     }
     return 0;
 }
@@ -460,8 +401,7 @@ static inline sdstring_t sds_makelength(const void* init, size_t initlen)
 {
     void* headbuf;
     sdstring_t s;
-    /* flags pointer. */
-    unsigned char* fp;
+    unsigned char* fp; /* flags pointer. */
     char type;
     int hdrlen;
     type = sds_reqtype(initlen);
@@ -472,7 +412,7 @@ static inline sdstring_t sds_makelength(const void* init, size_t initlen)
         type = SDS_TYPE_8;
     }
     hdrlen = sds_getheadersize(type);
-    headbuf = sds_actualmalloc(hdrlen + initlen + 1);
+    headbuf = s_malloc(hdrlen + initlen + 1);
     if(headbuf == NULL)
     {
         return NULL;
@@ -497,32 +437,32 @@ static inline sdstring_t sds_makelength(const void* init, size_t initlen)
         case SDS_TYPE_8:
             {
                 SDS_HDR_VAR(sdshead8_t, s);
-                sh->length = initlen;
-                sh->capacity = initlen;
+                sh->len = initlen;
+                sh->alloc = initlen;
                 *fp = type;
             }
             break;
         case SDS_TYPE_16:
             {
                 SDS_HDR_VAR(sdshead16_t, s);
-                sh->length = initlen;
-                sh->capacity = initlen;
+                sh->len = initlen;
+                sh->alloc = initlen;
                 *fp = type;
             }
             break;
         case SDS_TYPE_32:
             {
                 SDS_HDR_VAR(sdshead32_t, s);
-                sh->length = initlen;
-                sh->capacity = initlen;
+                sh->len = initlen;
+                sh->alloc = initlen;
                 *fp = type;
             }
             break;
         case SDS_TYPE_64:
             {
                 SDS_HDR_VAR(sdshead64_t, s);
-                sh->length = initlen;
-                sh->capacity = initlen;
+                sh->len = initlen;
+                sh->alloc = initlen;
                 *fp = type;
             }
             break;
@@ -559,10 +499,8 @@ static inline sdstring_t sds_duplicate(const sdstring_t s)
 static inline void sds_destroy(sdstring_t s)
 {
     if(s == NULL)
-    {
         return;
-    }
-    sds_actualfree((char*)s - sds_getheadersize(s[-1]));
+    s_free((char*)s - sds_getheadersize(s[-1]));
 }
 
 /* Set the sds string length to the length as obtained with strlen(), so
@@ -581,8 +519,7 @@ static inline void sds_destroy(sdstring_t s)
  * remains 6 bytes. */
 static inline void sds_updatelength(sdstring_t s)
 {
-    size_t reallen;
-    reallen = strlen(s);
+    size_t reallen = strlen(s);
     sds_setlength(s, reallen);
 }
 
@@ -604,66 +541,50 @@ static inline void sds_clear(sdstring_t s)
  * by sds_getlength(), but only the free buffer space we have. */
 static inline sdstring_t sds_allocroomfor(sdstring_t s, size_t addlen)
 {
-    void* sh;
-    void* newsh;
-    size_t avail;
-    size_t len;
-    size_t newlen;
-    size_t reqlen;
-    char type;
-    char oldtype;
+    void *sh, *newsh;
+    size_t avail = sds_getcapacity(s);
+    size_t len, newlen, reqlen;
+    char type, oldtype = s[-1] & SDS_TYPE_MASK;
     int hdrlen;
-    avail = sds_getcapacity(s);
-    oldtype = s[-1] & SDS_TYPE_MASK;
+
     /* Return ASAP if there is enough space left. */
     if(avail >= addlen)
-    {
         return s;
-    }
+
     len = sds_getlength(s);
     sh = (char*)s - sds_getheadersize(oldtype);
     reqlen = newlen = (len + addlen);
     if(newlen < SDS_MAX_PREALLOC)
-    {
         newlen *= 2;
-    }
     else
-    {
         newlen += SDS_MAX_PREALLOC;
-    }
+
     type = sds_reqtype(newlen);
-    /*
-    * Don't use type 5: the user is appending to the string and type 5 is
-    * not able to remember empty space, so sds_allocroomfor() must be called
-    * at every appending operation.
-    */
+
+    /* Don't use type 5: the user is appending to the string and type 5 is
+     * not able to remember empty space, so sds_allocroomfor() must be called
+     * at every appending operation. */
     if(type == SDS_TYPE_5)
-    {
         type = SDS_TYPE_8;
-    }
+
     hdrlen = sds_getheadersize(type);
-    /* Catch size_t overflow */
-    assert(hdrlen + newlen + 1 > reqlen);
+    assert(hdrlen + newlen + 1 > reqlen); /* Catch size_t overflow */
     if(oldtype == type)
     {
-        newsh = sds_actualrealloc(sh, hdrlen + newlen + 1);
+        newsh = s_realloc(sh, hdrlen + newlen + 1);
         if(newsh == NULL)
-        {
             return NULL;
-        }
         s = (char*)newsh + hdrlen;
     }
     else
     {
         /* Since the header size changes, need to move the string forward,
          * and can't use realloc */
-        newsh = sds_actualmalloc(hdrlen + newlen + 1);
+        newsh = s_malloc(hdrlen + newlen + 1);
         if(newsh == NULL)
-        {
             return NULL;
-        }
         memcpy((char*)newsh + hdrlen, s, len + 1);
-        sds_actualfree(sh);
+        s_free(sh);
         s = (char*)newsh + hdrlen;
         s[-1] = type;
         sds_setlength(s, len);
@@ -680,54 +601,40 @@ static inline sdstring_t sds_allocroomfor(sdstring_t s, size_t addlen)
  * references must be substituted with the new pointer returned by the call. */
 static inline sdstring_t sds_removefreespace(sdstring_t s)
 {
-    void* sh;
-    void* newsh;
-    char type;
-    char oldtype;
-    int hdrlen;
-    int oldhdrlen;
-    size_t len;
-    size_t avail;
-    avail = sds_getcapacity(s);
+    void *sh, *newsh;
+    char type, oldtype = s[-1] & SDS_TYPE_MASK;
+    int hdrlen, oldhdrlen = sds_getheadersize(oldtype);
+    size_t len = sds_getlength(s);
+    size_t avail = sds_getcapacity(s);
     sh = (char*)s - oldhdrlen;
-    oldhdrlen = sds_getheadersize(oldtype);
-    oldtype = s[-1] & SDS_TYPE_MASK;
-    len = sds_getlength(s);
+
     /* Return ASAP if there is no space left. */
     if(avail == 0)
-    {
         return s;
-    }
-    /*
-    * Check what would be the minimum SDS header that is just good enough to
-    * fit this string.
-    */
+
+    /* Check what would be the minimum SDS header that is just good enough to
+     * fit this string. */
     type = sds_reqtype(len);
     hdrlen = sds_getheadersize(type);
-    /*
-    * If the type is the same, or at least a large enough type is still
-    * required, we just realloc(), letting the allocator to do the copy
-    * only if really needed. Otherwise if the change is huge, we manually
-    * reallocate the string to use the different header type.
-    */
+
+    /* If the type is the same, or at least a large enough type is still
+     * required, we just realloc(), letting the allocator to do the copy
+     * only if really needed. Otherwise if the change is huge, we manually
+     * reallocate the string to use the different header type. */
     if(oldtype == type || type > SDS_TYPE_8)
     {
-        newsh = sds_actualrealloc(sh, oldhdrlen + len + 1);
+        newsh = s_realloc(sh, oldhdrlen + len + 1);
         if(newsh == NULL)
-        {
             return NULL;
-        }
         s = (char*)newsh + oldhdrlen;
     }
     else
     {
-        newsh = sds_actualmalloc(hdrlen + len + 1);
+        newsh = s_malloc(hdrlen + len + 1);
         if(newsh == NULL)
-        {
             return NULL;
-        }
         memcpy((char*)newsh + hdrlen, s, len + 1);
-        sds_actualfree(sh);
+        s_free(sh);
         s = (char*)newsh + hdrlen;
         s[-1] = type;
         sds_setlength(s, len);
@@ -745,8 +652,7 @@ static inline sdstring_t sds_removefreespace(sdstring_t s)
  */
 static inline size_t sds_internallocsize(sdstring_t s)
 {
-    size_t alloc;
-    alloc = sds_getallocatedsize(s);
+    size_t alloc = sds_alloc(s);
     return sds_getheadersize(s[-1]) + alloc + 1;
 }
 
@@ -782,56 +688,49 @@ static inline void* sds_allocptr(sdstring_t s)
  */
 static inline void sds_internincrlength(sdstring_t s, SDSSIZE_T incr)
 {
-    unsigned char flags;
+    unsigned char flags = s[-1];
     size_t len;
-    unsigned char* fp;
-    unsigned char oldlen;
-    flags = s[-1];
     switch(flags & SDS_TYPE_MASK)
     {
         case SDS_TYPE_5:
-            {
-                fp = ((unsigned char*)s) - 1;
-                oldlen = SDS_TYPE_5_LEN(flags);
-                assert((incr > 0 && oldlen + incr < 32) || (incr < 0 && oldlen >= (unsigned int)(-incr)));
-                *fp = SDS_TYPE_5 | ((oldlen + incr) << SDS_TYPE_BITS);
-                len = oldlen + incr;
-            }
+        {
+            unsigned char* fp = ((unsigned char*)s) - 1;
+            unsigned char oldlen = SDS_TYPE_5_LEN(flags);
+            assert((incr > 0 && oldlen + incr < 32) || (incr < 0 && oldlen >= (unsigned int)(-incr)));
+            *fp = SDS_TYPE_5 | ((oldlen + incr) << SDS_TYPE_BITS);
+            len = oldlen + incr;
             break;
+        }
         case SDS_TYPE_8:
-            {
-                SDS_HDR_VAR(sdshead8_t, s);
-                assert((incr >= 0 && sh->capacity - sh->length >= incr) || (incr < 0 && sh->length >= (unsigned int)(-incr)));
-                len = (sh->length += incr);
-            }
+        {
+            SDS_HDR_VAR(sdshead8_t, s);
+            assert((incr >= 0 && sh->alloc - sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
+            len = (sh->len += incr);
             break;
+        }
         case SDS_TYPE_16:
-            {
-                SDS_HDR_VAR(sdshead16_t, s);
-                assert((incr >= 0 && sh->capacity - sh->length >= incr) || (incr < 0 && sh->length >= (unsigned int)(-incr)));
-                len = (sh->length += incr);
-            }
+        {
+            SDS_HDR_VAR(sdshead16_t, s);
+            assert((incr >= 0 && sh->alloc - sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
+            len = (sh->len += incr);
             break;
+        }
         case SDS_TYPE_32:
-            {
-                SDS_HDR_VAR(sdshead32_t, s);
-                assert((incr >= 0 && sh->capacity - sh->length >= (unsigned int)incr) || (incr < 0 && sh->length >= (unsigned int)(-incr)));
-                len = (sh->length += incr);
-            }
+        {
+            SDS_HDR_VAR(sdshead32_t, s);
+            assert((incr >= 0 && sh->alloc - sh->len >= (unsigned int)incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
+            len = (sh->len += incr);
             break;
+        }
         case SDS_TYPE_64:
-            {
-                SDS_HDR_VAR(sdshead64_t, s);
-                assert((incr >= 0 && sh->capacity - sh->length >= (uint64_t)incr) || (incr < 0 && sh->length >= (uint64_t)(-incr)));
-                len = (sh->length += incr);
-            }
+        {
+            SDS_HDR_VAR(sdshead64_t, s);
+            assert((incr >= 0 && sh->alloc - sh->len >= (uint64_t)incr) || (incr < 0 && sh->len >= (uint64_t)(-incr)));
+            len = (sh->len += incr);
             break;
+        }
         default:
-            {
-                /* Just to avoid compilation warnings. */
-                len = 0;
-            }
-            break;
+            len = 0; /* Just to avoid compilation warnings. */
     }
     s[len] = '\0';
 }
@@ -843,17 +742,14 @@ static inline void sds_internincrlength(sdstring_t s, SDSSIZE_T incr)
  * is performed. */
 static inline sdstring_t sds_growzero(sdstring_t s, size_t len)
 {
-    size_t curlen;
-    curlen = sds_getlength(s);
+    size_t curlen = sds_getlength(s);
+
     if(len <= curlen)
-    {
         return s;
-    }
     s = sds_allocroomfor(s, len - curlen);
     if(s == NULL)
-    {
         return NULL;
-    }
+
     /* Make sure added region doesn't contain garbage */
     memset(s + curlen, 0, (len - curlen + 1)); /* also set trailing \0 byte */
     sds_setlength(s, len);
@@ -867,13 +763,11 @@ static inline sdstring_t sds_growzero(sdstring_t s, size_t len)
  * references must be substituted with the new pointer returned by the call. */
 static inline sdstring_t sds_appendlen(sdstring_t s, const void* t, size_t len)
 {
-    size_t curlen;
-    curlen = sds_getlength(s);
+    size_t curlen = sds_getlength(s);
+
     s = sds_allocroomfor(s, len);
     if(s == NULL)
-    {
         return NULL;
-    }
     memcpy(s + curlen, t, len);
     sds_setlength(s, curlen + len);
     s[curlen + len] = '\0';
@@ -902,13 +796,11 @@ static inline sdstring_t sds_appendsds(sdstring_t s, const sdstring_t t)
  * safe string pointed by 't' of length 'len' bytes. */
 static inline sdstring_t sds_copylength(sdstring_t s, const char* t, size_t len)
 {
-    if(sds_getallocatedsize(s) < len)
+    if(sds_alloc(s) < len)
     {
         s = sds_allocroomfor(s, len - sds_getlength(s));
         if(s == NULL)
-        {
             return NULL;
-        }
     }
     memcpy(s, t, len);
     s[len] = '\0';
@@ -932,10 +824,10 @@ static inline sdstring_t sds_copy(sdstring_t s, const char* t)
 
 static inline int sdsutil_ll2str(char* s, long long value)
 {
-    char aux;
+    char *p, aux;
     unsigned long long v;
     size_t l;
-    char *p;
+
     /* Generate the string representation, this method produces
      * an reversed string. */
     if(value < 0)
@@ -963,12 +855,12 @@ static inline int sdsutil_ll2str(char* s, long long value)
         v /= 10;
     } while(v);
     if(value < 0)
-    {
         *p++ = '-';
-    }
+
     /* Compute length and add null term. */
     l = p - s;
     *p = '\0';
+
     /* Reverse the string. */
     p--;
     while(s < p)
@@ -985,9 +877,9 @@ static inline int sdsutil_ll2str(char* s, long long value)
 /* Identical sdsutil_ll2str(), but for unsigned long long type. */
 static inline int sdsutil_ull2str(char* s, unsigned long long v)
 {
-    char *p;
-    char aux;
+    char *p, aux;
     size_t l;
+
     /* Generate the string representation, this method produces
      * an reversed string. */
     p = s;
@@ -996,9 +888,11 @@ static inline int sdsutil_ull2str(char* s, unsigned long long v)
         *p++ = '0' + (v % 10);
         v /= 10;
     } while(v);
+
     /* Compute length and add null term. */
     l = p - s;
     *p = '\0';
+
     /* Reverse the string. */
     p--;
     while(s < p)
@@ -1018,9 +912,9 @@ static inline int sdsutil_ull2str(char* s, unsigned long long v)
  */
 static inline sdstring_t sds_fromlonglong(long long value)
 {
-    int len;
     char buf[SDS_LLSTR_SIZE];
-    len = sdsutil_ll2str(buf, value);
+    int len = sdsutil_ll2str(buf, value);
+
     return sds_makelength(buf, len);
 }
 
@@ -1028,22 +922,17 @@ static inline sdstring_t sds_fromlonglong(long long value)
 static inline sdstring_t sds_appendvprintf(sdstring_t s, const char* fmt, va_list ap)
 {
     va_list cpy;
-    char *buf;
-    char* t;
-    char staticbuf[1024];
-    size_t buflen;
+    char staticbuf[1024], *buf = staticbuf, *t;
+    size_t buflen = strlen(fmt) * 2;
     int bufstrlen;
-    buf = staticbuf;
-    buflen = strlen(fmt) * 2;
+
     /* We try to start using a static buffer for speed.
      * If not possible we revert to heap allocation. */
     if(buflen > sizeof(staticbuf))
     {
-        buf = (char*)sds_actualmalloc(buflen);
+        buf = s_malloc(buflen);
         if(buf == NULL)
-        {
             return NULL;
-        }
     }
     else
     {
@@ -1060,23 +949,17 @@ static inline sdstring_t sds_appendvprintf(sdstring_t s, const char* fmt, va_lis
         if(bufstrlen < 0)
         {
             if(buf != staticbuf)
-            {
-                sds_actualfree(buf);
-            }
+                s_free(buf);
             return NULL;
         }
         if(((size_t)bufstrlen) >= buflen)
         {
             if(buf != staticbuf)
-            {
-                sds_actualfree(buf);
-            }
+                s_free(buf);
             buflen = ((size_t)bufstrlen) + 1;
-            buf = (char*)sds_actualmalloc(buflen);
+            buf = s_malloc(buflen);
             if(buf == NULL)
-            {
                 return NULL;
-            }
             continue;
         }
         break;
@@ -1085,9 +968,7 @@ static inline sdstring_t sds_appendvprintf(sdstring_t s, const char* fmt, va_lis
     /* Finally concat the obtained string to the SDS string and return it. */
     t = sds_appendlen(s, buf, bufstrlen);
     if(buf != staticbuf)
-    {
-        sds_actualfree(buf);
-    }
+        s_free(buf);
     return t;
 }
 
@@ -1135,16 +1016,9 @@ static inline sdstring_t sds_appendprintf(sdstring_t s, const char* fmt, ...)
  */
 static inline sdstring_t sds_appendfmt(sdstring_t s, char const* fmt, ...)
 {
-    size_t l;
-    size_t initlen;
+    size_t initlen = sds_getlength(s);
+    const char* f = fmt;
     long i;
-    long long num;
-    unsigned long long unum;
-    char next;
-    char* str;
-    const char* pfmt;
-    initlen = sds_getlength(s);
-    pfmt = fmt;
     va_list ap;
 
     /* To avoid continuous reallocations, let's start with a buffer that
@@ -1152,100 +1026,93 @@ static inline sdstring_t sds_appendfmt(sdstring_t s, char const* fmt, ...)
      * best heuristic but seems to work in practice. */
     s = sds_allocroomfor(s, initlen + strlen(fmt) * 2);
     va_start(ap, fmt);
-    pfmt = fmt; /* Next format specifier byte to process. */
+    f = fmt; /* Next format specifier byte to process. */
     i = initlen; /* Position of the next byte to write to dest str. */
-    while(*pfmt)
+    while(*f)
     {
+        char next, *str;
+        size_t l;
+        long long num;
+        unsigned long long unum;
+
         /* Make sure there is always space for at least 1 char. */
         if(sds_getcapacity(s) == 0)
         {
             s = sds_allocroomfor(s, 1);
         }
-        switch(*pfmt)
+
+        switch(*f)
         {
             case '%':
+                next = *(f + 1);
+                if(next == '\0')
+                    break;
+                f++;
+                switch(next)
                 {
-                    next = *(pfmt + 1);
-                    if(next == '\0')
-                    {
+                    case 's':
+                    case 'S':
+                        str = va_arg(ap, char*);
+                        l = (next == 's') ? strlen(str) : sds_getlength(str);
+                        if(sds_getcapacity(s) < l)
+                        {
+                            s = sds_allocroomfor(s, l);
+                        }
+                        memcpy(s + i, str, l);
+                        sds_increaselength(s, l);
+                        i += l;
                         break;
-                    }
-                    pfmt++;
-                    switch(next)
-                    {
-                        case 's':
-                        case 'S':
+                    case 'i':
+                    case 'I':
+                        if(next == 'i')
+                            num = va_arg(ap, int);
+                        else
+                            num = va_arg(ap, long long);
+                        {
+                            char buf[SDS_LLSTR_SIZE];
+                            l = sdsutil_ll2str(buf, num);
+                            if(sds_getcapacity(s) < l)
                             {
-                                str = va_arg(ap, char*);
-                                l = (next == 's') ? strlen(str) : sds_getlength(str);
-                                if(sds_getcapacity(s) < l)
-                                {
-                                    s = sds_allocroomfor(s, l);
-                                }
-                                memcpy(s + i, str, l);
-                                sds_increaselength(s, l);
-                                i += l;
+                                s = sds_allocroomfor(s, l);
                             }
-                            break;
-                        case 'i':
-                        case 'I':
+                            memcpy(s + i, buf, l);
+                            sds_increaselength(s, l);
+                            i += l;
+                        }
+                        break;
+                    case 'u':
+                    case 'U':
+                        if(next == 'u')
+                            unum = va_arg(ap, unsigned int);
+                        else
+                            unum = va_arg(ap, unsigned long long);
+                        {
+                            char buf[SDS_LLSTR_SIZE];
+                            l = sdsutil_ull2str(buf, unum);
+                            if(sds_getcapacity(s) < l)
                             {
-                                if(next == 'i')
-                                    num = va_arg(ap, int);
-                                else
-                                    num = va_arg(ap, long long);
-                                {
-                                    char buf[SDS_LLSTR_SIZE];
-                                    l = sdsutil_ll2str(buf, num);
-                                    if(sds_getcapacity(s) < l)
-                                    {
-                                        s = sds_allocroomfor(s, l);
-                                    }
-                                    memcpy(s + i, buf, l);
-                                    sds_increaselength(s, l);
-                                    i += l;
-                                }
+                                s = sds_allocroomfor(s, l);
                             }
-                            break;
-                        case 'u':
-                        case 'U':
-                            {
-                                if(next == 'u')
-                                    unum = va_arg(ap, unsigned int);
-                                else
-                                    unum = va_arg(ap, unsigned long long);
-                                {
-                                    char buf[SDS_LLSTR_SIZE];
-                                    l = sdsutil_ull2str(buf, unum);
-                                    if(sds_getcapacity(s) < l)
-                                    {
-                                        s = sds_allocroomfor(s, l);
-                                    }
-                                    memcpy(s + i, buf, l);
-                                    sds_increaselength(s, l);
-                                    i += l;
-                                }
-                            }
-                            break;
-                        default: /* Handle %% and generally %<unknown>. */
-                            {
-                                s[i++] = next;
-                                sds_increaselength(s, 1);
-                            }
-                            break;
-                    }
+                            memcpy(s + i, buf, l);
+                            sds_increaselength(s, l);
+                            i += l;
+                        }
+                        break;
+                    default: /* Handle %% and generally %<unknown>. */
+                        s[i++] = next;
+                        sds_increaselength(s, 1);
+                        break;
                 }
                 break;
             default:
-                {
-                    s[i++] = *pfmt;
-                    sds_increaselength(s, 1);
-                }
+                s[i++] = *f;
+                sds_increaselength(s, 1);
                 break;
         }
-        pfmt++;
+        f++;
     }
     va_end(ap);
+
     /* Add null-term */
     s[i] = '\0';
     return s;
@@ -1267,25 +1134,18 @@ static inline sdstring_t sds_appendfmt(sdstring_t s, char const* fmt, ...)
  */
 static inline sdstring_t sds_trim(sdstring_t s, const char* cset)
 {
+    char *end, *sp, *ep;
     size_t len;
-    char* sp;
-    char* ep;
-    char* end;
+
     sp = s;
     ep = end = s + sds_getlength(s) - 1;
     while(sp <= end && strchr(cset, *sp))
-    {
         sp++;
-    }
     while(ep > sp && strchr(cset, *ep))
-    {
         ep--;
-    }
     len = (ep - sp) + 1;
     if(s != sp)
-    {
         memmove(s, sp, len);
-    }
     s[len] = '\0';
     sds_setlength(s, len);
     return s;
@@ -1309,28 +1169,21 @@ static inline sdstring_t sds_trim(sdstring_t s, const char* cset)
  */
 static inline void sds_range(sdstring_t s, SDSSIZE_T start, SDSSIZE_T end)
 {
-    size_t newlen;
-    size_t len;
-    len = sds_getlength(s);
+    size_t newlen, len = sds_getlength(s);
+
     if(len == 0)
-    {
         return;
-    }
     if(start < 0)
     {
         start = len + start;
         if(start < 0)
-        {
             start = 0;
-        }
     }
     if(end < 0)
     {
         end = len + end;
         if(end < 0)
-        {
             end = 0;
-        }
     }
     newlen = (start > end) ? 0 : (end - start) + 1;
     if(newlen != 0)
@@ -1346,9 +1199,7 @@ static inline void sds_range(sdstring_t s, SDSSIZE_T start, SDSSIZE_T end)
         }
     }
     if(start && newlen)
-    {
         memmove(s, s + start, newlen);
-    }
     s[newlen] = 0;
     sds_setlength(s, newlen);
 }
@@ -1356,25 +1207,19 @@ static inline void sds_range(sdstring_t s, SDSSIZE_T start, SDSSIZE_T end)
 /* Apply tolower() to every character of the sds string 's'. */
 static inline void sds_tolower(sdstring_t s)
 {
-    size_t j;
-    size_t len;
-    len = sds_getlength(s);
+    size_t len = sds_getlength(s), j;
+
     for(j = 0; j < len; j++)
-    {
         s[j] = tolower(s[j]);
-    }
 }
 
 /* Apply toupper() to every character of the sds string 's'. */
 static inline void sds_toupper(sdstring_t s)
 {
-    size_t j;
-    size_t len;
-    len = sds_getlength(s);
+    size_t len = sds_getlength(s), j;
+
     for(j = 0; j < len; j++)
-    {
         s[j] = toupper(s[j]);
-    }
 }
 
 /* Compare two sds strings s1 and s2 with memcmp().
@@ -1390,26 +1235,15 @@ static inline void sds_toupper(sdstring_t s)
  * the smaller one. */
 static inline int sds_compare(const sdstring_t s1, const sdstring_t s2)
 {
-    size_t l1;
-    size_t l2;
-    size_t minlen;
+    size_t l1, l2, minlen;
     int cmp;
+
     l1 = sds_getlength(s1);
     l2 = sds_getlength(s2);
     minlen = (l1 < l2) ? l1 : l2;
     cmp = memcmp(s1, s2, minlen);
     if(cmp == 0)
-    {
-        if(l1 > l2)
-        {
-            return 1;
-        }
-        if(l1 < l2)
-        {
-            return -1;
-        }
-        return 0;
-    }
+        return l1 > l2 ? 1 : (l1 < l2 ? -1 : 0);
     return cmp;
 }
 
@@ -1431,37 +1265,31 @@ static inline int sds_compare(const sdstring_t s1, const sdstring_t s2)
  */
 static inline sdstring_t* sds_splitlen(const char* s, SDSSIZE_T len, const char* sep, int seplen, int* count)
 {
-    int i;
-    int slots;
-    int elements;
-    long j;
-    long start;
+    int elements = 0, slots = 5;
+    long start = 0, j;
     sdstring_t* tokens;
-    sdstring_t* newtokens;
-    elements = 0;
-    slots = 5;
-    start = 0;
+
     if(seplen < 1 || len <= 0)
     {
         *count = 0;
         return NULL;
     }
-    tokens = (sdstring_t*)sds_actualmalloc(sizeof(sdstring_t) * slots);
+
+    tokens = s_malloc(sizeof(sdstring_t) * slots);
     if(tokens == NULL)
-    {
         return NULL;
-    }
+
     for(j = 0; j < (len - (seplen - 1)); j++)
     {
         /* make sure there is room for the next element and the final one */
         if(slots < elements + 2)
         {
+            sdstring_t* newtokens;
+
             slots *= 2;
-            newtokens = (sdstring_t*)sds_actualrealloc(tokens, sizeof(sdstring_t) * slots);
+            newtokens = s_realloc(tokens, sizeof(sdstring_t) * slots);
             if(newtokens == NULL)
-            {
                 goto cleanup;
-            }
             tokens = newtokens;
         }
         /* search the separator */
@@ -1469,9 +1297,7 @@ static inline sdstring_t* sds_splitlen(const char* s, SDSSIZE_T len, const char*
         {
             tokens[elements] = sds_makelength(s + start, j - start);
             if(tokens[elements] == NULL)
-            {
                 goto cleanup;
-            }
             elements++;
             start = j + seplen;
             j = j + seplen - 1; /* skip the separator */
@@ -1480,37 +1306,30 @@ static inline sdstring_t* sds_splitlen(const char* s, SDSSIZE_T len, const char*
     /* Add the final element. We are sure there is room in the tokens array. */
     tokens[elements] = sds_makelength(s + start, len - start);
     if(tokens[elements] == NULL)
-    {
         goto cleanup;
-    }
     elements++;
     *count = elements;
     return tokens;
 
-    cleanup:
-    {
-        for(i = 0; i < elements; i++)
-        {
-            sds_destroy(tokens[i]);
-        }
-        sds_actualfree(tokens);
-        *count = 0;
-        return NULL;
-    }
+cleanup:
+{
+    int i;
+    for(i = 0; i < elements; i++)
+        sds_destroy(tokens[i]);
+    s_free(tokens);
+    *count = 0;
+    return NULL;
+}
 }
 
 /* Free the result returned by sds_splitlen(), or do nothing if 'tokens' is NULL. */
 static inline void sds_freesplitres(sdstring_t* tokens, int count)
 {
     if(!tokens)
-    {
         return;
-    }
     while(count--)
-    {
         sds_destroy(tokens[count]);
-    }
-    sds_actualfree(tokens);
+    s_free(tokens);
 }
 
 /* Append to the sds string "s" an escaped string representation where
@@ -1528,46 +1347,28 @@ static inline sdstring_t sds_appendrepr(sdstring_t s, const char* p, size_t len)
         {
             case '\\':
             case '"':
-                {
-                    s = sds_appendprintf(s, "\\%c", *p);
-                }
+                s = sds_appendprintf(s, "\\%c", *p);
                 break;
             case '\n':
-                {
-                    s = sds_appendlen(s, "\\n", 2);
-                }
+                s = sds_appendlen(s, "\\n", 2);
                 break;
             case '\r':
-                {
-                    s = sds_appendlen(s, "\\r", 2);
-                }
+                s = sds_appendlen(s, "\\r", 2);
                 break;
             case '\t':
-                {
-                    s = sds_appendlen(s, "\\t", 2);
-                }
+                s = sds_appendlen(s, "\\t", 2);
                 break;
             case '\a':
-                {
-                    s = sds_appendlen(s, "\\a", 2);
-                }
+                s = sds_appendlen(s, "\\a", 2);
                 break;
             case '\b':
-                {
-                    s = sds_appendlen(s, "\\b", 2);
-                }
+                s = sds_appendlen(s, "\\b", 2);
                 break;
             default:
-                {
-                    if(isprint(*p))
-                    {
-                        s = sds_appendprintf(s, "%c", *p);
-                    }
-                    else
-                    {
-                        s = sds_appendprintf(s, "\\x%02x", (unsigned char)*p);
-                    }
-                }
+                if(isprint(*p))
+                    s = sds_appendprintf(s, "%c", *p);
+                else
+                    s = sds_appendprintf(s, "\\x%02x", (unsigned char)*p);
                 break;
         }
         p++;
@@ -1579,11 +1380,7 @@ static inline sdstring_t sds_appendrepr(sdstring_t s, const char* p, size_t len)
  * is a valid hex digit. */
 static inline int sdsutil_ishexdigit(char c)
 {
-    return (
-        ((c >= '0') && (c <= '9')) ||
-        ((c >= 'a') && (c <= 'f')) ||
-        ((c >= 'A') && (c <= 'F'))
-    );
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
 /* Helper function for sds_splitargs() that converts a hex digit into an
@@ -1631,9 +1428,8 @@ static inline int sdsutil_hexdigittoint(char c)
         case 'F':
             return 15;
         default:
-            break;
+            return 0;
     }
-    return 0;
 }
 
 /* Split a line into arguments, where every argument can be in the
@@ -1657,17 +1453,10 @@ static inline int sdsutil_hexdigittoint(char c)
  */
 static inline sdstring_t* sds_splitargs(const char* line, int* argc)
 {
-    int inq;
-    int insq;
-    int done;
-    char c;
-    unsigned char byte;
-    const char* p;
-    char* current;
-    char** vector;
-    p = line;
-    current = NULL;
-    vector = NULL;
+    const char* p = line;
+    char* current = NULL;
+    char** vector = NULL;
+
     *argc = 0;
     while(1)
     {
@@ -1677,25 +1466,28 @@ static inline sdstring_t* sds_splitargs(const char* line, int* argc)
         if(*p)
         {
             /* get a token */
-            inq = 0; /* set to 1 if we are in "quotes" */
-            insq = 0; /* set to 1 if we are in 'single quotes' */
-            done = 0;
+            int inq = 0; /* set to 1 if we are in "quotes" */
+            int insq = 0; /* set to 1 if we are in 'single quotes' */
+            int done = 0;
+
             if(current == NULL)
-            {
                 current = sds_makeempty();
-            }
             while(!done)
             {
                 if(inq)
                 {
                     if(*p == '\\' && *(p + 1) == 'x' && sdsutil_ishexdigit(*(p + 2)) && sdsutil_ishexdigit(*(p + 3)))
                     {
+                        unsigned char byte;
+
                         byte = (sdsutil_hexdigittoint(*(p + 2)) * 16) + sdsutil_hexdigittoint(*(p + 3));
                         current = sds_appendlen(current, (char*)&byte, 1);
                         p += 3;
                     }
                     else if(*p == '\\' && *(p + 1))
                     {
+                        char c;
+
                         p++;
                         switch(*p)
                         {
@@ -1725,9 +1517,7 @@ static inline sdstring_t* sds_splitargs(const char* line, int* argc)
                         /* closing quote must be followed by a space or
                          * nothing at all. */
                         if(*(p + 1) && !isspace(*(p + 1)))
-                        {
                             goto err;
-                        }
                         done = 1;
                     }
                     else if(!*p)
@@ -1752,9 +1542,7 @@ static inline sdstring_t* sds_splitargs(const char* line, int* argc)
                         /* closing quote must be followed by a space or
                          * nothing at all. */
                         if(*(p + 1) && !isspace(*(p + 1)))
-                        {
                             goto err;
-                        }
                         done = 1;
                     }
                     else if(!*p)
@@ -1790,12 +1578,10 @@ static inline sdstring_t* sds_splitargs(const char* line, int* argc)
                     }
                 }
                 if(*p)
-                {
                     p++;
-                }
             }
             /* add the token to the vector */
-            vector = (char**)sds_actualrealloc(vector, ((*argc) + 1) * sizeof(char*));
+            vector = s_realloc(vector, ((*argc) + 1) * sizeof(char*));
             vector[*argc] = current;
             (*argc)++;
             current = NULL;
@@ -1804,23 +1590,17 @@ static inline sdstring_t* sds_splitargs(const char* line, int* argc)
         {
             /* Even on empty input string return something not NULL. */
             if(vector == NULL)
-            {
-                vector = (char**)sds_actualmalloc(sizeof(void*));
-            }
+                vector = s_malloc(sizeof(void*));
             return vector;
         }
     }
 
 err:
     while((*argc)--)
-    {
         sds_destroy(vector[*argc]);
-    }
-    sds_actualfree(vector);
+    s_free(vector);
     if(current)
-    {
         sds_destroy(current);
-    }
     *argc = 0;
     return NULL;
 }
@@ -1836,10 +1616,8 @@ err:
  * as the input pointer since no resize is needed. */
 static inline sdstring_t sds_mapchars(sdstring_t s, const char* from, const char* to, size_t setlen)
 {
-    size_t j;
-    size_t i;
-    size_t l;
-    l = sds_getlength(s);
+    size_t j, i, l = sds_getlength(s);
+
     for(j = 0; j < l; j++)
     {
         for(i = 0; i < setlen; i++)
@@ -1858,16 +1636,14 @@ static inline sdstring_t sds_mapchars(sdstring_t s, const char* from, const char
  * Returns the result as an sds string. */
 static inline sdstring_t sds_join(char** argv, int argc, char* sep)
 {
+    sdstring_t join = sds_makeempty();
     int j;
-    sdstring_t join;
-    join = sds_makeempty();
+
     for(j = 0; j < argc; j++)
     {
         join = sds_append(join, argv[j]);
         if(j != argc - 1)
-        {
             join = sds_append(join, sep);
-        }
     }
     return join;
 }
@@ -1875,37 +1651,34 @@ static inline sdstring_t sds_join(char** argv, int argc, char* sep)
 /* Like sds_join, but joins an array of SDS strings. */
 static inline sdstring_t sds_joinsds(sdstring_t* argv, int argc, const char* sep, size_t seplen)
 {
+    sdstring_t join = sds_makeempty();
     int j;
-    sdstring_t join;
-    join = sds_makeempty();
+
     for(j = 0; j < argc; j++)
     {
         join = sds_appendsds(join, argv[j]);
         if(j != argc - 1)
-        {
             join = sds_appendlen(join, sep, seplen);
-        }
     }
     return join;
 }
 
 /* Wrappers to the allocators used by SDS. Note that SDS will actually
- * just use the macros defined into sds_getallocatedsize.h in order to avoid to pay
+ * just use the macros defined into sds_alloc.h in order to avoid to pay
  * the overhead of function calls. Here we define these wrappers only for
  * the programs SDS is linked to, if they want to touch the SDS internals
  * even if they use a different allocator. */
 static inline void* sds_memmalloc(size_t size)
 {
-    return sds_actualmalloc(size);
+    return s_malloc(size);
 }
 
 static inline void* sds_memrealloc(void* ptr, size_t size)
 {
-    return sds_actualrealloc(ptr, size);
+    return s_realloc(ptr, size);
 }
 
 static inline void sds_memfree(void* ptr)
 {
-    sds_actualfree(ptr);
+    s_free(ptr);
 }
-

@@ -62,67 +62,72 @@ static TinAstExpression *tin_astparser_rulereference(TinAstParser *prs, bool can
 static TinAstExpression *tin_astparser_rulenothing(TinAstParser *prs, bool canassign);
 static TinAstExpression *tin_astparser_rulefunction(TinAstParser *prs, bool canassign);
 
+#if defined(__cplusplus)
+    #define TIN_MAKERULE(...) TinAstParseRule{__VA_ARGS__}
+#else
+    #define TIN_MAKERULE(...) (TinAstParseRule){__VA_ARGS__}
+#endif
 
 static void tin_astparser_setuprules()
 {
-    rules[TINTOK_PARENOPEN] = (TinAstParseRule){ tin_astparser_rulegroupingorlambda, tin_astparser_rulecall, TINPREC_CALL };
-    rules[TINTOK_PLUS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_TERM };
-    rules[TINTOK_MINUS] = (TinAstParseRule){ tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM };
-    rules[TINTOK_BANG] = (TinAstParseRule){ tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM };
-    rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_DOUBLESTAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_SLASH] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_SHARP] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_STAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_BAR] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BOR };
-    rules[TINTOK_AMPERSAND] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BAND };
-    rules[TINTOK_TILDE] = (TinAstParseRule){ tin_astparser_ruleunary, NULL, TINPREC_UNARY };
-    rules[TINTOK_CARET] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_BOR };
-    rules[TINTOK_SHIFTLEFT] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
-    rules[TINTOK_SHIFTRIGHT] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_SHIFT };
-    rules[TINTOK_PERCENT] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_FACTOR };
-    rules[TINTOK_KWIS] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_IS };
-    rules[TINTOK_NUMBER] = (TinAstParseRule){ tin_astparser_rulenumber, NULL, TINPREC_NONE };
-    rules[TINTOK_KWTRUE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
-    rules[TINTOK_KWFALSE] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
-    rules[TINTOK_KWNULL] = (TinAstParseRule){ tin_astparser_ruleliteral, NULL, TINPREC_NONE };
-    rules[TINTOK_BANGEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
-    rules[TINTOK_EQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_EQUALITY };
-    rules[TINTOK_GREATERTHAN] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
-    rules[TINTOK_GREATEREQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
-    rules[TINTOK_LESSTHAN] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
-    rules[TINTOK_LESSEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulebinary, TINPREC_COMPARISON };
-    rules[TINTOK_STRING] = (TinAstParseRule){ tin_astparser_rulestring, NULL, TINPREC_NONE };
-    rules[TINTOK_STRINTERPOL] = (TinAstParseRule){ tin_astparser_ruleinterpolation, NULL, TINPREC_NONE };
-    rules[TINTOK_IDENT] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_NONE };
-    rules[TINTOK_KWNEW] = (TinAstParseRule){ tin_astparser_rulenewexpr, NULL, TINPREC_NONE };
-    rules[TINTOK_PLUSEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_MINUSEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_STAREQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_SLASHEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_SHARPEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_PERCENTEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_CARETEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_ASSIGNEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_AMPERSANDEQUAL] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_DOUBLEPLUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_DOUBLEMINUS] = (TinAstParseRule){ NULL, tin_astparser_rulecompound, TINPREC_COMPOUND };
-    rules[TINTOK_DOUBLEAMPERSAND] = (TinAstParseRule){ NULL, tin_astparser_ruleand, TINPREC_AND };
-    rules[TINTOK_DOUBLEBAR] = (TinAstParseRule){ NULL, tin_astparser_ruleor, TINPREC_AND };
-    rules[TINTOK_DOUBLEQUESTION] = (TinAstParseRule){ NULL, tin_astparser_rulenull_filter, TINPREC_NULL };
-    rules[TINTOK_DOT] = (TinAstParseRule){ NULL, tin_astparser_ruledot, TINPREC_CALL };
-    rules[TINTOK_SMALLARROW] = (TinAstParseRule){ NULL, tin_astparser_ruledot, TINPREC_CALL };
-    rules[TINTOK_DOUBLEDOT] = (TinAstParseRule){ NULL, tin_astparser_rulerange, TINPREC_RANGE };
-    rules[TINTOK_TRIPLEDOT] = (TinAstParseRule){ tin_astparser_rulevarexpr, NULL, TINPREC_ASSIGNMENT };
-    rules[TINTOK_BRACKETOPEN] = (TinAstParseRule){ tin_astparser_rulearray, tin_astparser_rulesubscript, TINPREC_NONE };
-    rules[TINTOK_BRACEOPEN] = (TinAstParseRule){ tin_astparser_ruleobject, NULL, TINPREC_NONE };
-    rules[TINTOK_KWTHIS] = (TinAstParseRule){ tin_astparser_rulethis, NULL, TINPREC_NONE };
-    rules[TINTOK_KWSUPER] = (TinAstParseRule){ tin_astparser_rulesuper, NULL, TINPREC_NONE };
-    rules[TINTOK_QUESTION] = (TinAstParseRule){ NULL, tin_astparser_ruleternary, TINPREC_EQUALITY };
-    rules[TINTOK_KWREF] = (TinAstParseRule){ tin_astparser_rulereference, NULL, TINPREC_NONE };
-    rules[TINTOK_KWFUNCTION] = (TinAstParseRule){tin_astparser_rulefunction, NULL, TINPREC_NONE};
-    rules[TINTOK_SEMICOLON] = (TinAstParseRule){tin_astparser_rulenothing, NULL, TINPREC_NONE};
+    rules[TINTOK_PARENOPEN] = TIN_MAKERULE( tin_astparser_rulegroupingorlambda, tin_astparser_rulecall, TINPREC_CALL );
+    rules[TINTOK_PLUS] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_TERM );
+    rules[TINTOK_MINUS] = TIN_MAKERULE( tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM );
+    rules[TINTOK_BANG] = TIN_MAKERULE( tin_astparser_ruleunary, tin_astparser_rulebinary, TINPREC_TERM );
+    rules[TINTOK_STAR] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_FACTOR );
+    rules[TINTOK_DOUBLESTAR] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_FACTOR );
+    rules[TINTOK_SLASH] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_FACTOR );
+    rules[TINTOK_SHARP] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_FACTOR );
+    rules[TINTOK_STAR] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_FACTOR );
+    rules[TINTOK_STAR] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_FACTOR );
+    rules[TINTOK_BAR] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_BOR );
+    rules[TINTOK_AMPERSAND] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_BAND );
+    rules[TINTOK_TILDE] = TIN_MAKERULE( tin_astparser_ruleunary, NULL, TINPREC_UNARY );
+    rules[TINTOK_CARET] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_BOR );
+    rules[TINTOK_SHIFTLEFT] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_SHIFT );
+    rules[TINTOK_SHIFTRIGHT] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_SHIFT );
+    rules[TINTOK_PERCENT] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_FACTOR );
+    rules[TINTOK_KWIS] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_IS );
+    rules[TINTOK_NUMBER] = TIN_MAKERULE( tin_astparser_rulenumber, NULL, TINPREC_NONE );
+    rules[TINTOK_KWTRUE] = TIN_MAKERULE( tin_astparser_ruleliteral, NULL, TINPREC_NONE );
+    rules[TINTOK_KWFALSE] = TIN_MAKERULE( tin_astparser_ruleliteral, NULL, TINPREC_NONE );
+    rules[TINTOK_KWNULL] = TIN_MAKERULE( tin_astparser_ruleliteral, NULL, TINPREC_NONE );
+    rules[TINTOK_BANGEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_EQUALITY );
+    rules[TINTOK_EQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_EQUALITY );
+    rules[TINTOK_GREATERTHAN] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_COMPARISON );
+    rules[TINTOK_GREATEREQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_COMPARISON );
+    rules[TINTOK_LESSTHAN] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_COMPARISON );
+    rules[TINTOK_LESSEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulebinary, TINPREC_COMPARISON );
+    rules[TINTOK_STRING] = TIN_MAKERULE( tin_astparser_rulestring, NULL, TINPREC_NONE );
+    rules[TINTOK_STRINTERPOL] = TIN_MAKERULE( tin_astparser_ruleinterpolation, NULL, TINPREC_NONE );
+    rules[TINTOK_IDENT] = TIN_MAKERULE( tin_astparser_rulevarexpr, NULL, TINPREC_NONE );
+    rules[TINTOK_KWNEW] = TIN_MAKERULE( tin_astparser_rulenewexpr, NULL, TINPREC_NONE );
+    rules[TINTOK_PLUSEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_MINUSEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_STAREQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_SLASHEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_SHARPEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_PERCENTEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_CARETEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_ASSIGNEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_AMPERSANDEQUAL] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_DOUBLEPLUS] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_DOUBLEMINUS] = TIN_MAKERULE( NULL, tin_astparser_rulecompound, TINPREC_COMPOUND );
+    rules[TINTOK_DOUBLEAMPERSAND] = TIN_MAKERULE( NULL, tin_astparser_ruleand, TINPREC_AND );
+    rules[TINTOK_DOUBLEBAR] = TIN_MAKERULE( NULL, tin_astparser_ruleor, TINPREC_AND );
+    rules[TINTOK_DOUBLEQUESTION] = TIN_MAKERULE( NULL, tin_astparser_rulenull_filter, TINPREC_NULL );
+    rules[TINTOK_DOT] = TIN_MAKERULE( NULL, tin_astparser_ruledot, TINPREC_CALL );
+    rules[TINTOK_SMALLARROW] = TIN_MAKERULE( NULL, tin_astparser_ruledot, TINPREC_CALL );
+    rules[TINTOK_DOUBLEDOT] = TIN_MAKERULE( NULL, tin_astparser_rulerange, TINPREC_RANGE );
+    rules[TINTOK_TRIPLEDOT] = TIN_MAKERULE( tin_astparser_rulevarexpr, NULL, TINPREC_ASSIGNMENT );
+    rules[TINTOK_BRACKETOPEN] = TIN_MAKERULE( tin_astparser_rulearray, tin_astparser_rulesubscript, TINPREC_NONE );
+    rules[TINTOK_BRACEOPEN] = TIN_MAKERULE( tin_astparser_ruleobject, NULL, TINPREC_NONE );
+    rules[TINTOK_KWTHIS] = TIN_MAKERULE( tin_astparser_rulethis, NULL, TINPREC_NONE );
+    rules[TINTOK_KWSUPER] = TIN_MAKERULE( tin_astparser_rulesuper, NULL, TINPREC_NONE );
+    rules[TINTOK_QUESTION] = TIN_MAKERULE( NULL, tin_astparser_ruleternary, TINPREC_EQUALITY );
+    rules[TINTOK_KWREF] = TIN_MAKERULE( tin_astparser_rulereference, NULL, TINPREC_NONE );
+    rules[TINTOK_KWFUNCTION] = TIN_MAKERULE(tin_astparser_rulefunction, NULL, TINPREC_NONE);
+    rules[TINTOK_SEMICOLON] = TIN_MAKERULE(tin_astparser_rulenothing, NULL, TINPREC_NONE);
 }
 
 
@@ -797,17 +802,17 @@ static TinAstExpression* tin_astparser_ruleliteral(TinAstParser* prs, bool canas
     {
         case TINTOK_KWTRUE:
             {
-                return (TinAstExpression*)tin_ast_make_literalexpr(prs->state, line, TRUE_VALUE);
+                return (TinAstExpression*)tin_ast_make_literalexpr(prs->state, line, tin_value_makebool(prs->state, true));
             }
             break;
         case TINTOK_KWFALSE:
             {
-                return (TinAstExpression*)tin_ast_make_literalexpr(prs->state, line, FALSE_VALUE);
+                return (TinAstExpression*)tin_ast_make_literalexpr(prs->state, line, tin_value_makebool(prs->state, false));
             }
             break;
         case TINTOK_KWNULL:
             {
-                return (TinAstExpression*)tin_ast_make_literalexpr(prs->state, line, NULL_VALUE);
+                return (TinAstExpression*)tin_ast_make_literalexpr(prs->state, line, tin_value_makenull(prs->state));
             }
             break;
         default:

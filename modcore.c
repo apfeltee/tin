@@ -136,7 +136,7 @@ void util_run_fiber(TinVM* vm, TinFiber* fiber, TinValue* argv, size_t argc, boo
         fiber->arg_count = objfn_function_arg_count;
         for(i = 0; i < to; i++)
         {
-            tin_vm_push(vm, i < (int)argc ? argv[i] : NULL_VALUE);
+            tin_vm_push(vm, i < (int)argc ? argv[i] : tin_value_makenull(vm->state));
         }
         if(vararg)
         {
@@ -244,7 +244,7 @@ TinValue util_invalid_constructor(TinVM* vm, TinValue instance, size_t argc, Tin
     (void)argc;
     (void)argv;
     tin_vm_raiseexitingerror(vm, "cannot create an instance of built-in type", tin_value_asinstance(instance)->klass->name);
-    return NULL_VALUE;
+    return tin_value_makenull(vm->state);
 }
 
 static TinValue objfn_number_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -304,6 +304,7 @@ static TinValue cfn_print(TinVM* vm, size_t argc, TinValue* argv)
     size_t i;
     size_t written = 0;
     TinString* sv;
+    (void)sv;
     written = 0;
     if(argc == 0)
     {
@@ -339,6 +340,20 @@ static bool cfn_eval(TinVM* vm, size_t argc, TinValue* argv)
     return compile_and_interpret(vm, vm->fiber->module->name, sc->data, tin_string_getlength(sc));
 }
 
+static TinValue objfn_system_getenv(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    const char* ce;
+    TinString* sc;
+    sc = tin_args_checkobjstring(vm, argv, argc, 0);
+    ce = getenv(sc->data);
+    if(ce == NULL)
+    {
+        return tin_value_makenull(vm->state);
+    }
+    return tin_value_fromobject(tin_string_copy(vm->state, ce, strlen(ce)));
+}
+
+
 void tin_open_string_library(TinState* state);
 void tin_open_array_library(TinState* state);
 void tin_open_map_library(TinState* state);
@@ -367,6 +382,30 @@ void tin_open_core_library(TinState* state)
         tin_open_fiber_library(state);
         tin_open_module_library(state);
         tin_state_openfunctionlibrary(state);
+    }
+    {
+        #if 0
+        klass = tin_object_makeclassname(state, "Struct");
+        {
+            tin_class_bindstaticmethod(state, klass, "getenv", objfn_system_getenv);
+        }
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
+        if(klass->super == NULL)
+        {
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
+        };
+        #endif
+    }
+    {
+        klass = tin_object_makeclassname(state, "System");
+        {
+            tin_class_bindstaticmethod(state, klass, "getenv", objfn_system_getenv);
+        }
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
+        if(klass->super == NULL)
+        {
+            tin_class_inheritfrom(state, klass, state->primobjectclass);
+        };        
     }
     {
         klass = tin_object_makeclassname(state, "Number");
