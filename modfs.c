@@ -706,7 +706,10 @@ static TinValue objstatic_file_stat(TinVM* vm, TinValue instance, size_t argc, T
 
 static TinValue objmethod_file_write(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TIN_ENSURE_ARGS(vm->state, 1)
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     size_t rt;
     TinString* value;
     value = tin_value_tostring(vm->state, argv[0]);
@@ -780,11 +783,11 @@ static long tin_util_filesize(FILE* fh)
         return -1;
     }
     /* visualstudio is being a little bitch */
-    #if defined(__cplusplus)
+    #if defined(__cplusplus) && defined(_MSC_VER)
         //r = fstat(fd, reinterpret_cast<struct stat*>(&sb));
         r = -1;
     #else
-        r = fstat(fd, (struct stat* const)&sb);
+        r = fstat(fd, (struct stat*)&sb);
     #endif
     if(r == -1)
     {

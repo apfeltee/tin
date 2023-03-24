@@ -344,6 +344,7 @@ static TinValue objfn_system_getenv(TinVM* vm, TinValue instance, size_t argc, T
 {
     const char* ce;
     TinString* sc;
+    (void)instance;
     sc = tin_args_checkobjstring(vm, argv, argc, 0);
     ce = getenv(sc->data);
     if(ce == NULL)

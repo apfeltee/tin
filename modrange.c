@@ -16,7 +16,10 @@ static TinValue objfn_range_iterator(TinVM* vm, TinValue instance, size_t argc, 
     TinRange* range;
     (void)vm;
     (void)argc;
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     range = tin_value_asrange(instance);
     number = range->from;
     if(tin_value_isnumber(argv[0]))
@@ -33,7 +36,10 @@ static TinValue objfn_range_iterator(TinVM* vm, TinValue instance, size_t argc, 
 
 static TinValue objfn_range_iteratorvalue(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     (void)vm;
     (void)instance;
     return argv[0];

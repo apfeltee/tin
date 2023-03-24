@@ -1422,7 +1422,7 @@ TIN_VM_INLINE bool tin_vmdo_makemethod(TinExecState* est, TinValue* finalresult)
     TinString* name;
     TinClass* klassobj;
     (void)finalresult;
-    ctorname = "constructor";
+    ctorname = TIN_VALUE_CTORNAME;
     ctorlen = strlen(ctorname);
     klassobj = tin_value_asclass(tin_vmintern_peek(est, 1));
     name = tin_vmintern_readstringlong(est);
@@ -1472,6 +1472,7 @@ TIN_VM_INLINE bool tin_vmdo_vararg(TinExecState* est, TinValue* finalresult)
     size_t i;
     TinValue slot;
     TinValList* values;
+    (void)finalresult;
     slot = est->slots[tin_vmintern_readbyte(est)];
     if(!tin_value_isarray(slot))
     {
@@ -1523,6 +1524,7 @@ TIN_VM_INLINE bool tin_vmdo_reffield(TinExecState* est, TinValue* finalresult)
 TIN_VM_INLINE bool tin_vmdo_globalset(TinExecState* est, TinValue* finalresult)
 {
     TinString* name;
+    (void)finalresult;
     name = tin_vmintern_readstringlong(est);
     tin_table_set(est->state, &est->vm->globals->values, name, tin_vmintern_peek(est, 0));
     return true;
@@ -1533,6 +1535,7 @@ TIN_VM_INLINE bool tin_vmdo_globalget(TinExecState* est, TinValue* finalresult)
 {
     TinValue setval;
     TinString* name;
+    (void)finalresult;
     name = tin_vmintern_readstringlong(est);
     //fprintf(stderr, "GET_GLOBAL: %s\n", name->data);
     if(!tin_table_get(&est->vm->globals->values, name, &setval))
@@ -1549,6 +1552,7 @@ TIN_VM_INLINE bool tin_vmdo_globalget(TinExecState* est, TinValue* finalresult)
 // OP_LOCALGET
 TIN_VM_INLINE bool tin_vmdo_localget(TinExecState* est, TinValue* finalresult)
 {
+    (void)finalresult;
     tin_vmintern_push(est, est->slots[tin_vmintern_readbyte(est)]);
     return true;
 }
@@ -1557,6 +1561,7 @@ TIN_VM_INLINE bool tin_vmdo_localget(TinExecState* est, TinValue* finalresult)
 TIN_VM_INLINE bool tin_vmdo_localset(TinExecState* est, TinValue* finalresult)
 {
     uint8_t index;
+    (void)finalresult;
     index = tin_vmintern_readbyte(est);
     est->slots[index] = tin_vmintern_peek(est, 0);
     return true;

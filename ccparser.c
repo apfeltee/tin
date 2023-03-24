@@ -359,19 +359,32 @@ static void tin_astparser_ignorenewlines(TinAstParser* prs, bool checksemi)
 static void tin_astparser_consume(TinAstParser* prs, TinAstTokType type, const char* onerror)
 {
     bool line;
+    size_t chlen;
     size_t olen;
     const char* fmt;
     const char* otext;
+    TinString* ts;
     if(prs->current.type == type)
     {
         tin_astparser_advance(prs);
         return;
     }
     //fprintf(stderr, "in tin_astparser_consume: failed?\n");
-    line = prs->previous.type == TINTOK_NEWLINE;
-    olen = (line ? 8 : prs->previous.length);
-    otext = (line ? "new line" : prs->previous.start);
-    fmt = tin_format_error(prs->state, prs->current.line, "expected %s, got '%.*s'", onerror, olen, otext)->data;
+    line = (prs->previous.type == TINTOK_NEWLINE);
+    otext = "new line";
+    olen = strlen(otext);
+    if(!line)
+    {
+        olen = prs->previous.length;
+        otext = prs->previous.start; 
+    }
+    chlen = strlen(otext);
+    if(olen > chlen)
+    {
+        olen = chlen;
+    }
+    ts = tin_format_error(prs->state, prs->current.line, "expected %s, got '%.*s'", onerror, olen, otext);
+    fmt = ts->data;
     tin_astparser_raisestring(prs, &prs->current,fmt);
 }
 
@@ -400,45 +413,48 @@ static TinAstExpression* tin_astparser_parseblock(TinAstParser* prs)
 
 static TinAstExpression* tin_astparser_parseprecedence(TinAstParser* prs, TinAstPrecedence precedence, bool err, bool ignsemi)
 {
-    bool new_line;
-    bool prevnewline;
-    bool parserprevnewline;
+    bool expisnewline;
+    bool gotisnewline;
     bool canassign;
+    size_t explen;
+    size_t gotlen;
+    size_t nllen;
+    const char* exptext;
+    const char* gottxt;
+    const char* nltext;
     TinAstExpression* expr;
-    TinAstParsePrefixFn prefix_rule;
-    TinAstParseInfixFn infix_rule;
+    TinAstParsePrefixFn prefixrule;
+    TinAstParseInfixFn infixrule;
     TinAstToken previous;
-    (void)new_line;
-    prevnewline = false;
     previous = prs->previous;
     tin_astparser_ignorenewlines(prs, true);
     tin_astparser_advance(prs);
-    prefix_rule = tin_astparser_getrule(prs->previous.type)->prefix;
-    if(prefix_rule == NULL)
+    prefixrule = tin_astparser_getrule(prs->previous.type)->prefix;
+    if(prefixrule == NULL)
     {
-        //if(prs->previous.type != prs->current.type)
+        nltext = "new line";
+        nllen = strlen(nltext);
         {
             // todo: file start
-            new_line = previous.start != NULL && *previous.start == '\n';
-            parserprevnewline = prs->previous.start != NULL && *prs->previous.start == '\n';
-            tin_astparser_raiseerror(prs, "expected expression after '%.*s', got '%.*s'",
-                (prevnewline ? 8 : previous.length),
-                (prevnewline ? "new line" : previous.start),
-                (parserprevnewline ? 8 : prs->previous.length),
-                (parserprevnewline ? "new line" : prs->previous.start)
-            );
+            expisnewline = ((previous.start != NULL) && (*previous.start == '\n'));
+            gotisnewline = ((prs->previous.start != NULL) && (*prs->previous.start == '\n'));
+            explen = (expisnewline ? nllen : previous.length);
+            exptext = (expisnewline ? nltext : previous.start);
+            gotlen = (gotisnewline ? nllen : prs->previous.length);
+            gottxt = (gotisnewline ? nltext : prs->previous.start);
+            tin_astparser_raiseerror(prs, "expected expression after '%.*s', got '%.*s'", explen, exptext, gotlen, gottxt);
             return NULL;
         }
     }
     canassign = precedence <= TINPREC_ASSIGNMENT;
-    expr = prefix_rule(prs, canassign);
+    expr = prefixrule(prs, canassign);
     tin_astparser_ignorenewlines(prs, ignsemi);
     while(precedence <= tin_astparser_getrule(prs->current.type)->precedence)
     {
         tin_astparser_ignorenewlines(prs, true);
         tin_astparser_advance(prs);
-        infix_rule = tin_astparser_getrule(prs->previous.type)->infix;
-        expr = infix_rule(prs, expr, canassign);
+        infixrule = tin_astparser_getrule(prs->previous.type)->infix;
+        expr = infixrule(prs, expr, canassign);
     }
     if(err && canassign && tin_astparser_match(prs, TINTOK_ASSIGN))
     {
@@ -1121,7 +1137,7 @@ static TinAstExpression* tin_astparser_rulesuper(TinAstParser* prs, bool canassi
     if(!(tin_astparser_match(prs, TINTOK_DOT) || tin_astparser_match(prs, TINTOK_SMALLARROW)))
     {
         expression = (TinAstExpression*)tin_ast_make_superexpr(
-        prs->state, line, tin_string_copy(prs->state, "constructor", 11), false);
+        prs->state, line, tin_string_copy(prs->state, TIN_VALUE_CTORNAME, strlen(TIN_VALUE_CTORNAME)), false);
         tin_astparser_consume(prs, TINTOK_PARENOPEN, "'(' after 'super'");
         return tin_astparser_rulecall(prs, expression, false);
     }
@@ -1205,7 +1221,11 @@ static TinAstExpression* tin_astparser_parsestatement(TinAstParser* prs)
         return tin_astparser_parseblock(prs);
     }
     expression = tin_astparser_parseexpression(prs, true);
-    return expression == NULL ? NULL : (TinAstExpression*)tin_ast_make_exprstmt(prs->state, prs->previous.line, expression);
+    if(expression == NULL)
+    {
+        return NULL;
+    }
+    return (TinAstExpression*)tin_ast_make_exprstmt(prs->state, prs->previous.line, expression);
 }
 
 static TinAstExpression* tin_astparser_parseexpression(TinAstParser* prs, bool ignsemi)
@@ -1332,9 +1352,18 @@ static TinAstExpression* tin_astparser_parsefor(TinAstParser* prs)
     if(cstyle)
     {
         tin_astparser_consume(prs, TINTOK_SEMICOLON, "';'");
-        condition = tin_astparser_check(prs, TINTOK_SEMICOLON) ? NULL : tin_astparser_parseexpression(prs, false);
+        condition = NULL;
+    
+        if(!tin_astparser_check(prs, TINTOK_SEMICOLON))
+        {
+            condition = tin_astparser_parseexpression(prs, false);
+        }
         tin_astparser_consume(prs, TINTOK_SEMICOLON, "';'");
-        increment = tin_astparser_check(prs, TINTOK_PARENCLOSE) ? NULL : tin_astparser_parseexpression(prs, false);
+        increment = NULL;
+        if(!tin_astparser_check(prs, TINTOK_PARENCLOSE))
+        {
+            increment = tin_astparser_parseexpression(prs, false);
+        }
     }
     else
     {

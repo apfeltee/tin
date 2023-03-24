@@ -8,6 +8,34 @@
     #define TIN_VM_INLINE static
 #endif
 
+#if !defined(TIN_DISABLE_COLOR) && !defined(TIN_ENABLE_COLOR) && !(defined(TIN_OS_WINDOWS) || defined(EMSCRIPTEN))
+    #define TIN_ENABLE_COLOR
+#endif
+
+#ifdef TIN_ENABLE_COLOR
+    #define COLOR_RESET "\x1B[0m"
+    #define COLOR_RED "\x1B[31m"
+    #define COLOR_GREEN "\x1B[32m"
+    #define COLOR_YELLOW "\x1B[33m"
+    #define COLOR_BLUE "\x1B[34m"
+    #define COLOR_MAGENTA "\x1B[35m"
+    #define COLOR_CYAN "\x1B[36m"
+    #define COLOR_WHITE "\x1B[37m"
+#else
+    #define COLOR_RESET ""
+    #define COLOR_RED ""
+    #define COLOR_GREEN ""
+    #define COLOR_YELLOW ""
+    #define COLOR_BLUE ""
+    #define COLOR_MAGENTA ""
+    #define COLOR_CYAN ""
+    #define COLOR_WHITE ""
+#endif
+
+#define TIN_VALUE_CTORNAME "constructor"
+#define TIN_VALUE_THISNAME "this"
+#define TIN_VALUE_SUPERNAME "super"
+
 
 struct TinAstExpression
 {
@@ -429,5 +457,16 @@ static inline TinValue tin_vm_pop(TinVM* vm)
     rt = *(vm->fiber->stack_top);
     vm->fiber->stack_top--;
     return rt;
+}
+
+
+static inline bool tin_args_ensure(TinState* state, size_t argc, size_t count)
+{
+    if(argc != count)
+    {
+        tin_vm_raiseerror(state->vm, "expected %i argument, got %i", count, argc);
+        return false;
+    }
+    return true;
 }
 

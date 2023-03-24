@@ -17,7 +17,7 @@
     #endif
 #endif
 
-#include "tin.h"
+#include "priv.h"
 
 enum
 {
@@ -123,6 +123,7 @@ static void show_help()
     printf(" If no code to run is provided, lit will try to run either main.lbc or main.lit and, if fails, default to an interactive shell will start.\n");
 }
 
+/*
 static void show_optimization_help()
 {
     int i;
@@ -148,6 +149,7 @@ static void show_optimization_help()
         printf("\t-O%i\t\t%s\n", i, tin_astopt_getoptleveldescr((TinAstOptLevel)i));
     }
 }
+*/
 
 int exitstate(TinState* state, TinStatus result)
 {

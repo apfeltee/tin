@@ -873,13 +873,13 @@ void tin_astwriter_expr(TinAstWriterState* aw, TinAstExpression* expr)
             break;
         case TINEXPR_THIS:
             {
-                tin_writer_writestring(wr, "this");
+                tin_writer_writestring(wr, TIN_VALUE_THISNAME);
             }
             break;
         case TINEXPR_SUPER:
             {
                 as_type(exsuper, expr, TinAstSuperExpr);
-                tin_writer_writeformat(wr, "super(%.*s)", tin_string_getlength(exsuper->method), exsuper->method->data);
+                tin_writer_writeformat(wr, "%s(%.*s)", TIN_VALUE_SUPERNAME, tin_string_getlength(exsuper->method), exsuper->method->data);
             }
             break;
         case TINEXPR_RANGE:

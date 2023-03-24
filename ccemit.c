@@ -325,7 +325,7 @@ static void tin_compiler_compiler(TinAstEmitter* emt, TinAstCompiler* compiler, 
     }
     if(type == TINFUNC_METHOD || type == TINFUNC_STATICMETHOD || type == TINFUNC_CONSTRUCTOR)
     {
-        tin_loclist_push(emt->state, &compiler->locals, tin_compiler_makelocal("this", 4, -1, false, false));
+        tin_loclist_push(emt->state, &compiler->locals, tin_compiler_makelocal(TIN_VALUE_THISNAME, strlen(TIN_VALUE_THISNAME), -1, false, false));
     }
     else
     {
@@ -1108,7 +1108,7 @@ static bool tin_astemit_doemitcall(TinAstEmitter* emt, TinAstExpression* expr)
         else
         {
             superexpr = (TinAstSuperExpr*)callexpr->callee;
-            index = tin_astemit_resolveupvalue(emt, emt->compiler, "super", 5, emt->lastline);
+            index = tin_astemit_resolveupvalue(emt, emt->compiler, TIN_VALUE_SUPERNAME, strlen(TIN_VALUE_SUPERNAME), emt->lastline);
             tin_astemit_emitargedop(emt, expr->line, OP_UPVALGET, index);
             tin_astemit_emitvaryingop(emt, emt->lastline,
                             ((TinAstSuperExpr*)callexpr->callee)->ignresult ? OP_INVOKESUPERIGNORING : OP_INVOKESUPER,
@@ -1301,7 +1301,7 @@ static bool tin_astemit_doemitthis(TinAstEmitter* emt, TinAstExpression* expr)
         }
         else
         {
-            local = tin_astemit_resolvelocal(emt, (TinAstCompiler*)emt->compiler->enclosing, "this", 4, expr->line);
+            local = tin_astemit_resolvelocal(emt, (TinAstCompiler*)emt->compiler->enclosing, TIN_VALUE_THISNAME, strlen(TIN_VALUE_THISNAME), expr->line);
             tin_astemit_emitargedop(emt, expr->line, OP_UPVALGET,
                           tin_astemit_addupvalue(emt, emt->compiler, local, expr->line, true));
         }
@@ -1324,7 +1324,7 @@ static bool tin_astemit_doemitsuper(TinAstEmitter* emt, TinAstExpression* expr)
     superexpr = (TinAstSuperExpr*)expr;
     if(!superexpr->ignemit)
     {
-        index = tin_astemit_resolveupvalue(emt, emt->compiler, "super", 5, emt->lastline);
+        index = tin_astemit_resolveupvalue(emt, emt->compiler, TIN_VALUE_SUPERNAME, strlen(TIN_VALUE_SUPERNAME), emt->lastline);
         tin_astemit_emitargedop(emt, expr->line, OP_LOCALGET, 0);
         tin_astemit_emitargedop(emt, expr->line, OP_UPVALGET, index);
         tin_astemit_emit1op(emt, expr->line, OP_GETSUPERMETHOD);
@@ -1810,7 +1810,7 @@ static bool tin_astemit_doemitmethod(TinAstEmitter* emt, TinAstExpression* expr)
     TinFunction* function;
     TinAstMethodExpr* mthstmt;
     mthstmt = (TinAstMethodExpr*)expr;
-    constructor = memcmp(mthstmt->name->data, "constructor", 11) == 0;
+    constructor = memcmp(mthstmt->name->data, TIN_VALUE_CTORNAME, strlen(TIN_VALUE_CTORNAME)) == 0;
     if(constructor && mthstmt->isstatic)
     {
         tin_astemit_raiseerror(emt, expr->line, "constructors cannot be static (at least for now)");
@@ -1866,7 +1866,7 @@ static bool tin_astemit_doemitclass(TinAstEmitter* emt, TinAstExpression* expr)
         tin_astemit_emit1op(emt, emt->lastline, OP_CLASSINHERIT);
         emt->classisinheriting = true;
         tin_astemit_beginscope(emt);
-        varstr = "super";
+        varstr = TIN_VALUE_SUPERNAME;
         superidx = tin_astemit_addlocal(emt, varstr, strlen(varstr), emt->lastline, false);
         tin_astemit_marklocalinit(emt, superidx);
     }

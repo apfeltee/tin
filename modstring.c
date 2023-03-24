@@ -2,41 +2,6 @@
 #include "priv.h"
 #include "sds.h"
 
-TIN_VM_INLINE char* itoa(int value, char* result, int base)
-{
-    int tmp_value;
-    char* ptr;
-    char* ptr1;
-    char tmp_char;
-    // check that the base if valid
-    if (base < 2 || base > 36)
-    {
-        *result = '\0';
-        return result;
-    }
-    ptr = result;
-    ptr1 = result;
-    do
-    {
-        tmp_value = value;
-        value /= base;
-        *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
-    } while ( value );
-    // Apply negative sign
-    if (tmp_value < 0)
-    {
-        *ptr++ = '-';
-    }
-    *ptr-- = '\0';
-    while(ptr1 < ptr)
-    {
-        tmp_char = *ptr;
-        *ptr--= *ptr1;
-        *ptr1++ = tmp_char;
-    }
-    return result;
-}
-
 static char *tin_util_itoshelper(char *dest, size_t n, int x)
 {
     if (n == 0)
@@ -119,79 +84,6 @@ int tin_util_decodenumbytes(uint8_t byte)
     return 1;
 }
 
-int tin_ustring_length(TinString* string)
-{
-    int length;
-    uint32_t i;
-    length = 0;
-    for(i = 0; i < tin_string_getlength(string);)
-    {
-        i += tin_util_decodenumbytes(string->data[i]);
-        length++;
-    }
-    return length;
-}
-
-TinString* tin_ustring_codepointat(TinState* state, TinString* string, uint32_t index)
-{
-    char bytes[2];
-    int codepoint;
-    if(index >= tin_string_getlength(string))
-    {
-        return NULL;
-    }
-    codepoint = tin_ustring_decode((uint8_t*)string->data + index, tin_string_getlength(string) - index);
-    if(codepoint == -1)
-    {
-        bytes[0] = string->data[index];
-        bytes[1] = '\0';
-        return tin_string_copy(state, bytes, 1);
-    }
-    return tin_ustring_fromcodepoint(state, codepoint);
-}
-
-TinString* tin_ustring_fromcodepoint(TinState* state, int value)
-{
-    int length;
-    char* bytes;
-    TinString* rt;
-    length = tin_util_encodenumbytes(value);
-    bytes = (char*)TIN_ALLOCATE(state, sizeof(char), length + 1);
-    tin_ustring_encode(value, (uint8_t*)bytes);
-    /* this should be tin_string_take, but something prevents the memory from being free'd. */
-    rt = tin_string_copy(state, bytes, length);
-    TIN_FREE(state, sizeof(char), bytes);
-    return rt;
-}
-
-TinString* tin_ustring_fromrange(TinState* state, TinString* source, int start, uint32_t count)
-{
-    int length;
-    int index;
-    int codepoint;
-    uint32_t i;
-    uint8_t* to;
-    uint8_t* from;
-    char* bytes;
-    from = (uint8_t*)source->data;
-    length = 0;
-    for(i = 0; i < count; i++)
-    {
-        length += tin_util_decodenumbytes(from[start + i]);
-    }
-    bytes = (char*)malloc(length + 1);
-    to = (uint8_t*)bytes;
-    for(i = 0; i < count; i++)
-    {
-        index = start + i;
-        codepoint = tin_ustring_decode(from + index, tin_string_getlength(source) - index);
-        if(codepoint != -1)
-        {
-            to += tin_ustring_encode(codepoint, to);
-        }
-    }
-    return tin_string_take(state, bytes, length, false);
-}
 
 int tin_util_encodenumbytes(int value)
 {
@@ -214,7 +106,7 @@ int tin_util_encodenumbytes(int value)
     return 0;
 }
 
-int tin_ustring_encode(int value, uint8_t* bytes)
+int tin_util_ustringencode(int value, uint8_t* bytes)
 {
     if(value <= 0x7f)
     {
@@ -252,7 +144,7 @@ int tin_ustring_encode(int value, uint8_t* bytes)
     return 0;
 }
 
-int tin_ustring_decode(const uint8_t* bytes, uint32_t length)
+int tin_util_ustringdecode(const uint8_t* bytes, uint32_t length)
 {
     int value;
     uint32_t remainingbytes;
@@ -309,6 +201,81 @@ int tin_util_ucharoffset(char* str, int index)
     return offset;
 #undef is_utf
 }
+
+int tin_string_getutflength(TinString* string)
+{
+    int length;
+    uint32_t i;
+    length = 0;
+    for(i = 0; i < tin_string_getlength(string);)
+    {
+        i += tin_util_decodenumbytes(string->data[i]);
+        length++;
+    }
+    return length;
+}
+
+TinString* tin_string_codepointat(TinState* state, TinString* string, uint32_t index)
+{
+    char bytes[2];
+    int codepoint;
+    if(index >= tin_string_getlength(string))
+    {
+        return NULL;
+    }
+    codepoint = tin_util_ustringdecode((uint8_t*)string->data + index, tin_string_getlength(string) - index);
+    if(codepoint == -1)
+    {
+        bytes[0] = string->data[index];
+        bytes[1] = '\0';
+        return tin_string_copy(state, bytes, 1);
+    }
+    return tin_string_fromcodepoint(state, codepoint);
+}
+
+TinString* tin_string_fromcodepoint(TinState* state, int value)
+{
+    int length;
+    char* bytes;
+    TinString* rt;
+    length = tin_util_encodenumbytes(value);
+    bytes = (char*)TIN_ALLOCATE(state, sizeof(char), length + 1);
+    tin_util_ustringencode(value, (uint8_t*)bytes);
+    /* this should be tin_string_take, but something prevents the memory from being free'd. */
+    rt = tin_string_copy(state, bytes, length);
+    TIN_FREE(state, sizeof(char), bytes);
+    return rt;
+}
+
+TinString* tin_string_fromrange(TinState* state, TinString* source, int start, uint32_t count)
+{
+    int length;
+    int index;
+    int codepoint;
+    uint32_t i;
+    uint8_t* to;
+    uint8_t* from;
+    char* bytes;
+    from = (uint8_t*)source->data;
+    length = 0;
+    for(i = 0; i < count; i++)
+    {
+        length += tin_util_decodenumbytes(from[start + i]);
+    }
+    bytes = (char*)malloc(length + 1);
+    to = (uint8_t*)bytes;
+    for(i = 0; i < count; i++)
+    {
+        index = start + i;
+        codepoint = tin_util_ustringdecode(from + index, tin_string_getlength(source) - index);
+        if(codepoint != -1)
+        {
+            to += tin_util_ustringencode(codepoint, to);
+        }
+    }
+    return tin_string_take(state, bytes, length, false);
+}
+
 
 TinString* tin_string_makeempty(TinState* state, size_t length, bool reuse)
 {
@@ -629,7 +596,7 @@ static TinValue objfn_string_plus(TinVM* vm, TinValue instance, size_t argc, Tin
 static TinValue objfn_string_splice(TinVM* vm, TinString* string, int from, int to)
 {
     int length;
-    length = tin_ustring_length(string);
+    length = tin_string_getutflength(string);
     if(from < 0)
     {
         from = length + from;
@@ -646,7 +613,7 @@ static TinValue objfn_string_splice(TinVM* vm, TinString* string, int from, int 
     }
     from = tin_util_ucharoffset(string->data, from);
     to = tin_util_ucharoffset(string->data, to);
-    return tin_value_fromobject(tin_ustring_fromrange(vm->state, string, from, to - from + 1));
+    return tin_value_fromobject(tin_string_fromrange(vm->state, string, from, to - from + 1));
 }
 
 static TinValue objfn_string_subscript(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -667,14 +634,14 @@ static TinValue objfn_string_subscript(TinVM* vm, TinValue instance, size_t argc
     }
     if(index < 0)
     {
-        index = tin_ustring_length(string) + index;
+        index = tin_string_getutflength(string) + index;
 
         if(index < 0)
         {
             return tin_value_makenull(vm->state);
         }
     }
-    c = tin_ustring_codepointat(vm->state, string, tin_util_ucharoffset(string->data, index));
+    c = tin_string_codepointat(vm->state, string, tin_util_ucharoffset(string->data, index));
     return c == NULL ? tin_value_makenull(vm->state) : tin_value_fromobject(c);
 }
 
@@ -789,7 +756,7 @@ static TinValue objfn_string_tobyte(TinVM* vm, TinValue instance, size_t argc, T
     (void)argc;
     (void)argv;
     selfstr = tin_value_asstring(instance);
-    iv = tin_ustring_decode((const uint8_t*)selfstr->data, tin_string_getlength(selfstr));
+    iv = tin_util_ustringdecode((const uint8_t*)selfstr->data, tin_string_getlength(selfstr));
     return tin_value_makefixednumber(vm->state, iv);
 }
 
@@ -870,7 +837,10 @@ static TinValue objfn_string_replace(TinVM* vm, TinValue instance, size_t argc, 
     TinString* string;
     TinString* what;
     TinString* with;
-    TIN_ENSURE_ARGS(vm->state, 2);
+    if(!tin_args_ensure(vm->state, argc, 2))
+    {
+        return tin_value_makenull(vm->state);
+    }
     if(!tin_value_isstring(argv[0]) || !tin_value_isstring(argv[1]))
     {
         tin_vm_raiseexitingerror(vm, "expected 2 string arguments");
@@ -926,7 +896,7 @@ static TinValue objfn_string_byteat(TinVM* vm, TinValue instance, size_t argc, T
     TinString* self;
     self = tin_value_asstring(instance);
     idx = tin_args_checknumber(vm, argv, argc, 0);
-    if(idx < tin_string_getlength(self))
+    if(idx < (int)tin_string_getlength(self))
     {
         return tin_value_makefixednumber(vm->state, self->data[idx]);
     }
@@ -970,7 +940,7 @@ static TinValue objfn_string_length(TinVM* vm, TinValue instance, size_t argc, T
     (void)vm;
     (void)argc;
     (void)argv;
-    return tin_value_makefixednumber(vm->state, tin_ustring_length(tin_value_asstring(instance)));
+    return tin_value_makefixednumber(vm->state, tin_string_getutflength(tin_value_asstring(instance)));
 }
 
 static TinValue objfn_string_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -1012,7 +982,7 @@ static TinValue objfn_string_iteratorvalue(TinVM* vm, TinValue instance, size_t 
     {
         return tin_value_makebool(vm->state, false);
     }
-    return tin_value_fromobject(tin_ustring_codepointat(vm->state, string, index));
+    return tin_value_fromobject(tin_string_codepointat(vm->state, string, index));
 }
 
 bool check_fmt_arg(TinVM* vm, char* buf, size_t ai, size_t argc, TinValue* argv, const char* fmttext)

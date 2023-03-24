@@ -442,7 +442,10 @@ static TinValue objfn_instance_iterator(TinVM* vm, TinValue instance, size_t arg
     int value;
     int index;
     TinInstance* self;
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     self = tin_value_asinstance(instance);
     index = tin_value_isnull(argv[0]) ? -1 : tin_value_asnumber(argv[0]);
     value = util_table_iterator(&self->fields, index);

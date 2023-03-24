@@ -83,7 +83,7 @@ bool tin_table_set(TinState* state, TinTable* table, TinString* key, TinValue va
     bool isnew;
     int capacity;
     TinTabEntry* entry;
-    if(table->count + 1 > (table->capacity + 1) * TABLE_MAX_LOAD)
+    if((table->count + 1) > ((table->capacity + 1) * TABLE_MAX_LOAD))
     {
         capacity = TIN_GROW_CAPACITY(table->capacity + 1) - 1;
         adjust_capacity(state, table, capacity);
@@ -328,7 +328,10 @@ static TinValue objfn_map_subscript(TinVM* vm, TinValue instance, size_t argc, T
 
 static TinValue objfn_map_addall(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     if(!tin_value_ismap(argv[0]))
     {
         tin_vm_raiseexitingerror(vm, "expected map as the argument");
@@ -349,7 +352,10 @@ static TinValue objfn_map_clear(TinVM* vm, TinValue instance, size_t argc, TinVa
 
 static TinValue objfn_map_iterator(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     (void)vm;
     int index;
     int value;

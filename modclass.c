@@ -45,7 +45,7 @@ TinInstance* tin_object_makeinstance(TinState* state, TinClass* klass)
 void tin_class_bindconstructor(TinState* state, TinClass* cl, TinNativeMethodFn fn)
 {
     TinNativeMethod* mth;
-    mth = tin_class_bindmethod(state, cl, "constructor", fn);
+    mth = tin_class_bindmethod(state, cl, TIN_VALUE_CTORNAME, fn);
     cl->init_method = (TinObject*)mth;
 }
 
@@ -167,7 +167,10 @@ static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, 
     int mthcap;
     TinClass* klass;
     (void)argc;
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     klass = tin_value_asclass(instance);
     index = tin_value_isnull(argv[0]) ? -1 : tin_value_asnumber(argv[0]);
     mthcap = (int)klass->methods.capacity;

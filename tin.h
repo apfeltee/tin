@@ -89,7 +89,7 @@
 #define UINT8_COUNT UINT8_MAX + 1
 #define UINT16_COUNT UINT16_MAX + 1
 
-#define TABLE_MAX_LOAD 0.75
+#define TABLE_MAX_LOAD 0.85
 // Do not change these, or old bytecode files will break!
 #define TIN_BYTECODE_MAGIC_NUMBER 6932
 #define TIN_BYTECODE_END_NUMBER 2942
@@ -120,54 +120,7 @@
 #define TIN_SET_FIELD(id, value) tin_state_setfield(vm->state, &tin_value_asinstance(instance)->fields, id, value)
 #define TIN_SET_MAP_FIELD(id, value) tin_state_setmapfield(vm->state, &tin_value_asinstance(instance)->fields, id, value)
 
-#define TIN_ENSURE_ARGS(state, count)                                                   \
-    if(argc != count)                                                       \
-    {                                                                            \
-        tin_vm_raiseerror(vm, "expected %i argument, got %i", count, argc); \
-        return tin_value_makenull(state);                                                       \
-    }
 
-#define TIN_ENSURE_MIN_ARGS(state, count)                                                       \
-    if(argc < count)                                                                \
-    {                                                                                    \
-        tin_vm_raiseerror(state->vm, "expected minimum %i argument, got %i", count, argc); \
-        return tin_value_makenull(state);                                                               \
-    }
-
-#define TIN_ENSURE_MAX_ARGS(state, count)                                                       \
-    if(argc > count)                                                                \
-    {                                                                                    \
-        tin_vm_raiseerror(state->vm, "expected maximum %i argument, got %i", count, argc); \
-        return tin_value_makenull(state);                                                               \
-    }
-
-
-#if !defined(TIN_DISABLE_COLOR) && !defined(TIN_ENABLE_COLOR) && !(defined(TIN_OS_WINDOWS) || defined(EMSCRIPTEN))
-    #define TIN_ENABLE_COLOR
-#endif
-
-#ifdef TIN_ENABLE_COLOR
-    #define COLOR_RESET "\x1B[0m"
-    #define COLOR_RED "\x1B[31m"
-    #define COLOR_GREEN "\x1B[32m"
-    #define COLOR_YELLOW "\x1B[33m"
-    #define COLOR_BLUE "\x1B[34m"
-    #define COLOR_MAGENTA "\x1B[35m"
-    #define COLOR_CYAN "\x1B[36m"
-    #define COLOR_WHITE "\x1B[37m"
-#else
-    #define COLOR_RESET ""
-    #define COLOR_RED ""
-    #define COLOR_GREEN ""
-    #define COLOR_YELLOW ""
-    #define COLOR_BLUE ""
-    #define COLOR_MAGENTA ""
-    #define COLOR_CYAN ""
-    #define COLOR_WHITE ""
-#endif
-
-
-#define PUSH(value) (*fiber->stack_top++ = value)
 
 #if defined(__cplusplus)
     #define TIN_MAKESTATUS(code, value) TinInterpretResult{code, value}

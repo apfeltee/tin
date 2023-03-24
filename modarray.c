@@ -418,7 +418,10 @@ static TinValue objfn_array_insert(TinVM* vm, TinValue instance, size_t argc, Ti
     int index;
     TinValue value;
     TinValList* vl;
-    TIN_ENSURE_ARGS(vm->state, 2);
+    if(!tin_args_ensure(vm->state, argc, 2))
+    {
+        return tin_value_makenull(vm->state);
+    }
     vl = &tin_value_asarray(instance)->list;
     index = tin_args_checknumber(vm, argv, argc, 0);
     if(index < 0)
@@ -447,7 +450,10 @@ static TinValue objfn_array_addall(TinVM* vm, TinValue instance, size_t argc, Ti
     size_t i;
     TinArray* array;
     TinArray* toadd;
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     if(!tin_value_isarray(argv[0]))
     {
         tin_vm_raiseexitingerror(vm, "expected array as the argument");
@@ -463,7 +469,10 @@ static TinValue objfn_array_addall(TinVM* vm, TinValue instance, size_t argc, Ti
 
 static TinValue objfn_array_indexof(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     int index = tin_array_indexof(tin_value_asarray(instance), argv[0]);
     if(index == -1)
     {
@@ -476,7 +485,10 @@ static TinValue objfn_array_remove(TinVM* vm, TinValue instance, size_t argc, Ti
 {
     int index;
     TinArray* array;
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     array = tin_value_asarray(instance);
     index = tin_array_indexof(array, argv[0]);
     if(index != -1)
@@ -499,7 +511,10 @@ static TinValue objfn_array_removeat(TinVM* vm, TinValue instance, size_t argc, 
 
 static TinValue objfn_array_contains(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     return tin_value_makebool(vm->state, tin_array_indexof(tin_value_asarray(instance), argv[0]) != -1);
 }
 
@@ -517,7 +532,10 @@ static TinValue objfn_array_iterator(TinVM* vm, TinValue instance, size_t argc, 
     int number;
     TinArray* array;
     (void)vm;
-    TIN_ENSURE_ARGS(vm->state, 1);
+    if(!tin_args_ensure(vm->state, argc, 1))
+    {
+        return tin_value_makenull(vm->state);
+    }
     array = tin_value_asarray(instance);
     number = 0;
     if(tin_value_isnumber(argv[0]))

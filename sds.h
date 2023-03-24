@@ -689,9 +689,9 @@ static inline sdstring_t sds_removefreespace(sdstring_t s)
     size_t len;
     size_t avail;
     avail = sds_getcapacity(s);
-    sh = (char*)s - oldhdrlen;
-    oldhdrlen = sds_getheadersize(oldtype);
     oldtype = s[-1] & SDS_TYPE_MASK;
+    oldhdrlen = sds_getheadersize(oldtype);
+    sh = (char*)s - oldhdrlen;
     len = sds_getlength(s);
     /* Return ASAP if there is no space left. */
     if(avail == 0)

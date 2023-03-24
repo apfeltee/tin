@@ -449,6 +449,53 @@ static TinAstTokType tin_astlex_checkkeyword(TinAstScanner* scn, int start, int 
 
 static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scn)
 {
+    static struct {
+        TinAstTokType type;
+        const char* kw;
+    } keywords[] =
+    {
+        {TINTOK_KWCLASS, "class"},
+        {TINTOK_KWELSE, "else"},
+        {TINTOK_KWFALSE, "false"},
+        {TINTOK_KWFOR, "for"},
+        {TINTOK_KWFUNCTION, "function"},
+        {TINTOK_KWIF, "if"},
+        {TINTOK_KWNULL, "null"},
+        {TINTOK_KWRETURN, "return"},
+        {TINTOK_KWSUPER, TIN_VALUE_SUPERNAME},
+        {TINTOK_KWTHIS, TIN_VALUE_THISNAME},
+        {TINTOK_KWTRUE, "true"},
+        {TINTOK_KWVAR, "var"},
+        {TINTOK_KWWHILE, "while"},
+        {TINTOK_KWCONTINUE, "continue"},
+        {TINTOK_KWBREAK, "break"},
+        {TINTOK_KWNEW, "new"},
+        {TINTOK_KWEXPORT, "export"},
+        {TINTOK_KWIS, "is"},
+        {TINTOK_KWSTATIC, "static"},
+        {TINTOK_KWOPERATOR, "operator"},
+        {TINTOK_KWGET, "get"},
+        {TINTOK_KWSET, "set"},
+        {TINTOK_KWIN, "in"},
+        {TINTOK_KWCONST, "const"},
+        {TINTOK_KWREF, "ref"},
+        {0, NULL},
+    };
+    size_t i;
+    size_t kwlen;
+    size_t ofs;
+    const char* kwtext;
+    for(i=0; keywords[i].kw != NULL; i++)
+    {
+        kwtext = keywords[i].kw;
+        kwlen = strlen(keywords[i].kw);
+        ofs = (scn->current - scn->start);
+        if((ofs == (0 + kwlen)) && (memcmp(scn->start + 0, kwtext, kwlen) == 0))
+        {
+            return keywords[i].type;
+        }
+    }
+    /*
     switch(scn->start[0])
     {
         case 'b':
@@ -601,7 +648,7 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scn)
         case 'g':
             return tin_astlex_checkkeyword(scn, 1, 2, "et", TINTOK_KWGET);
     }
-
+    */
     return TINTOK_IDENT;
 }
 
