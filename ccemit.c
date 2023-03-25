@@ -48,7 +48,7 @@ void tin_privlist_init(TinAstPrivList* array)
 
 void tin_privlist_destroy(TinState* state, TinAstPrivList* array)
 {
-    TIN_FREE_ARRAY(state, sizeof(TinAstPrivate), array->values, array->capacity);
+    tin_gcmem_freearray(state, sizeof(TinAstPrivate), array->values, array->capacity);
     tin_privlist_init(array);
 }
 
@@ -59,7 +59,7 @@ void tin_privlist_push(TinState* state, TinAstPrivList* array, TinAstPrivate val
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = (TinAstPrivate*)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstPrivate), oldcapacity, array->capacity);
+        array->values = (TinAstPrivate*)tin_gcmem_growarray(state, array->values, sizeof(TinAstPrivate), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -73,7 +73,7 @@ void tin_loclist_init(TinAstLocList* array)
 
 void tin_loclist_destroy(TinState* state, TinAstLocList* array)
 {
-    TIN_FREE_ARRAY(state, sizeof(TinAstLocal), array->values, array->capacity);
+    tin_gcmem_freearray(state, sizeof(TinAstLocal), array->values, array->capacity);
     tin_loclist_init(array);
 }
 
@@ -84,7 +84,7 @@ void tin_loclist_push(TinState* state, TinAstLocList* array, TinAstLocal value)
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = (TinAstLocal*)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstLocal), oldcapacity, array->capacity);
+        array->values = (TinAstLocal*)tin_gcmem_growarray(state, array->values, sizeof(TinAstLocal), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -454,7 +454,7 @@ static int tin_astemit_addprivate(TinAstEmitter* emt, const char* name, size_t l
         tin_astemit_raiseerror(emt, line, "too many private locals for one module");
     }
     privnames = &emt->module->private_names->values;
-    key = tin_table_find_string(privnames, name, length, tin_util_hashstring(name, length));
+    key = tin_table_findstring(privnames, name, length, tin_util_hashstring(name, length));
     if(key != NULL)
     {
         tin_astemit_raiseerror(emt, line, "variable '%.*s' was already declared in this scope", length, name);
@@ -476,7 +476,7 @@ static int tin_astemit_resolveprivate(TinAstEmitter* emt, const char* name, size
     TinString* key;
     TinTable* privnames;
     privnames = &emt->module->private_names->values;
-    key = tin_table_find_string(privnames, name, length, tin_util_hashstring(name, length));
+    key = tin_table_findstring(privnames, name, length, tin_util_hashstring(name, length));
     if(key != NULL)
     {
         tin_table_get(privnames, key, &index);
@@ -1053,6 +1053,7 @@ static bool tin_astemit_doemitcall(TinAstEmitter* emt, TinAstExpression* expr)
     uint8_t index;
     bool issuper;
     bool ismethod;
+    TinString* name;
     TinAstExpression* e;
     TinAstVarExpr* ee;
     TinAstObjectExpr* init;
@@ -1061,6 +1062,7 @@ static bool tin_astemit_doemitcall(TinAstEmitter* emt, TinAstExpression* expr)
     TinAstExpression* get;
     TinAstGetExpr* getexpr;
     TinAstGetExpr* getter;
+    name = NULL;
     callexpr = (TinAstCallExpr*)expr;
     ismethod = callexpr->callee->type == TINEXPR_GET;
     issuper = callexpr->callee->type == TINEXPR_SUPER;
@@ -1118,7 +1120,11 @@ static bool tin_astemit_doemitcall(TinAstEmitter* emt, TinAstExpression* expr)
     }
     else
     {
+        name = callexpr->name;
         tin_astemit_emitvaryingop(emt, expr->line, OP_CALLFUNCTION, (uint8_t)callexpr->args.count);
+        assert(name);
+        //tin_astemit_emitconstant(emt, expr->line, tin_value_fromobject(name));
+        tin_astemit_emitshort(emt, expr->line, tin_astemit_addconstant(emt, expr->line, tin_value_fromobject(name)));
     }
     if(ismethod)
     {
@@ -1392,8 +1398,15 @@ static bool tin_astemit_doemitvarstmt(TinAstEmitter* emt, TinAstExpression* expr
     varstmt = (TinAstAssignVarExpr*)expr;
     line = expr->line;
     isprivate = emt->compiler->enclosing == NULL && emt->compiler->scope_depth == 0;
-    index = isprivate ? tin_astemit_resolveprivate(emt, varstmt->name, varstmt->length, expr->line) :
-                          tin_astemit_addlocal(emt, varstmt->name, varstmt->length, expr->line, varstmt->constant);
+    index = 0;
+    if(isprivate)
+    {
+        index = tin_astemit_resolveprivate(emt, varstmt->name, varstmt->length, expr->line);
+    }
+    else
+    {
+        index = tin_astemit_addlocal(emt, varstmt->name, varstmt->length, expr->line, varstmt->constant);
+    }
     if(varstmt->init == NULL)
     {
         tin_astemit_emit1op(emt, line, OP_VALNULL);
@@ -2289,7 +2302,7 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
     if(isnew)
     {
         total = emt->privates.count;
-        module->privates = (TinValue*)TIN_ALLOCATE(emt->state, sizeof(TinValue), total);
+        module->privates = (TinValue*)tin_gcmem_allocate(emt->state, sizeof(TinValue), total);
         for(i = 0; i < total; i++)
         {
             module->privates[i] = tin_value_makenull(emt->state);
@@ -2297,7 +2310,7 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
     }
     else
     {
-        module->privates = (TinValue*)TIN_GROW_ARRAY(emt->state, module->privates, sizeof(TinValue), oldprivatescnt, module->private_count);
+        module->privates = (TinValue*)tin_gcmem_growarray(emt->state, module->privates, sizeof(TinValue), oldprivatescnt, module->private_count);
         for(i = oldprivatescnt; i < module->private_count; i++)
         {
             module->privates[i] = tin_value_makenull(emt->state);

@@ -78,8 +78,8 @@
     tin_vmmac_traceframe(est->fiber);
 
 
-#define tin_vmmac_callvalue(callee, argc) \
-    if(tin_vm_callvalue(est, callee, argc)) \
+#define tin_vmmac_callvalue(callee, name, argc) \
+    if(tin_vm_callvalue(est, callee, name, argc)) \
     { \
         tin_vmmac_recoverstate(est); \
     }
@@ -118,7 +118,7 @@
     { \
         if(ignoring) \
         { \
-            if(tin_vm_callvalue(est, mthval, argc)) \
+            if(tin_vm_callvalue(est, mthval, mthname, argc)) \
             { \
                 tin_vmmac_recoverstate(est); \
                 est->frame->result_ignored = true; \
@@ -130,7 +130,7 @@
         } \
         else \
         { \
-            tin_vmmac_callvalue(mthval, argc); \
+            tin_vmmac_callvalue(mthval, mthname, argc); \
         } \
     } \
     else \
@@ -244,7 +244,7 @@ bool tin_vm_vraiseerror(TinVM *vm, const char *format, va_list args);
 bool tin_vm_raiseerror(TinVM *vm, const char *format, ...);
 bool tin_vm_raiseexitingerror(TinVM *vm, const char *format, ...);
 bool tin_vm_callcallable(TinVM *vm, TinFunction *function, TinClosure *closure, uint8_t argc);
-bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc);
+bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8_t argc);
 TinInterpretResult tin_vm_execmodule(TinState *state, TinModule *module);
 bool tin_vmintern_execfiber(TinState* state, TinFiber* fiber, TinValue* finalresult);
 void tin_vm_callexitjump(TinVM* vm);
@@ -313,6 +313,10 @@ TIN_VM_INLINE TinValue tin_vmintern_peek(TinExecState* est, short distance)
 TIN_VM_INLINE void tin_vmintern_readframe(TinExecState* est)
 {
     est->frame = &est->fiber->frames[est->fiber->frame_count - 1];
+    if(est->frame->function == NULL)
+    {
+        est->frame->function = (&est->fiber->frames[0])->function;
+    }
     est->currentchunk = &est->frame->function->chunk;
     est->ip = est->frame->ip;
     est->slots = est->frame->slots;
@@ -342,7 +346,7 @@ void tin_vmintern_resetvm(TinState* state, TinVM* vm)
     vm->gcgraystack = NULL;
     vm->gcgraycount = 0;
     vm->gcgraycapacity = 0;
-    tin_table_init(vm->state, &vm->gcstrings);
+    tin_strreg_init(vm->state);
     vm->globals = NULL;
     vm->modules = NULL;
 }
@@ -356,7 +360,7 @@ void tin_vm_init(TinState* state, TinVM* vm)
 
 void tin_vm_destroy(TinVM* vm)
 {
-    tin_table_destroy(vm->state, &vm->gcstrings);
+    tin_strreg_destroy(vm->state);
     tin_object_destroylistof(vm->state, vm->gcobjects);
     tin_vmintern_resetvm(vm->state, vm);
 }
@@ -405,6 +409,7 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
 {
     int i;
     int count;
+    bool haschunk;
     size_t length;
     char* start;
     char* buffer;
@@ -446,9 +451,17 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
         frame = &fiber->frames[i];
         function = frame->function;
         chunk = &function->chunk;
-        name = function->name == NULL ? "unknown" : function->name->data;
-
-        if(chunk->has_line_info)
+        name = "unknown";
+        haschunk = false;
+        if(function != NULL)
+        {
+            if(function->name != NULL)
+            {
+                haschunk = true;
+                name = function->name->data;
+            }
+        }
+        if(haschunk && chunk->has_line_info)
         {
             length += snprintf(NULL, 0, "[line %d] in %s()\n", (int)tin_chunk_getline(chunk, frame->ip - chunk->code - 1), name);
         }
@@ -466,8 +479,17 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
         frame = &fiber->frames[i];
         function = frame->function;
         chunk = &function->chunk;
-        name = function->name == NULL ? "unknown" : function->name->data;
-        if(chunk->has_line_info)
+        haschunk = false;
+        name = "unknown";
+        if(function != NULL)
+        {
+            if(function->name != NULL)
+            {
+                haschunk = true;
+                name = function->name->data;
+            }
+        }
+        if(haschunk && chunk->has_line_info)
         {
             start += sprintf(start, "[line %d] in %s()\n", (int)tin_chunk_getline(chunk, frame->ip - chunk->code - 1), name);
         }
@@ -616,7 +638,7 @@ const char* tin_vmintern_funcnamefromvalue(TinExecState* est, TinValue v)
     return "unknown";
 }
 
-bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
+bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8_t argc)
 {
     size_t i;
     bool bres;
@@ -711,7 +733,7 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
                     est->vm->fiber->stack_top[-argc - 1] = tin_value_fromobject(instance);
                     if(klass->init_method != NULL)
                     {
-                        return tin_vm_callvalue(est, tin_value_fromobject(klass->init_method), argc);
+                        return tin_vm_callvalue(est, tin_value_fromobject(klass->init_method), klass->name, argc);
                     }
                     // Remove the arguments, so that they don't mess up the stack
                     // (default constructor has no arguments)
@@ -773,16 +795,8 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, uint8_t argc)
         //fromval = est->slots[0];
         fromval = tin_vmintern_peek(est, 0);
     }
-    fname = "unknown";
-    fprintf(stderr, "fromval type=%d %s\n", tin_value_type(fromval), tin_tostring_typename(fromval));
-    if(tin_value_isfunction(fromval))
-    {
-        fname = tin_vmintern_funcnamefromvalue(est, fromval);
-    }
-    else if(tin_value_isstring(fromval))
-    {
-        fname = tin_value_ascstring(fromval);
-    }
+    fname = name->data;
+
     if(tin_value_isnull(callee))
     {
         tin_vm_raiseerror(est->vm, "attempt to call '%s' which is null", fname);
@@ -1114,15 +1128,34 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
     return true;
 }
 
-// OP_CAll
+// OP_CALLFUNCTION
 TIN_VM_INLINE bool tin_vmdo_call(TinExecState* est, TinValue* finalresult)
 {
     size_t argc;
     TinValue peeked;
+    TinValue vname;
+    TinString* name;
+    const char* cstr;
+    cstr = "?tin_vmdo_call?";
+
+
     argc = tin_vmintern_readbyte(est);
     tin_vmintern_writeframe(est, est->ip);
+
+
+
+    //name = tin_vmintern_readstringlong(est);
+    //name = tin_vmintern_readstring(est);
+    //vname =  tin_vmintern_readconstant(est);
+    name = tin_vmintern_readstringlong(est);
     peeked = tin_vmintern_peek(est, argc);
-    tin_vmmac_callvalue(peeked, argc);
+    
+    //name = tin_string_copy(est->state, cstr, strlen(cstr));
+    //name = est->frame->closure->function->name;
+    //name = est->frame->function->name;
+    //name = tin_value_asstring(vname);
+
+    tin_vmmac_callvalue(peeked, name, argc);
     return true;
 }
 
@@ -1161,7 +1194,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldget(TinExecState* est, TinValue* finalresult)
                     tin_vmintern_writeframe(est, est->ip);
                     field = tin_value_asfield(getval);
                     tmpval =tin_value_fromobject(field->getter);
-                    tin_vmmac_callvalue(tmpval, 0);
+                    tin_vmmac_callvalue(tmpval, name, 0);
                     tin_vmintern_readframe(est);
                     return true;
                 }
@@ -1196,7 +1229,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldget(TinExecState* est, TinValue* finalresult)
                 tin_vmintern_drop(est);
                 tin_vmintern_writeframe(est, est->ip);
                 tmpval = tin_value_fromobject(field->getter);
-                tin_vmmac_callvalue(tmpval, 0);
+                tin_vmmac_callvalue(tmpval, name, 0);
                 tin_vmintern_readframe(est);
                 return true;
             }
@@ -1226,7 +1259,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldget(TinExecState* est, TinValue* finalresult)
                 tin_vmintern_drop(est);
                 tin_vmintern_writeframe(est, est->ip);
                 tmpval = tin_value_fromobject(tin_value_asfield(getval)->getter);
-                tin_vmmac_callvalue(tmpval, 0);
+                tin_vmmac_callvalue(tmpval, name, 0);
                 tin_vmintern_readframe(est);
                 return true;
             }
@@ -1279,7 +1312,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
             tin_vmintern_push(est, value);
             tin_vmintern_writeframe(est, est->ip);
             tmpval = tin_value_fromobject(field->setter);
-            tin_vmmac_callvalue(tmpval, 1);
+            tin_vmmac_callvalue(tmpval, fieldname, 1);
             tin_vmintern_readframe(est);
             return true;
         }
@@ -1309,7 +1342,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
             tin_vmintern_push(est, value);
             tin_vmintern_writeframe(est, est->ip);
             tmpval = tin_value_fromobject(field->setter);
-            tin_vmmac_callvalue(tmpval, 1);
+            tin_vmmac_callvalue(tmpval, fieldname, 1);
             tin_vmintern_readframe(est);
             return true;
         }
@@ -1343,7 +1376,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
             tin_vmintern_push(est, value);
             tin_vmintern_writeframe(est, est->ip);
             tmpval = tin_value_fromobject(field->setter);
-            tin_vmmac_callvalue(tmpval, 1);
+            tin_vmmac_callvalue(tmpval, fieldname, 1);
             tin_vmintern_readframe(est);
             return true;
         }
@@ -1607,7 +1640,7 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval)))
            || tin_table_get(&tin_value_asclass(receiver)->static_fields, mthname, &mthval))
         {
-            if(tin_vm_callvalue(est, mthval, argc))
+            if(tin_vm_callvalue(est, mthval, mthname, argc))
             {
                 tin_vmmac_recoverstate(est);
                 est->frame->result_ignored = true;
@@ -1629,14 +1662,14 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
         if(tin_table_get(&instance->fields, mthname, &vmthval))
         {
             est->fiber->stack_top[-argc - 1] = vmthval;
-            tin_vmmac_callvalue(vmthval, argc);
+            tin_vmmac_callvalue(vmthval, mthname, argc);
             tin_vmintern_readframe(est);
             return true;
         }
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval)))
            || tin_table_get(&instance->klass->methods, mthname, &mthval))
         {
-            if(tin_vm_callvalue(est, mthval, argc))
+            if(tin_vm_callvalue(est, mthval, mthname, argc))
             {
                 tin_vmmac_recoverstate(est);
                 est->frame->result_ignored = true;
@@ -1661,7 +1694,7 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
         }
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval))) || tin_table_get(&type->methods, mthname, &mthval))
         {
-            if(tin_vm_callvalue(est, mthval, argc))
+            if(tin_vm_callvalue(est, mthval, mthname, argc))
             {
                 tin_vmmac_recoverstate(est);
                 est->frame->result_ignored = true;
@@ -1704,7 +1737,7 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval)))
            || tin_table_get(&tin_value_asclass(receiver)->static_fields, mthname, &mthval))
         {
-            tin_vmmac_callvalue(mthval, argc);
+            tin_vmmac_callvalue(mthval, mthname, argc);
         }
         else
         {
@@ -1718,14 +1751,14 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
         if(tin_table_get(&instance->fields, mthname, &vmthval))
         {
             est->fiber->stack_top[-argc - 1] = vmthval;
-            tin_vmmac_callvalue(vmthval, argc);
+            tin_vmmac_callvalue(vmthval, mthname, argc);
             tin_vmintern_readframe(est);
             return true;
         }
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval)))
            || tin_table_get(&instance->klass->methods, mthname, &mthval))
         {
-            tin_vmmac_callvalue(mthval, argc);
+            tin_vmmac_callvalue(mthval, mthname, argc);
         }
         else
         {
@@ -1742,7 +1775,7 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
         }
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval))) || tin_table_get(&type->methods, mthname, &mthval))
         {
-            tin_vmmac_callvalue(mthval, argc);
+            tin_vmmac_callvalue(mthval, mthname, argc);
         }
         else
         {

@@ -469,7 +469,7 @@ TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
         privates = &module->private_names->values;
         privatescount = tin_emufile_readuint16(&femu);
         enabled = !((bool)tin_emufile_readuint8(&femu));
-        module->privates = (TinValue*)TIN_ALLOCATE(state, sizeof(TinValue), privatescount);
+        module->privates = (TinValue*)tin_gcmem_allocate(state, sizeof(TinValue), privatescount);
         module->private_count = privatescount;
         for(i = 0; i < privatescount; i++)
         {
@@ -833,7 +833,7 @@ static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc
         sds_internincrlength(result->data, actuallen);
     }
     result->hash = tin_util_hashstring(result->data, actuallen);
-    tin_state_regstring(vm->state, result);
+    tin_strreg_put(vm->state, result);
     return tin_value_fromobject(result);
 }
 
@@ -887,7 +887,7 @@ static TinValue objmethod_file_readamount(TinVM* vm, TinValue instance, size_t a
     sds_internincrlength(result->data, actuallen);
     /* insert string into the gc matrix. */
     result->hash = tin_util_hashstring(result->data, actuallen);
-    tin_state_regstring(vm->state, result);
+    tin_strreg_put(vm->state, result);
     return tin_value_fromobject(result);
 }
 
@@ -902,10 +902,10 @@ static TinValue objmethod_file_readline(TinVM* vm, TinValue instance, size_t arg
     TinFileData* data;
     maxlength = (size_t)tin_value_getnumber(vm, argv, argc, 0, 128);
     data = (TinFileData*)tin_util_instancedataget(vm, instance);
-    line = (char*)TIN_ALLOCATE(vm->state, sizeof(char), maxlength + 1);
+    line = (char*)tin_gcmem_allocate(vm->state, sizeof(char), maxlength + 1);
     if(!fgets(line, maxlength, data->handle))
     {
-        TIN_FREE(vm->state, sizeof(char), line);
+        tin_gcmem_free(vm->state, sizeof(char), line);
         return tin_value_makenull(vm->state);
     }
     return tin_value_fromobject(tin_string_take(vm->state, line, strlen(line) - 1, false));
@@ -1035,7 +1035,7 @@ static void tin_userfile_destroyhandle(TinState* state, TinUserdata* userdata, b
     TinStdioHandle* hstd;
     (void)mark;
     hstd = (TinStdioHandle*)(userdata->data);
-    TIN_FREE(state, sizeof(TinStdioHandle), hstd);
+    tin_gcmem_free(state, sizeof(TinStdioHandle), hstd);
 }
 
 static void tin_userfile_makehandle(TinState* state, TinValue fileval, const char* name, FILE* hnd, bool canread, bool canwrite)
@@ -1050,7 +1050,7 @@ static void tin_userfile_makehandle(TinState* state, TinValue fileval, const cha
     oldfiber = state->vm->fiber;
     state->vm->fiber = tin_object_makefiber(state, state->last_module, NULL);
     {
-        hstd = (TinStdioHandle*)TIN_ALLOCATE(state, sizeof(TinStdioHandle), 1);
+        hstd = (TinStdioHandle*)tin_gcmem_allocate(state, sizeof(TinStdioHandle), 1);
         hstd->handle = hnd;
         hstd->name = name;
         hstd->canread = canread;
@@ -1121,6 +1121,13 @@ void tin_open_file_library(TinState* state)
     {
         klass = tin_object_makeclassname(state, "Dir");
         {
+            /*
+            //-- todo --//
+            */
+            //tin_class_bindstaticmethod(state, klass, "chdir", objfunction_directory_chdir);
+            /* glob may require digging up ye olde reliable wildpat.c */
+            //tin_class_bindstaticmethod(state, klass, "glob", objfunction_directory_glob);
+            //tin_class_bindstaticmethod(state, klass, "pwd", objfunction_directory_pwd);
             tin_class_bindstaticmethod(state, klass, "exists", objfunction_directory_exists);
             tin_class_bindstaticmethod(state, klass, "read", objstatic_directory_read);
         }

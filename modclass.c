@@ -4,7 +4,7 @@
 TinClass* tin_object_makeclass(TinState* state, TinString* name)
 {
     TinClass* klass;
-    klass = (TinClass*)tin_gcmem_allocobject(state, sizeof(TinClass), TINTYPE_CLASS, false);
+    klass = (TinClass*)tin_object_allocobject(state, sizeof(TinClass), TINTYPE_CLASS, false);
     klass->name = name;
     klass->init_method = NULL;
     klass->super = NULL;
@@ -26,7 +26,7 @@ TinClass* tin_object_makeclassname(TinState* state, const char* name)
 TinField* tin_object_makefield(TinState* state, TinObject* getter, TinObject* setter)
 {
     TinField* field;
-    field = (TinField*)tin_gcmem_allocobject(state, sizeof(TinField), TINTYPE_FIELD, false);
+    field = (TinField*)tin_object_allocobject(state, sizeof(TinField), TINTYPE_FIELD, false);
     field->getter = getter;
     field->setter = setter;
     return field;
@@ -35,7 +35,7 @@ TinField* tin_object_makefield(TinState* state, TinObject* getter, TinObject* se
 TinInstance* tin_object_makeinstance(TinState* state, TinClass* klass)
 {
     TinInstance* instance;
-    instance = (TinInstance*)tin_gcmem_allocobject(state, sizeof(TinInstance), TINTYPE_INSTANCE, false);
+    instance = (TinInstance*)tin_object_allocobject(state, sizeof(TinInstance), TINTYPE_INSTANCE, false);
     instance->klass = klass;
     tin_table_init(state, &instance->fields);
     instance->fields.count = 0;

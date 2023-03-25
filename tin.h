@@ -95,31 +95,11 @@
 #define TIN_BYTECODE_END_NUMBER 2942
 #define TIN_STRING_KEY 48
 
-
-
 #define TIN_TESTS_DIRECTORY "tests"
 
-#define TIN_GROW_CAPACITY(capacity) \
-    ((capacity) < 8 ? 8 : (capacity)*2)
 
-#define TIN_GROW_ARRAY(state, previous, typesz, oldcount, count) \
-    tin_gcmem_memrealloc(state, previous, typesz * (oldcount), typesz * (count))
-
-#define TIN_FREE_ARRAY(state, typesz, pointer, oldcount) \
-    tin_gcmem_memrealloc(state, pointer, typesz * (oldcount), 0)
-
-#define TIN_ALLOCATE(state, typesz, count) \
-    tin_gcmem_memrealloc(state, NULL, 0, typesz * (count))
-
-#define TIN_FREE(state, typesz, pointer) \
-    tin_gcmem_memrealloc(state, pointer, typesz, 0)
-
-
-#define TIN_GET_FIELD(id) tin_state_getfield(vm->state, &tin_value_asinstance(instance)->fields, id)
-#define TIN_GET_MAP_FIELD(id) tin_state_getmapfield(vm->state, &tin_value_asinstance(instance)->fields, id)
-#define TIN_SET_FIELD(id, value) tin_state_setfield(vm->state, &tin_value_asinstance(instance)->fields, id, value)
-#define TIN_SET_MAP_FIELD(id, value) tin_state_setmapfield(vm->state, &tin_value_asinstance(instance)->fields, id, value)
-
+#define TIN_GROW_CAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
 
 
 #if defined(__cplusplus)
@@ -989,6 +969,7 @@ struct TinVM
     TinObject** gcgraystack;
 };
 
+#include "protall.inc"
 
 /*
 #define tin_value_asnumber(v) \
@@ -1004,24 +985,40 @@ struct TinVM
 
 */
 #define tin_value_asnumber(v) \
-        ( \
-            ((v).isfixednumber) ? ((v).numfixedval) : ((v).numfloatval) )
-
+    (((v).isfixednumber) ? ((v).numfixedval) : ((v).numfloatval) )
 
 #define tin_value_fromobject(obj) tin_value_fromobject_actual((TinObject*)obj)
 
-#define tin_value_istype(value, t) \
-    (tin_value_isobject(value) && (tin_value_asobject(value) != NULL) && (tin_value_asobject(value)->type == t))
+static inline bool tin_value_isobject(TinValue v)
+{
+    return v.type == TINVAL_OBJECT;
+}
 
+static inline bool tin_value_istype(TinValue value, int t)
+{
+    int ot;
+    if(tin_value_isobject(value) && (tin_value_asobject(value) != NULL))
+    {
+        ot = tin_value_asobject(value)->type;
+        return (ot == t);
+    }
+    return false;
+}
 
-#define tin_value_isstring(value) \
-    tin_value_istype(value, TINTYPE_STRING)
+static inline bool tin_value_isstring(TinValue value)
+{
+    return tin_value_istype(value, TINTYPE_STRING);
+}
 
-#define tin_value_isfunction(value) \
-    tin_value_istype(value, TINTYPE_FUNCTION)
+static inline bool tin_value_isfunction(TinValue value)
+{
+    return tin_value_istype(value, TINTYPE_FUNCTION);
+}
 
-#define tin_value_isnatfunction(value) \
-    tin_value_istype(value, TINTYPE_NATIVEFUNCTION)
+static inline bool tin_value_isnatfunction(TinValue value)
+{
+    return tin_value_istype(value, TINTYPE_NATIVEFUNCTION);
+}
 
 #define tin_value_isnatprim(value) \
     tin_value_istype(value, TINTYPE_NATIVEPRIMITIVE)
@@ -1050,7 +1047,7 @@ struct TinVM
 #define tin_value_isarray(value) \
     tin_value_istype(value, TINTYPE_ARRAY)
 
-#include "protall.inc"
+
 
 static inline bool tin_value_isnull(TinValue v)
 {
@@ -1065,11 +1062,6 @@ static inline bool tin_value_isbool(TinValue v)
 static inline bool tin_value_isnumber(TinValue v)
 {
     return v.type == TINVAL_NUMBER;
-}
-
-static inline bool tin_value_isobject(TinValue v)
-{
-    return v.type == TINVAL_OBJECT;
 }
 
 static inline bool tin_value_isfalsey(TinValue v)
@@ -1265,9 +1257,4 @@ static inline TinValue tin_value_makenull(TinState* state)
 static inline TinValue tin_value_makestring(TinState* state, const char* text)
 {
     return tin_value_fromobject(tin_string_copy((state), (text), strlen(text)));
-}
-
-static inline TinString* tin_string_copyconst(TinState* state, const char* text)
-{
-    return tin_string_copy(state, text, strlen(text));
 }

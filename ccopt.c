@@ -82,7 +82,7 @@ void tin_varlist_init(TinVarList* array)
 
 void tin_varlist_destroy(TinState* state, TinVarList* array)
 {
-    TIN_FREE_ARRAY(state, sizeof(TinVariable), array->values, array->capacity);
+    tin_gcmem_freearray(state, sizeof(TinVariable), array->values, array->capacity);
     tin_varlist_init(array);
 }
 
@@ -93,7 +93,7 @@ void tin_varlist_push(TinState* state, TinVarList* array, TinVariable value)
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = (TinVariable*)TIN_GROW_ARRAY(state, array->values, sizeof(TinVariable), oldcapacity, array->capacity);
+        array->values = (TinVariable*)tin_gcmem_growarray(state, array->values, sizeof(TinVariable), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;

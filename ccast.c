@@ -10,7 +10,7 @@ void tin_exprlist_init(TinAstExprList* array)
 
 void tin_exprlist_destroy(TinState* state, TinAstExprList* array)
 {
-    TIN_FREE_ARRAY(state, sizeof(TinAstExpression*), array->values, array->capacity);
+    tin_gcmem_freearray(state, sizeof(TinAstExpression*), array->values, array->capacity);
     tin_exprlist_init(array);
 }
 
@@ -21,7 +21,7 @@ void tin_exprlist_push(TinState* state, TinAstExprList* array, TinAstExpression*
     {
         oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = (TinAstExpression**)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstExpression*), oldcapacity, array->capacity);
+        array->values = (TinAstExpression**)tin_gcmem_growarray(state, array->values, sizeof(TinAstExpression*), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -47,7 +47,7 @@ void tin_paramlist_init(TinAstParamList* array)
 
 void tin_paramlist_destroy(TinState* state, TinAstParamList* array)
 {
-    TIN_FREE_ARRAY(state, sizeof(TinAstParameter), array->values, array->capacity);
+    tin_gcmem_freearray(state, sizeof(TinAstParameter), array->values, array->capacity);
     tin_paramlist_init(array);
 }
 
@@ -57,7 +57,7 @@ void tin_paramlist_push(TinState* state, TinAstParamList* array, TinAstParameter
     {
         size_t oldcapacity = array->capacity;
         array->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        array->values = (TinAstParameter*)TIN_GROW_ARRAY(state, array->values, sizeof(TinAstParameter), oldcapacity, array->capacity);
+        array->values = (TinAstParameter*)tin_gcmem_growarray(state, array->values, sizeof(TinAstParameter), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
     array->count++;
@@ -400,12 +400,13 @@ TinAstAssignExpr* tin_ast_make_assignexpr(TinState* state, size_t line, TinAstEx
     return expr;
 }
 
-TinAstCallExpr* tin_ast_make_callexpr(TinState* state, size_t line, TinAstExpression* callee)
+TinAstCallExpr* tin_ast_make_callexpr(TinState* state, size_t line, TinAstExpression* callee, TinString* name)
 {
     TinAstCallExpr* expr;
     expr = (TinAstCallExpr*)tin_ast_allocexpr(state, line, sizeof(TinAstCallExpr), TINEXPR_CALL);
     expr->callee = callee;
     expr->init = NULL;
+    expr->name = name;
     tin_exprlist_init(&expr->args);
     return expr;
 }

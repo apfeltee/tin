@@ -310,8 +310,8 @@ static void tin_astparser_raiseerror(TinAstParser* prs, const char* fmt, ...)
 
 static void tin_astparser_advance(TinAstParser* prs)
 {
+    prs->prevprev = prs->previous;
     prs->previous = prs->current;
-
     while(true)
     {
         prs->current = tin_astlex_scantoken(prs->state->scanner);
@@ -627,47 +627,75 @@ static TinAstExpression* tin_astparser_rulegroupingorlambda(TinAstParser* prs, b
 
 static TinAstExpression* tin_astparser_rulecall(TinAstParser* prs, TinAstExpression* prev, bool canassign)
 {
+    int pplen;
+    /*
+    int prevlen;
+    int currlen;
+    */
+    const char* ppstr;
+    /*
+    const char* prevstr;
+    const char* currstr;
+    */
+    TinString* ts;
+    TinAstExpression* argexpr;
+    TinAstVarExpr* varex;
+    TinAstCallExpr* callexpr;
     (void)canassign;
-    TinAstExpression* e;
-    TinAstVarExpr* ee;
-    TinAstCallExpr* expression;
-    expression = tin_ast_make_callexpr(prs->state, prs->previous.line, prev);
+    ts = NULL;
+    callexpr = tin_ast_make_callexpr(prs->state, prs->previous.line, prev, ts);
+
+    if(ts == NULL)
+    {
+        pplen = prs->prevprev.length;
+        ppstr = prs->prevprev.start;
+        /*
+        prevlen = prs->previous.length;
+        prevstr = prs->previous.start;
+        currlen = prs->current.length;
+        currstr = prs->current.start;
+        fprintf(stderr, "call name: prevprev: '%.*s' previous: '%.*s' current: '%.*s'\n", pplen, ppstr, prevlen, prevstr, currlen, currstr);
+        */
+        ts = tin_string_copy(prs->state, ppstr, pplen);
+    }
     while(!tin_astparser_check(prs, TINTOK_PARENCLOSE))
     {
-        e = tin_astparser_parseexpression(prs, true);
-        tin_exprlist_push(prs->state, &expression->args, e);
+        argexpr = tin_astparser_parseexpression(prs, true);
+
+        tin_exprlist_push(prs->state, &callexpr->args, argexpr);
         if(!tin_astparser_match(prs, TINTOK_COMMA))
         {
             break;
         }
-        if(e->type == TINEXPR_VAREXPR)
+        if(argexpr->type == TINEXPR_VAREXPR)
         {
-            ee = (TinAstVarExpr*)e;
+            varex = (TinAstVarExpr*)argexpr;
             // Vararg ...
-            if(ee->length == 3 && memcmp(ee->name, "...", 3) == 0)
+            if(varex->length == 3 && memcmp(varex->name, "...", 3) == 0)
             {
                 break;
             }
         }
     }
-    if(expression->args.count > 255)
+    if(callexpr->args.count > 255)
     {
-        tin_astparser_raiseerror(prs, "function cannot have more than 255 arguments, got %i", (int)expression->args.count);
+        tin_astparser_raiseerror(prs, "function cannot have more than 255 arguments, got %i", (int)callexpr->args.count);
     }
     tin_astparser_consume(prs, TINTOK_PARENCLOSE, "')' after arguments");
-    return (TinAstExpression*)expression;
+    callexpr->name = ts;
+    return (TinAstExpression*)callexpr;
 }
 
 static TinAstExpression* tin_astparser_ruleunary(TinAstParser* prs, bool canassign)
 {
     (void)canassign;
     size_t line;
-    TinAstExpression* expression;
+    TinAstExpression* unexpr;
     TinAstTokType op;
     op = prs->previous.type;
     line = prs->previous.line;
-    expression = tin_astparser_parseprecedence(prs, TINPREC_UNARY, true, true);
-    return (TinAstExpression*)tin_ast_make_unaryexpr(prs->state, line, expression, op);
+    unexpr = tin_astparser_parseprecedence(prs, TINPREC_UNARY, true, true);
+    return (TinAstExpression*)tin_ast_make_unaryexpr(prs->state, line, unexpr, op);
 }
 
 static TinAstExpression* tin_astparser_rulebinary(TinAstParser* prs, TinAstExpression* prev, bool canassign)
@@ -948,6 +976,7 @@ static TinAstExpression* tin_astparser_rulevarexprbase(TinAstParser* prs, bool c
 {
     (void)canassign;
     bool hadargs;
+    TinString* ts;
     TinAstCallExpr* callex;
     TinAstExpression* expression;
     expression = (TinAstExpression*)tin_ast_make_varexpr(prs->state, prs->previous.line, prs->previous.start, prs->previous.length);
@@ -964,7 +993,8 @@ static TinAstExpression* tin_astparser_rulevarexprbase(TinAstParser* prs, bool c
         {
             if(callex == NULL)
             {
-                callex = tin_ast_make_callexpr(prs->state, expression->line, expression);
+                ts =  tin_string_copy(prs->state, prs->previous.start, prs->previous.length);
+                callex = tin_ast_make_callexpr(prs->state, expression->line, expression, ts);
             }
             callex->init = tin_astparser_ruleobject(prs, false);
         }

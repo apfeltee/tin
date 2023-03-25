@@ -10,9 +10,9 @@ TinFiber* tin_object_makefiber(TinState* state, TinModule* module, TinFunction* 
     TinFiber* fiber;
     // Allocate in advance, just in case GC is triggered
     stack_capacity = function == NULL ? 1 : (size_t)tin_util_closestpowof2(function->maxslots + 1);
-    stack = (TinValue*)TIN_ALLOCATE(state, sizeof(TinValue), stack_capacity);
-    frames = (TinCallFrame*)TIN_ALLOCATE(state, sizeof(TinCallFrame), TIN_INITIAL_CALL_FRAMES);
-    fiber = (TinFiber*)tin_gcmem_allocobject(state, sizeof(TinFiber), TINTYPE_FIBER, false);
+    stack = (TinValue*)tin_gcmem_allocate(state, sizeof(TinValue), stack_capacity);
+    frames = (TinCallFrame*)tin_gcmem_allocate(state, sizeof(TinCallFrame), TIN_INITIAL_CALL_FRAMES);
+    fiber = (TinFiber*)tin_object_allocobject(state, sizeof(TinFiber), TINTYPE_FIBER, false);
     if(module != NULL)
     {
         if(module->main_fiber == NULL)

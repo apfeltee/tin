@@ -1,3 +1,4 @@
+
 /* ccast.c */
 void tin_exprlist_init(TinAstExprList *array);
 void tin_exprlist_destroy(TinState *state, TinAstExprList *array);
@@ -16,7 +17,7 @@ TinAstBinaryExpr *tin_ast_make_binaryexpr(TinState *state, size_t line, TinAstEx
 TinAstUnaryExpr *tin_ast_make_unaryexpr(TinState *state, size_t line, TinAstExpression *right, TinAstTokType op);
 TinAstVarExpr *tin_ast_make_varexpr(TinState *state, size_t line, const char *name, size_t length);
 TinAstAssignExpr *tin_ast_make_assignexpr(TinState *state, size_t line, TinAstExpression *to, TinAstExpression *value);
-TinAstCallExpr *tin_ast_make_callexpr(TinState *state, size_t line, TinAstExpression *callee);
+TinAstCallExpr *tin_ast_make_callexpr(TinState *state, size_t line, TinAstExpression *callee, TinString *name);
 TinAstGetExpr *tin_ast_make_getexpr(TinState *state, size_t line, TinAstExpression *where, const char *name, size_t length, bool questionable, bool ignoreresult);
 TinAstSetExpr *tin_ast_make_setexpr(TinState *state, size_t line, TinAstExpression *where, const char *name, size_t length, TinAstExpression *value);
 TinAstFunctionExpr *tin_ast_make_lambdaexpr(TinState *state, size_t line);
@@ -97,8 +98,12 @@ void tin_disassemble_chunk(TinState *state, TinChunk *chunk, const char *name, c
 size_t tin_disassemble_instruction(TinState *state, TinChunk *chunk, size_t offset, const char *source);
 void tin_trace_frame(TinFiber *fiber, TinWriter *wr);
 /* gcmem.c */
-TinObject *tin_gcmem_allocobject(TinState *state, size_t size, TinObjType type, bool islight);
+TinObject *tin_object_allocobject(TinState *state, size_t size, TinObjType type, bool islight);
 void *tin_gcmem_memrealloc(TinState *state, void *pointer, size_t oldsize, size_t newsize);
+void *tin_gcmem_allocate(TinState *state, size_t tsz, size_t cnt);
+void *tin_gcmem_growarray(TinState *state, void *pptr, size_t tsz, size_t oldcnt, size_t cnt);
+void tin_gcmem_free(TinState *state, size_t tsz, void *ptr);
+void tin_gcmem_freearray(TinState *state, size_t tsz, void *ptr, size_t ocount);
 void tin_gcmem_marktable(TinVM *vm, TinTable *table);
 void tin_gcmem_markobject(TinVM *vm, TinObject *object);
 void tin_gcmem_markvalue(TinVM *vm, TinValue value);
@@ -220,7 +225,7 @@ bool tin_table_set(TinState *state, TinTable *table, TinString *key, TinValue va
 bool tin_table_get(TinTable *table, TinString *key, TinValue *value);
 bool tin_table_get_slot(TinTable *table, TinString *key, TinValue **value);
 bool tin_table_delete(TinTable *table, TinString *key);
-TinString *tin_table_find_string(TinTable *table, const char *chars, size_t length, uint32_t hash);
+TinString *tin_table_findstring(TinTable *table, const char *chars, size_t length, uint32_t hash);
 void tin_table_add_all(TinState *state, TinTable *from, TinTable *to);
 void tin_table_removewhite(TinTable *table);
 int util_table_iterator(TinTable *table, int number);
@@ -256,15 +261,20 @@ int tin_util_encodenumbytes(int value);
 int tin_util_ustringencode(int value, uint8_t *bytes);
 int tin_util_ustringdecode(const uint8_t *bytes, uint32_t length);
 int tin_util_ucharoffset(char *str, int index);
+void tin_strreg_init(TinState *state);
+void tin_strreg_destroy(TinState *state);
+void tin_strreg_put(TinState *state, TinString *string);
+TinString *tin_strreg_find(TinState *state, const char *chars, size_t length, uint32_t hash);
+void tin_strreg_remwhite(TinState *state);
 int tin_string_getutflength(TinString *string);
 TinString *tin_string_codepointat(TinState *state, TinString *string, uint32_t index);
 TinString *tin_string_fromcodepoint(TinState *state, int value);
 TinString *tin_string_fromrange(TinState *state, TinString *source, int start, uint32_t count);
 TinString *tin_string_makeempty(TinState *state, size_t length, bool reuse);
 TinString *tin_string_makelen(TinState *state, char *chars, size_t length, uint32_t hash, bool wassds, bool reuse);
-void tin_state_regstring(TinState *state, TinString *string);
 TinString *tin_string_take(TinState *state, char *chars, size_t length, bool wassds);
 TinString *tin_string_copy(TinState *state, const char *chars, size_t length);
+TinString *tin_string_copyconst(TinState *state, const char *text);
 const char *tin_string_getdata(TinString *ls);
 size_t tin_string_getlength(TinString *ls);
 void tin_string_appendlen(TinString *ls, const char *s, size_t len);
@@ -366,7 +376,7 @@ bool tin_vm_raiseerror(TinVM *vm, const char *format, ...);
 bool tin_vm_raiseexitingerror(TinVM *vm, const char *format, ...);
 bool tin_vm_callcallable(TinVM *vm, TinFunction *function, TinClosure *closure, uint8_t argc);
 const char *tin_vmintern_funcnamefromvalue(TinExecState *est, TinValue v);
-bool tin_vm_callvalue(TinExecState *est, TinValue callee, uint8_t argc);
+bool tin_vm_callvalue(TinExecState *est, TinValue callee, TinString *name, uint8_t argc);
 TinUpvalue *tin_vmintern_captureupvalue(TinState *state, TinValue *local);
 void tin_vmintern_closeupvalues(TinVM *vm, const TinValue *last);
 TinInterpretResult tin_vm_execmodule(TinState *state, TinModule *module);

@@ -9,7 +9,7 @@ static TinObject g_stackmem[1024 * (1024 * 4)];
 static size_t g_objcount = 0;
 #endif
 
-TinObject* tin_gcmem_allocobject(TinState* state, size_t size, TinObjType type, bool islight)
+TinObject* tin_object_allocobject(TinState* state, size_t size, TinObjType type, bool islight)
 {
     TinObject* obj;
     islight = false;
@@ -35,9 +35,8 @@ TinObject* tin_gcmem_allocobject(TinState* state, size_t size, TinObjType type, 
     obj->next = state->vm->gcobjects;
     state->vm->gcobjects = obj;
     #ifdef TIN_LOG_ALLOCATION
-        printf("%p allocate %ld for %s\n", (void*)obj, size, tin_tostring_typename(type));
+        fprintf(stderr, "%p allocate %ld for %s\n", (void*)obj, size, tin_tostring_typename(type));
     #endif
-
     return obj;
 }
 
@@ -64,10 +63,30 @@ void* tin_gcmem_memrealloc(TinState* state, void* pointer, size_t oldsize, size_
     ptr = (void*)realloc(pointer, newsize);
     if(ptr == NULL)
     {
-        tin_state_raiseerror(state, RUNTIME_ERROR, "Fatal error:\nOut of memory\nProgram terminated");
+        tin_state_raiseerror(state, RUNTIME_ERROR, "internal error: failed to allocate %d bytes\n", newsize);
         exit(111);
     }
     return ptr;
+}
+
+void* tin_gcmem_allocate(TinState* state, size_t tsz, size_t cnt)
+{
+    return tin_gcmem_memrealloc(state, NULL, 0, tsz * (cnt));
+}
+
+void* tin_gcmem_growarray(TinState* state, void* pptr, size_t tsz, size_t oldcnt, size_t cnt)
+{
+    return tin_gcmem_memrealloc(state, pptr, tsz * oldcnt, tsz * cnt);
+}
+
+void tin_gcmem_free(TinState* state, size_t tsz, void* ptr)
+{
+    tin_gcmem_memrealloc(state, ptr, tsz, 0);    
+}
+
+void tin_gcmem_freearray(TinState* state, size_t tsz, void* ptr, size_t ocount)
+{
+    tin_gcmem_memrealloc(state, ptr, tsz * ocount, 0);
 }
 
 void tin_gcmem_marktable(TinVM* vm, TinTable* table)
@@ -377,7 +396,7 @@ uint64_t tin_gcmem_collectgarbage(TinVM* vm)
 #endif
     tin_gcmem_vmmarkroots(vm);
     tin_gcmem_vmtracerefs(vm);
-    tin_table_removewhite(&vm->gcstrings);
+    tin_strreg_remwhite(vm->state);
     tin_gcmem_vmsweep(vm);
     vm->state->gcnext = vm->state->gcbytescount * TIN_GC_HEAP_GROW_FACTOR;
     vm->state->gcallow = true;

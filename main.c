@@ -210,6 +210,11 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
                     opts->codeline = flags[i].value;
                 }
                 break;
+            case 'c':
+                {
+                    
+                }
+                break;
             case 'd':
                 {
                     if(flags[i].value == NULL)

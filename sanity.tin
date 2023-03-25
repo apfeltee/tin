@@ -9,8 +9,12 @@ function check(msg, b)
 
 function testfiber()
 {
-    print("expect: attempt to call null value: ", new Fiber(() => {
+    println("expect: attempt to call null value: ", new Fiber(() => {
       null()
+    }).try()) // Expected: Attempt to call a null value
+
+    println("expect: attempt to call 'reallynotafunction': ", new Fiber(() => {
+      reallynotafunction()
     }).try()) // Expected: Attempt to call a null value
 
     println("expect null: ", new Fiber(() => {
@@ -48,7 +52,7 @@ function testfiber()
       println("help")
     })
 
-    print("expect attempt to call null value :", fiber.try()) // Expected: Attempt to call a null value
+    println("expect attempt to call null value :", fiber.try()) // Expected: Attempt to call a null value
 
     function shout(a, ...) {
         var f = new Fiber((...) => {

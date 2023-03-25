@@ -129,6 +129,7 @@ struct TinAstAssignExpr
 struct TinAstCallExpr
 {
     TinAstExpression exobj;
+    TinString* name;
     TinAstExpression* callee;
     TinAstExprList args;
     TinAstExpression* init;
@@ -410,6 +411,7 @@ struct TinAstParser
     TinState* state;
     bool haderror;
     bool panic_mode;
+    TinAstToken prevprev;
     TinAstToken previous;
     TinAstToken current;
     TinAstCompiler* compiler;

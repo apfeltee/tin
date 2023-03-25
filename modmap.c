@@ -13,7 +13,7 @@ void tin_table_destroy(TinState* state, TinTable* table)
 {
     if(table->capacity > 0)
     {
-        TIN_FREE_ARRAY(state, sizeof(TinTabEntry), table->entries, table->capacity + 1);
+        tin_gcmem_freearray(state, sizeof(TinTabEntry), table->entries, table->capacity + 1);
     }
     tin_table_init(state, table);
 }
@@ -54,7 +54,7 @@ static void adjust_capacity(TinState* state, TinTable* table, int capacity)
     TinTabEntry* destination;
     TinTabEntry* entries;
     TinTabEntry* entry;
-    entries = (TinTabEntry*)TIN_ALLOCATE(state, sizeof(TinTabEntry), capacity + 1);
+    entries = (TinTabEntry*)tin_gcmem_allocate(state, sizeof(TinTabEntry), capacity + 1);
     for(i = 0; i <= capacity; i++)
     {
         entries[i].key = NULL;
@@ -73,7 +73,7 @@ static void adjust_capacity(TinState* state, TinTable* table, int capacity)
         destination->value = entry->value;
         table->count++;
     }
-    TIN_FREE_ARRAY(state, sizeof(TinTabEntry), table->entries, table->capacity + 1);
+    tin_gcmem_freearray(state, sizeof(TinTabEntry), table->entries, table->capacity + 1);
     table->capacity = capacity;
     table->entries = entries;
 }
@@ -148,7 +148,7 @@ bool tin_table_delete(TinTable* table, TinString* key)
     return true;
 }
 
-TinString* tin_table_find_string(TinTable* table, const char* chars, size_t length, uint32_t hash)
+TinString* tin_table_findstring(TinTable* table, const char* chars, size_t length, uint32_t hash)
 {
     uint32_t index;
     TinTabEntry* entry;
@@ -167,7 +167,7 @@ TinString* tin_table_find_string(TinTable* table, const char* chars, size_t leng
                 return NULL;
             }
         }
-        else if(tin_string_getlength(entry->key) == length && entry->key->hash == hash && memcmp(entry->key->data, chars, length) == 0)
+        if(tin_string_getlength(entry->key) == length && entry->key->hash == hash && memcmp(entry->key->data, chars, length) == 0)
         {
             return entry->key;
         }
@@ -238,7 +238,7 @@ TinValue util_table_iterator_key(TinTable* table, int index)
 TinMap* tin_object_makemap(TinState* state)
 {
     TinMap* map;
-    map = (TinMap*)tin_gcmem_allocobject(state, sizeof(TinMap), TINTYPE_MAP, false);
+    map = (TinMap*)tin_object_allocobject(state, sizeof(TinMap), TINTYPE_MAP, false);
     tin_table_init(state, &map->values);
     map->index_fn = NULL;
     return map;

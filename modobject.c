@@ -7,7 +7,7 @@
 TinUpvalue* tin_object_makeupvalue(TinState* state, TinValue* slot)
 {
     TinUpvalue* upvalue;
-    upvalue = (TinUpvalue*)tin_gcmem_allocobject(state, sizeof(TinUpvalue), TINTYPE_UPVALUE, false);
+    upvalue = (TinUpvalue*)tin_object_allocobject(state, sizeof(TinUpvalue), TINTYPE_UPVALUE, false);
     upvalue->location = slot;
     upvalue->closed = tin_value_makenull(state);
     upvalue->next = NULL;
@@ -17,7 +17,7 @@ TinUpvalue* tin_object_makeupvalue(TinState* state, TinValue* slot)
 TinModule* tin_object_makemodule(TinState* state, TinString* name)
 {
     TinModule* module;
-    module = (TinModule*)tin_gcmem_allocobject(state, sizeof(TinModule), TINTYPE_MODULE, false);
+    module = (TinModule*)tin_object_allocobject(state, sizeof(TinModule), TINTYPE_MODULE, false);
     module->name = name;
     module->return_value = tin_value_makenull(state);
     module->main_function = NULL;
@@ -32,7 +32,7 @@ TinModule* tin_object_makemodule(TinState* state, TinString* name)
 TinUserdata* tin_object_makeuserdata(TinState* state, size_t size, bool ispointeronly)
 {
     TinUserdata* userdata;
-    userdata = (TinUserdata*)tin_gcmem_allocobject(state, sizeof(TinUserdata), TINTYPE_USERDATA, false);
+    userdata = (TinUserdata*)tin_object_allocobject(state, sizeof(TinUserdata), TINTYPE_USERDATA, false);
     userdata->data = NULL;
     if(size > 0)
     {
@@ -50,7 +50,7 @@ TinUserdata* tin_object_makeuserdata(TinState* state, size_t size, bool ispointe
 TinReference* tin_object_makereference(TinState* state, TinValue* slot)
 {
     TinReference* reference;
-    reference = (TinReference*)tin_gcmem_allocobject(state, sizeof(TinReference), TINTYPE_REFERENCE, false);
+    reference = (TinReference*)tin_object_allocobject(state, sizeof(TinReference), TINTYPE_REFERENCE, false);
     reference->slot = slot;
     return reference;
 }
@@ -78,17 +78,17 @@ void tin_object_destroy(TinState* state, TinObject* object)
             {
                 if(object->mustfree)
                 {
-                    TIN_FREE(state, sizeof(TinNumber), object);
+                    tin_gcmem_free(state, sizeof(TinNumber), object);
                 }
             }
             break;
         case TINTYPE_STRING:
             {
                 string = (TinString*)object;
-                //TIN_FREE_ARRAY(state, sizeof(char), string->data, string->length + 1);
+                //tin_gcmem_freearray(state, sizeof(char), string->data, string->length + 1);
                 sds_destroy(string->data);
                 string->data = NULL;
-                TIN_FREE(state, sizeof(TinString), object);
+                tin_gcmem_free(state, sizeof(TinString), object);
             }
             break;
 
@@ -96,54 +96,54 @@ void tin_object_destroy(TinState* state, TinObject* object)
             {
                 function = (TinFunction*)object;
                 tin_chunk_destroy(state, &function->chunk);
-                TIN_FREE(state, sizeof(TinFunction), object);
+                tin_gcmem_free(state, sizeof(TinFunction), object);
             }
             break;
         case TINTYPE_NATIVEFUNCTION:
             {
-                TIN_FREE(state, sizeof(TinNativeFunction), object);
+                tin_gcmem_free(state, sizeof(TinNativeFunction), object);
             }
             break;
         case TINTYPE_NATIVEPRIMITIVE:
             {
-                TIN_FREE(state, sizeof(TinNativePrimFunction), object);
+                tin_gcmem_free(state, sizeof(TinNativePrimFunction), object);
             }
             break;
         case TINTYPE_NATIVEMETHOD:
             {
-                TIN_FREE(state, sizeof(TinNativeMethod), object);
+                tin_gcmem_free(state, sizeof(TinNativeMethod), object);
             }
             break;
         case TINTYPE_PRIMITIVEMETHOD:
             {
-                TIN_FREE(state, sizeof(TinPrimitiveMethod), object);
+                tin_gcmem_free(state, sizeof(TinPrimitiveMethod), object);
             }
             break;
         case TINTYPE_FIBER:
             {
                 fiber = (TinFiber*)object;
-                TIN_FREE_ARRAY(state, sizeof(TinCallFrame), fiber->frames, fiber->frame_capacity);
-                TIN_FREE_ARRAY(state, sizeof(TinValue), fiber->stack, fiber->stack_capacity);
-                TIN_FREE(state, sizeof(TinFiber), object);
+                tin_gcmem_freearray(state, sizeof(TinCallFrame), fiber->frames, fiber->frame_capacity);
+                tin_gcmem_freearray(state, sizeof(TinValue), fiber->stack, fiber->stack_capacity);
+                tin_gcmem_free(state, sizeof(TinFiber), object);
             }
             break;
         case TINTYPE_MODULE:
             {
                 module = (TinModule*)object;
-                TIN_FREE_ARRAY(state, sizeof(TinValue), module->privates, module->private_count);
-                TIN_FREE(state, sizeof(TinModule), object);
+                tin_gcmem_freearray(state, sizeof(TinValue), module->privates, module->private_count);
+                tin_gcmem_free(state, sizeof(TinModule), object);
             }
             break;
         case TINTYPE_CLOSURE:
             {
                 closure = (TinClosure*)object;
-                TIN_FREE_ARRAY(state, sizeof(TinUpvalue*), closure->upvalues, closure->upvalue_count);
-                TIN_FREE(state, sizeof(TinClosure), object);
+                tin_gcmem_freearray(state, sizeof(TinUpvalue*), closure->upvalues, closure->upvalue_count);
+                tin_gcmem_free(state, sizeof(TinClosure), object);
             }
             break;
         case TINTYPE_UPVALUE:
             {
-                TIN_FREE(state, sizeof(TinUpvalue), object);
+                tin_gcmem_free(state, sizeof(TinUpvalue), object);
             }
             break;
         case TINTYPE_CLASS:
@@ -151,31 +151,31 @@ void tin_object_destroy(TinState* state, TinObject* object)
                 TinClass* klass = (TinClass*)object;
                 tin_table_destroy(state, &klass->methods);
                 tin_table_destroy(state, &klass->static_fields);
-                TIN_FREE(state, sizeof(TinClass), object);
+                tin_gcmem_free(state, sizeof(TinClass), object);
             }
             break;
 
         case TINTYPE_INSTANCE:
             {
                 tin_table_destroy(state, &((TinInstance*)object)->fields);
-                TIN_FREE(state, sizeof(TinInstance), object);
+                tin_gcmem_free(state, sizeof(TinInstance), object);
             }
             break;
         case TINTYPE_BOUNDMETHOD:
             {
-                TIN_FREE(state, sizeof(TinBoundMethod), object);
+                tin_gcmem_free(state, sizeof(TinBoundMethod), object);
             }
             break;
         case TINTYPE_ARRAY:
             {
                 tin_vallist_destroy(state, &((TinArray*)object)->list);
-                TIN_FREE(state, sizeof(TinArray), object);
+                tin_gcmem_free(state, sizeof(TinArray), object);
             }
             break;
         case TINTYPE_MAP:
             {
                 tin_table_destroy(state, &((TinMap*)object)->values);
-                TIN_FREE(state, sizeof(TinMap), object);
+                tin_gcmem_free(state, sizeof(TinMap), object);
             }
             break;
         case TINTYPE_USERDATA:
@@ -192,23 +192,23 @@ void tin_object_destroy(TinState* state, TinObject* object)
                         tin_gcmem_memrealloc(state, data->data, data->size, 0);
                     }
                 }
-                TIN_FREE(state, sizeof(TinUserdata), data);
+                tin_gcmem_free(state, sizeof(TinUserdata), data);
                 //free(data);
             }
             break;
         case TINTYPE_RANGE:
             {
-                TIN_FREE(state, sizeof(TinRange), object);
+                tin_gcmem_free(state, sizeof(TinRange), object);
             }
             break;
         case TINTYPE_FIELD:
             {
-                TIN_FREE(state, sizeof(TinField), object);
+                tin_gcmem_free(state, sizeof(TinField), object);
             }
             break;
         case TINTYPE_REFERENCE:
             {
-                TIN_FREE(state, sizeof(TinReference), object);
+                tin_gcmem_free(state, sizeof(TinReference), object);
             }
             break;
         default:
@@ -233,74 +233,6 @@ void tin_object_destroylistof(TinState* state, TinObject* objects)
     }
     free(state->vm->gcgraystack);
     state->vm->gcgraycapacity = 0;
-}
-
-TinValue tin_function_getname(TinVM* vm, TinValue instance)
-{
-    TinString* name;
-    TinField* field;
-    name = NULL;
-    switch(tin_value_type(instance))
-    {
-        case TINTYPE_FUNCTION:
-            {
-                name = tin_value_asfunction(instance)->name;
-            }
-            break;
-        case TINTYPE_CLOSURE:
-            {
-                name = tin_value_asclosure(instance)->function->name;
-            }
-            break;
-        case TINTYPE_FIELD:
-            {
-                field = tin_value_asfield(instance);
-                if(field->getter != NULL)
-                {
-                    return tin_function_getname(vm, tin_value_fromobject(field->getter));
-                }
-                return tin_function_getname(vm, tin_value_fromobject(field->setter));
-            }
-            break;
-        case TINTYPE_NATIVEPRIMITIVE:
-            {
-                name = tin_value_asnativeprimitive(instance)->name;
-            }
-            break;
-        case TINTYPE_NATIVEFUNCTION:
-            {
-                name = tin_value_asnativefunction(instance)->name;
-            }
-            break;
-        case TINTYPE_NATIVEMETHOD:
-            {
-                name = tin_value_asnativemethod(instance)->name;
-            }
-            break;
-        case TINTYPE_PRIMITIVEMETHOD:
-            {
-                name = tin_value_asprimitivemethod(instance)->name;
-            }
-            break;
-        case TINTYPE_BOUNDMETHOD:
-            {
-                return tin_function_getname(vm, tin_value_asboundmethod(instance)->method);
-            }
-            break;
-        default:
-            {
-                //return tin_value_makenull(vm->state);
-            }
-            break;
-    }
-    if(name == NULL)
-    {
-        if(tin_value_isobject(instance))
-        {
-            return tin_string_format(vm->state, "function #", *((double*)tin_value_asobject(instance)));
-        }
-    }
-    return tin_string_format(vm->state, "function @", tin_value_fromobject(name));
 }
 
 static TinValue objfn_instance_class(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)

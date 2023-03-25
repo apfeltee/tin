@@ -202,6 +202,36 @@ int tin_util_ucharoffset(char* str, int index)
 #undef is_utf
 }
 
+void tin_strreg_init(TinState* state)
+{
+    tin_table_init(state, &state->vm->gcstrings);
+}
+
+void tin_strreg_destroy(TinState* state)
+{
+    tin_table_destroy(state, &state->vm->gcstrings);
+}
+
+void tin_strreg_put(TinState* state, TinString* string)
+{
+    if(tin_string_getlength(string) > 0)
+    {
+        tin_state_pushroot(state, (TinObject*)string);
+        tin_table_set(state, &state->vm->gcstrings, string, tin_value_makenull(state));
+        tin_state_poproot(state);
+    }
+}
+
+TinString* tin_strreg_find(TinState* state, const char* chars, size_t length, uint32_t hash)
+{
+    return tin_table_findstring(&state->vm->gcstrings, chars, length, hash);
+}
+
+void tin_strreg_remwhite(TinState* state)
+{
+    tin_table_removewhite(&state->vm->gcstrings);
+}
+
 int tin_string_getutflength(TinString* string)
 {
     int length;
@@ -239,11 +269,11 @@ TinString* tin_string_fromcodepoint(TinState* state, int value)
     char* bytes;
     TinString* rt;
     length = tin_util_encodenumbytes(value);
-    bytes = (char*)TIN_ALLOCATE(state, sizeof(char), length + 1);
+    bytes = (char*)tin_gcmem_allocate(state, sizeof(char), length + 1);
     tin_util_ustringencode(value, (uint8_t*)bytes);
     /* this should be tin_string_take, but something prevents the memory from being free'd. */
     rt = tin_string_copy(state, bytes, length);
-    TIN_FREE(state, sizeof(char), bytes);
+    tin_gcmem_free(state, sizeof(char), bytes);
     return rt;
 }
 
@@ -280,7 +310,9 @@ TinString* tin_string_fromrange(TinState* state, TinString* source, int start, u
 TinString* tin_string_makeempty(TinState* state, size_t length, bool reuse)
 {
     TinString* string;
-    string = (TinString*)tin_gcmem_allocobject(state, sizeof(TinString), TINTYPE_STRING, false);
+    string = (TinString*)tin_object_allocobject(state, sizeof(TinString), TINTYPE_STRING, false);
+    string->data = NULL;
+    string->hash = 0;
     if(!reuse)
     {
         //fprintf(stderr, "tin_string_makeempty: length=%d\n", length);
@@ -303,6 +335,7 @@ TinString* tin_string_makeempty(TinState* state, size_t length, bool reuse)
 TinString* tin_string_makelen(TinState* state, char* chars, size_t length, uint32_t hash, bool wassds, bool reuse)
 {
     TinString* string;
+    
     string = tin_string_makeempty(state, length, reuse);
     if(wassds && reuse)
     {
@@ -319,20 +352,10 @@ TinString* tin_string_makelen(TinState* state, char* chars, size_t length, uint3
     string->hash = hash;
     if(!wassds)
     {
-        TIN_FREE(state, sizeof(char), chars);
+        tin_gcmem_free(state, sizeof(char), chars);
     }
-    tin_state_regstring(state, string);
+    tin_strreg_put(state, string);
     return string;
-}
-
-void tin_state_regstring(TinState* state, TinString* string)
-{
-    if(tin_string_getlength(string) > 0)
-    {
-        tin_state_pushroot(state, (TinObject*)string);
-        tin_table_set(state, &state->vm->gcstrings, string, tin_value_makenull(state));
-        tin_state_poproot(state);
-    }
 }
 
 /* todo: track if $chars is a sds instance - additional argument $fromsds? */
@@ -340,14 +363,15 @@ TinString* tin_string_take(TinState* state, char* chars, size_t length, bool was
 {
     bool reuse;
     uint32_t hash;
+    reuse = false;
     hash = tin_util_hashstring(chars, length);
     TinString* interned;
-    interned = tin_table_find_string(&state->vm->gcstrings, chars, length, hash);
+    interned = tin_strreg_find(state, chars, length, hash);
     if(interned != NULL)
     {
         if(!wassds)
         {
-            TIN_FREE(state, sizeof(char), chars);
+            tin_gcmem_free(state, sizeof(char), chars);
             //sds_destroy(chars);
         }
         return interned;
@@ -361,22 +385,28 @@ TinString* tin_string_copy(TinState* state, const char* chars, size_t length)
     uint32_t hash;
     char* heapchars;
     TinString* interned;
-    hash= tin_util_hashstring(chars, length);
-    interned = tin_table_find_string(&state->vm->gcstrings, chars, length, hash);
+    interned = NULL;
+    hash = tin_util_hashstring(chars, length);
+    interned = tin_strreg_find(state, chars, length, hash);
     if(interned != NULL)
     {
         return interned;
     }
     /*
-    heapchars = TIN_ALLOCATE(state, sizeof(char), length + 1);
+    heapchars = tin_gcmem_allocate(state, sizeof(char), length + 1);
     memcpy(heapchars, chars, length);
     heapchars[length] = '\0';
     */
     heapchars = sds_makelength(chars, length);
 #ifdef TIN_LOG_ALLOCATION
-    printf("Allocated new string '%s'\n", chars);
+    fprintf(stderr, "Allocated new string '%s'\n", chars);
 #endif
     return tin_string_makelen(state, heapchars, length, hash, true, true);
+}
+
+TinString* tin_string_copyconst(TinState* state, const char* text)
+{
+    return tin_string_copy(state, text, strlen(text));
 }
 
 const char* tin_string_getdata(TinString* ls)
@@ -491,6 +521,7 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                 break;
             case '@':
                 {
+                    string = NULL;
                     val = va_arg(arglist, TinValue);
                     if(tin_value_isstring(val))
                     {
@@ -500,7 +531,8 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
                     {
                         //fprintf(stderr, "format: not a string, but a '%s'\n", tin_tostring_typename(val));
                         //string = tin_value_tostring(state, val);
-                        goto defaultendingcopying;
+                        //goto defaultendingcopying;
+                        string = tin_value_tostring(state, val);
                     }
                     if(string != NULL)
                     {
@@ -537,7 +569,7 @@ TinValue tin_string_format(TinState* state, const char* format, ...)
     }
     va_end(arglist);
     result->hash = tin_util_hashstring(result->data, tin_string_getlength(result));
-    tin_state_regstring(state, result);
+    tin_strreg_put(state, result);
     state->gcallow = wasallowed;
     return tin_value_fromobject(result);
 }
@@ -589,7 +621,7 @@ static TinValue objfn_string_plus(TinVM* vm, TinValue instance, size_t argc, Tin
     result = tin_string_makeempty(vm->state, selflen + otherlen, false);
     tin_string_appendobj(result, selfstr);
     tin_string_appendobj(result, strval);
-    tin_state_regstring(vm->state, result);
+    tin_strreg_put(vm->state, result);
     return tin_value_fromobject(result);
 }
 
@@ -719,7 +751,7 @@ static TinValue objfn_string_touppercase(TinVM* vm, TinValue instance, size_t ar
     string = tin_value_asstring(instance);
     (void)argc;
     (void)argv;
-    buffer = (char*)TIN_ALLOCATE(vm->state, sizeof(char), tin_string_getlength(string) + 1);
+    buffer = (char*)tin_gcmem_allocate(vm->state, sizeof(char), tin_string_getlength(string) + 1);
     for(i = 0; i < tin_string_getlength(string); i++)
     {
         buffer[i] = (char)toupper(string->data[i]);
@@ -738,7 +770,7 @@ static TinValue objfn_string_tolowercase(TinVM* vm, TinValue instance, size_t ar
     string = tin_value_asstring(instance);
     (void)argc;
     (void)argv;
-    buffer = (char*)TIN_ALLOCATE(vm->state, sizeof(char), tin_string_getlength(string) + 1);
+    buffer = (char*)tin_gcmem_allocate(vm->state, sizeof(char), tin_string_getlength(string) + 1);
     for(i = 0; i < tin_string_getlength(string); i++)
     {
         buffer[i] = (char)tolower(string->data[i]);
@@ -862,7 +894,7 @@ static TinValue objfn_string_replace(TinVM* vm, TinValue instance, size_t argc, 
         }
     }
     bufferindex = 0;
-    buffer = (char*)TIN_ALLOCATE(vm->state, sizeof(char), bufferlength+1);
+    buffer = (char*)tin_gcmem_allocate(vm->state, sizeof(char), bufferlength+1);
     for(i = 0; i < tin_string_getlength(string); i++)
     {
         if(strncmp(string->data + i, what->data, tin_string_getlength(what)) == 0)

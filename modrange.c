@@ -4,7 +4,7 @@
 TinRange* tin_object_makerange(TinState* state, double from, double to)
 {
     TinRange* range;
-    range = (TinRange*)tin_gcmem_allocobject(state, sizeof(TinRange), TINTYPE_RANGE, false);
+    range = (TinRange*)tin_object_allocobject(state, sizeof(TinRange), TINTYPE_RANGE, false);
     range->from = from;
     range->to = to;
     return range;

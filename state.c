@@ -850,7 +850,7 @@ bool tin_state_compileandsave(TinState* state, char* files[], size_t numfiles, c
     TinString* module_name;
     TinModule* module;
     TinModule** compiledmodules;
-    compiledmodules = (TinModule**)TIN_ALLOCATE(state, sizeof(TinModule*), numfiles+1);
+    compiledmodules = (TinModule**)tin_gcmem_allocate(state, sizeof(TinModule*), numfiles+1);
     tin_astopt_setoptlevel(TINOPTLEVEL_EXTREME);
     for(i = 0; i < numfiles; i++)
     {
@@ -886,7 +886,7 @@ bool tin_state_compileandsave(TinState* state, char* files[], size_t numfiles, c
         tin_ioutil_writemodule(compiledmodules[i], file);
     }
     tin_ioutil_writeuint16(file, TIN_BYTECODE_END_NUMBER);
-    TIN_FREE(state, sizeof(TinModule), compiledmodules);
+    tin_gcmem_free(state, sizeof(TinModule), compiledmodules);
     fclose(file);
     return true;
 }

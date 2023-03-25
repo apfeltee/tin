@@ -4,7 +4,7 @@
 TinFunction* tin_object_makefunction(TinState* state, TinModule* module)
 {
     TinFunction* function;
-    function = (TinFunction*)tin_gcmem_allocobject(state, sizeof(TinFunction), TINTYPE_FUNCTION, false);
+    function = (TinFunction*)tin_object_allocobject(state, sizeof(TinFunction), TINTYPE_FUNCTION, false);
     tin_chunk_init(&function->chunk);
     function->name = NULL;
     function->arg_count = 0;
@@ -20,9 +20,9 @@ TinClosure* tin_object_makeclosure(TinState* state, TinFunction* function)
     size_t i;
     TinClosure* closure;
     TinUpvalue** upvalues;
-    closure = (TinClosure*)tin_gcmem_allocobject(state, sizeof(TinClosure), TINTYPE_CLOSURE, false);
+    closure = (TinClosure*)tin_object_allocobject(state, sizeof(TinClosure), TINTYPE_CLOSURE, false);
     tin_state_pushroot(state, (TinObject*)closure);
-    upvalues = (TinUpvalue**)TIN_ALLOCATE(state, sizeof(TinUpvalue*), function->upvalue_count);
+    upvalues = (TinUpvalue**)tin_gcmem_allocate(state, sizeof(TinUpvalue*), function->upvalue_count);
     tin_state_poproot(state);
     for(i = 0; i < function->upvalue_count; i++)
     {
@@ -37,7 +37,7 @@ TinClosure* tin_object_makeclosure(TinState* state, TinFunction* function)
 TinNativeFunction* tin_object_makenativefunction(TinState* state, TinNativeFunctionFn function, TinString* name)
 {
     TinNativeFunction* native;
-    native = (TinNativeFunction*)tin_gcmem_allocobject(state, sizeof(TinNativeFunction), TINTYPE_NATIVEFUNCTION, false);
+    native = (TinNativeFunction*)tin_object_allocobject(state, sizeof(TinNativeFunction), TINTYPE_NATIVEFUNCTION, false);
     native->function = function;
     native->name = name;
     return native;
@@ -46,7 +46,7 @@ TinNativeFunction* tin_object_makenativefunction(TinState* state, TinNativeFunct
 TinNativePrimFunction* tin_object_makenativeprimitive(TinState* state, TinNativePrimitiveFn function, TinString* name)
 {
     TinNativePrimFunction* native;
-    native = (TinNativePrimFunction*)tin_gcmem_allocobject(state, sizeof(TinNativePrimFunction), TINTYPE_NATIVEPRIMITIVE, false);
+    native = (TinNativePrimFunction*)tin_object_allocobject(state, sizeof(TinNativePrimFunction), TINTYPE_NATIVEPRIMITIVE, false);
     native->function = function;
     native->name = name;
     return native;
@@ -55,7 +55,7 @@ TinNativePrimFunction* tin_object_makenativeprimitive(TinState* state, TinNative
 TinNativeMethod* tin_object_makenativemethod(TinState* state, TinNativeMethodFn method, TinString* name)
 {
     TinNativeMethod* native;
-    native = (TinNativeMethod*)tin_gcmem_allocobject(state, sizeof(TinNativeMethod), TINTYPE_NATIVEMETHOD, false);
+    native = (TinNativeMethod*)tin_object_allocobject(state, sizeof(TinNativeMethod), TINTYPE_NATIVEMETHOD, false);
     native->method = method;
     native->name = name;
     return native;
@@ -64,7 +64,7 @@ TinNativeMethod* tin_object_makenativemethod(TinState* state, TinNativeMethodFn 
 TinPrimitiveMethod* tin_object_makeprimitivemethod(TinState* state, TinPrimitiveMethodFn method, TinString* name)
 {
     TinPrimitiveMethod* native;
-    native = (TinPrimitiveMethod*)tin_gcmem_allocobject(state, sizeof(TinPrimitiveMethod), TINTYPE_PRIMITIVEMETHOD, false);
+    native = (TinPrimitiveMethod*)tin_object_allocobject(state, sizeof(TinPrimitiveMethod), TINTYPE_PRIMITIVEMETHOD, false);
     native->method = method;
     native->name = name;
     return native;
@@ -73,11 +73,95 @@ TinPrimitiveMethod* tin_object_makeprimitivemethod(TinState* state, TinPrimitive
 TinBoundMethod* tin_object_makeboundmethod(TinState* state, TinValue receiver, TinValue method)
 {
     TinBoundMethod* boundmethod;
-    boundmethod = (TinBoundMethod*)tin_gcmem_allocobject(state, sizeof(TinBoundMethod), TINTYPE_BOUNDMETHOD, false);
+    boundmethod = (TinBoundMethod*)tin_object_allocobject(state, sizeof(TinBoundMethod), TINTYPE_BOUNDMETHOD, false);
     boundmethod->receiver = receiver;
     boundmethod->method = method;
     return boundmethod;
 }
+
+
+TinValue tin_function_getname(TinVM* vm, TinValue instance)
+{
+    double* pv;
+    TinString* name;
+    TinField* field;
+    name = NULL;
+    switch(tin_value_type(instance))
+    {
+        case TINTYPE_FUNCTION:
+            {
+                name = tin_value_asfunction(instance)->name;
+            }
+            break;
+        case TINTYPE_CLOSURE:
+            {
+                name = tin_value_asclosure(instance)->function->name;
+            }
+            break;
+        case TINTYPE_FIELD:
+            {
+                field = tin_value_asfield(instance);
+                if(field->getter != NULL)
+                {
+                    return tin_function_getname(vm, tin_value_fromobject(field->getter));
+                }
+                return tin_function_getname(vm, tin_value_fromobject(field->setter));
+            }
+            break;
+        case TINTYPE_NATIVEPRIMITIVE:
+            {
+                name = tin_value_asnativeprimitive(instance)->name;
+                return tin_value_fromobject(name);
+            }
+            break;
+        case TINTYPE_NATIVEFUNCTION:
+            {
+                name = tin_value_asnativefunction(instance)->name;
+                return tin_value_fromobject(name);
+            }
+            break;
+        case TINTYPE_NATIVEMETHOD:
+            {
+                name = tin_value_asnativemethod(instance)->name;
+                return tin_value_fromobject(name);
+            }
+            break;
+        case TINTYPE_PRIMITIVEMETHOD:
+            {
+                name = tin_value_asprimitivemethod(instance)->name;
+                return tin_value_fromobject(name);
+            }
+            break;
+        case TINTYPE_BOUNDMETHOD:
+            {
+                return tin_function_getname(vm, tin_value_asboundmethod(instance)->method);
+            }
+            break;
+        default:
+            {
+                //return tin_value_makenull(vm->state);
+            }
+            break;
+    }
+    //if(name == NULL)
+    {
+        if(tin_value_isobject(instance))
+        {
+            pv = (double*)tin_value_asobject(instance);
+            return tin_string_format(vm->state, "function (unknown) @", instance);
+
+        }
+        else
+        {
+            pv = (double*)&instance;
+            return tin_string_format(vm->state, "function (native) @", instance);
+        }
+    }
+    //return tin_string_format(vm->state, "function @", tin_value_fromobject(name));
+    //return tin_value_fromobject(name);
+
+}
+
 
 bool tin_value_iscallablefunction(TinValue value)
 {

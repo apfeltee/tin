@@ -13,7 +13,7 @@ void tin_datalist_init(TinDataList* dl, size_t typsz)
 
 void tin_datalist_destroy(TinState* state, TinDataList* dl)
 {
-    TIN_FREE_ARRAY(state, dl->elemsz, dl->values, dl->capacity);
+    tin_gcmem_freearray(state, dl->elemsz, dl->values, dl->capacity);
     tin_datalist_init(dl, dl->rawelemsz);
 }
 
@@ -65,7 +65,7 @@ void tin_datalist_push(TinState* state, TinDataList* dl, intptr_t value)
     {
         oldcapacity = dl->capacity;
         dl->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        dl->values = (intptr_t*)TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
+        dl->values = (intptr_t*)tin_gcmem_growarray(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
     }
     dl->values[dl->count] = value;
     dl->count++;
@@ -79,7 +79,7 @@ void tin_datalist_ensuresize(TinState* state, TinDataList* dl, size_t size)
     {
         oldcapacity = dl->capacity;
         dl->capacity = size;
-        dl->values = (intptr_t*)TIN_GROW_ARRAY(state, dl->values, dl->elemsz, oldcapacity, size);
+        dl->values = (intptr_t*)tin_gcmem_growarray(state, dl->values, dl->elemsz, oldcapacity, size);
         for(i = oldcapacity; i < size; i++)
         {
             dl->values[i] = 0;
@@ -102,7 +102,7 @@ void tin_vallist_init(TinValList* vl)
 
 void tin_vallist_destroy(TinState* state, TinValList* vl)
 {
-    TIN_FREE_ARRAY(state, sizeof(TinValue), vl->values, vl->capacity);
+    tin_gcmem_freearray(state, sizeof(TinValue), vl->values, vl->capacity);
     tin_vallist_init(vl);
 }
 
@@ -144,7 +144,7 @@ void tin_vallist_ensuresize(TinState* state, TinValList* vl, size_t size)
     {
         oldcapacity = vl->capacity;
         vl->capacity = size;
-        vl->values = (TinValue*)TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, size);
+        vl->values = (TinValue*)tin_gcmem_growarray(state, vl->values, sizeof(TinValue), oldcapacity, size);
         for(i = oldcapacity; i < size; i++)
         {
             vl->values[i] = tin_value_makenull(state);
@@ -175,7 +175,7 @@ void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
     {
         oldcapacity = vl->capacity;
         vl->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        vl->values = (TinValue*)TIN_GROW_ARRAY(state, vl->values, sizeof(TinValue), oldcapacity, vl->capacity);
+        vl->values = (TinValue*)tin_gcmem_growarray(state, vl->values, sizeof(TinValue), oldcapacity, vl->capacity);
     }
     vl->values[vl->count] = value;
     vl->count++;
@@ -186,7 +186,7 @@ void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
 TinArray* tin_object_makearray(TinState* state)
 {
     TinArray* array;
-    array = (TinArray*)tin_gcmem_allocobject(state, sizeof(TinArray), TINTYPE_ARRAY, false);
+    array = (TinArray*)tin_object_allocobject(state, sizeof(TinArray), TINTYPE_ARRAY, false);
     tin_vallist_init(&array->list);
     return array;
 }
