@@ -285,7 +285,6 @@ TinInstance* tin_args_checkinstance(TinVM* vm, TinValue* args, uint8_t arg_count
         tin_vm_raiseexitingerror(vm, "expected an instance as argument #%i, got a %s", (int)id,
                                   id >= arg_count ? "null" : tin_tostring_typename(args[id]));
     }
-
     return tin_value_asinstance(args[id]);
 }
 

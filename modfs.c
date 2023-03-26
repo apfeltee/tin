@@ -4,12 +4,17 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
-#ifdef TIN_OS_WINDOWS
+
+#include "priv.h"
+
+#if defined(TIN_OS_UNIXLIKE)
+    #include <unistd.h>
+#elif defined(TIN_OS_WINDOWS)
     #include <windows.h>
     #define stat _stat
 #endif
+
 #include "dirwrap.h"
-#include "priv.h"
 #include "sds.h"
 
 #if defined (S_IFDIR) && !defined (S_ISDIR)
@@ -992,33 +997,74 @@ static TinValue objmethod_file_getlastmodified(TinVM* vm, TinValue instance, siz
 * Directory
 */
 
+
+static TinValue objfunction_directory_pwd(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    enum{ kMaxPath = 1024 };
+    char cwd[kMaxPath] = {0};
+    TinString* ts;
+    (void)instance;
+    (void)argc;
+    (void)argv;
+    if(getcwd(cwd, kMaxPath) == NULL)
+    {
+        tin_state_raiseerror(vm->state, RUNTIME_ERROR, "getcwd() failed");
+        return tin_value_makenull(vm->state);
+    }
+    ts = tin_string_copy(vm->state, cwd, strlen(cwd));
+    return tin_value_fromobject(ts);
+}
+
 static TinValue objfunction_directory_exists(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {
-    const char* directoryname = tin_args_checkstring(vm, argv, argc, 0);
-    struct stat buffer;
+    struct stat sb;
+    const char* dname;
     (void)vm;
     (void)instance;
     (void)argc;
     (void)argv;
-    return tin_value_makebool(vm->state, stat(directoryname, &buffer) == 0 && S_ISDIR(buffer.st_mode));
+    dname = tin_args_checkstring(vm, argv, argc, 0);
+    if(stat(dname, &sb) == 0)
+    {
+        if(S_ISDIR(sb.st_mode))
+        {
+            return tin_value_makebool(vm->state, true);
+        }
+    }
+    return tin_value_makebool(vm->state, false);
 }
 
-static TinValue objstatic_directory_read(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+//bool tin_util_stringglob(const char* patstr, size_t patternlen, const char* text, size_t tlen, bool icase)
+
+TinValue tin_fsutil_readdir(TinVM* vm, const char* dname, const char* pattern, size_t plen, bool isglobbing, bool isglobicase)
 {
+    bool canpush;
+    size_t entlen;
     TinArray* array;
-    TinState* state;
+    TinString* ts;
     TinDirReader rd;
     TinDirItem ent;
-    (void)instance;
-    state = vm->state;
-    array = tin_object_makearray(state);
-    if(tin_fs_diropen(&rd, tin_args_checkstring(vm, argv, argc, 0)))
+    array = tin_object_makearray(vm->state);
+    if(tin_fs_diropen(&rd, dname))
     {
         while(true)
         {
             if(tin_fs_dirread(&rd, &ent))
             {
-                tin_vallist_push(state, &array->list, tin_value_makestring(state, ent.name));
+                canpush = true;
+                entlen = strlen(ent.name);
+                if(isglobbing)
+                {
+                    if(!tin_util_stringglob(pattern, plen, ent.name, entlen, isglobicase))
+                    {
+                        canpush = false;
+                    }
+                }
+                if(canpush)
+                {
+                    ts = tin_string_copy(vm->state, ent.name, entlen);
+                    tin_vallist_push(vm->state, &array->list, tin_value_fromobject(ts));
+                }
             }
             else
             {
@@ -1029,6 +1075,32 @@ static TinValue objstatic_directory_read(TinVM* vm, TinValue instance, size_t ar
     }
     return tin_value_fromobject(array);
 }
+
+static TinValue objfunction_directory_glob(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    bool icase;
+    const char* dname;
+    const char* pat;
+    (void)instance;
+    icase = false;
+    dname = tin_args_checkstring(vm, argv, argc, 0);
+    pat = tin_args_checkstring(vm, argv, argc, 1);
+    if(argc > 2)
+    {
+        icase = tin_args_checkbool(vm, argv, argc, 2);
+    }
+    return tin_fsutil_readdir(vm, dname, pat, strlen(pat), true, icase);
+
+}
+
+static TinValue objstatic_directory_read(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
+{
+    const char* dname;
+    (void)instance;
+    dname = tin_args_checkstring(vm, argv, argc, 0);
+    return tin_fsutil_readdir(vm, dname, NULL, 0, false, false);
+}
+
 
 static void tin_userfile_destroyhandle(TinState* state, TinUserdata* userdata, bool mark)
 {
@@ -1126,8 +1198,8 @@ void tin_open_file_library(TinState* state)
             */
             //tin_class_bindstaticmethod(state, klass, "chdir", objfunction_directory_chdir);
             /* glob may require digging up ye olde reliable wildpat.c */
-            //tin_class_bindstaticmethod(state, klass, "glob", objfunction_directory_glob);
-            //tin_class_bindstaticmethod(state, klass, "pwd", objfunction_directory_pwd);
+            tin_class_bindstaticmethod(state, klass, "glob", objfunction_directory_glob);
+            tin_class_bindstaticmethod(state, klass, "pwd", objfunction_directory_pwd);
             tin_class_bindstaticmethod(state, klass, "exists", objfunction_directory_exists);
             tin_class_bindstaticmethod(state, klass, "read", objstatic_directory_read);
         }

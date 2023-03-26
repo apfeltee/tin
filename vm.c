@@ -55,6 +55,9 @@
 #define tin_vmmac_popgc(est) \
     est->state->gcallow = est->wasallowed;
 
+#define tin_vmmac_continue(bval) \
+    continue;
+
 
 // can't be turned into a function because it is expected to return in
 // tin_vm_execfiber.
@@ -89,7 +92,7 @@
     if(tin_vm_raiseerror(est->vm, format, __VA_ARGS__)) \
     { \
         tin_vmmac_recoverstate(est);  \
-        continue; \
+        tin_vmmac_continue(false); \
     } \
     else \
     { \
@@ -143,7 +146,7 @@
     } \
     if(raiseerr) \
     { \
-        continue; \
+        tin_vmmac_continue(false); \
     }
 
 
@@ -183,7 +186,7 @@
         tin_vmintern_drop(est); \
         if(vm_binaryop_actual(est, op, a, b))\
         { \
-            continue; \
+            tin_vmmac_continue(true); \
         } \
     } \
     if(tin_value_isnull(a)) \

@@ -202,6 +202,77 @@ int tin_util_ucharoffset(char* str, int index)
 #undef is_utf
 }
 
+
+static bool tin_util_charcmp(int first, int second, bool icase)
+{
+    if(icase)
+    {
+        return (tolower(first) == tolower(second));
+    }
+    return (first == second);
+}
+
+bool tin_util_stringglob(const char* patstr, size_t patternlen, const char* text, size_t tlen, bool icase)
+{
+    const char* cp;
+    const char* mp;
+    cp = NULL;
+    mp = NULL;
+    /* sanity checks */
+    if((patstr == NULL) || (patternlen == 0))
+    {
+        return false;
+    }
+    if((text == NULL) || (tlen == 0))
+    {
+        return false;
+    }
+    if((patternlen == 1) && (patstr[0] != '*'))
+    {
+        return false;
+    }
+    while((*text != 0) && (*patstr != '*'))
+    {
+        /* character mismatch and no patternstrcard */
+        if((!tin_util_charcmp(*patstr, *text, icase)) && (*patstr != '?'))
+        {
+            return false;
+        }
+        patstr++;
+        text++;
+    }
+    while(*text != 0)
+    {
+        if(*patstr == '*')
+        {
+            /* reached end of text */
+            if(*++patstr == 0)
+            {
+                return true;
+            }
+            mp = patstr;
+            cp = text + 1;
+        }
+        /* characters match and/or patternstrcard present */
+        else if(tin_util_charcmp(*patstr, *text, icase) || (*patstr == '?'))
+        {
+            patstr++;
+            text++;
+        }
+        else
+        {
+            patstr = mp;
+            text = cp++;
+        }
+    }
+    /* continue as long as patternstrcard present */
+    while(*patstr == '*')
+    {
+        patstr++;
+    }
+    return (!(*patstr));
+}
+
 void tin_strreg_init(TinState* state)
 {
     tin_table_init(state, &state->vm->gcstrings);
@@ -224,6 +295,7 @@ void tin_strreg_put(TinState* state, TinString* string)
 
 TinString* tin_strreg_find(TinState* state, const char* chars, size_t length, uint32_t hash)
 {
+    //return NULL;
     return tin_table_findstring(&state->vm->gcstrings, chars, length, hash);
 }
 
@@ -965,7 +1037,6 @@ static TinValue objfn_string_indexof(TinVM* vm, TinValue instance, size_t argc, 
     }
     return tin_value_makefixednumber(vm->state, -1);
 }
-
 
 static TinValue objfn_string_length(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
 {

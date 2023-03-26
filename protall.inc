@@ -1,4 +1,3 @@
-
 /* ccast.c */
 void tin_exprlist_init(TinAstExprList *array);
 void tin_exprlist_destroy(TinState *state, TinAstExprList *array);
@@ -207,6 +206,7 @@ TinString *tin_emufile_readstring(TinState *state, TinEmulatedFile *femu);
 void tin_ioutil_writemodule(TinModule *module, FILE *fh);
 TinModule *tin_ioutil_readmodule(TinState *state, const char *input, size_t len);
 void tin_userfile_cleanup(TinState *state, TinUserdata *data, bool mark);
+TinValue tin_fsutil_readdir(TinVM *vm, const char *dname, const char *pattern, size_t plen, bool isglobbing, bool isglobicase);
 void tin_open_file_library(TinState *state);
 /* modfunc.c */
 TinFunction *tin_object_makefunction(TinState *state, TinModule *module);
@@ -216,6 +216,7 @@ TinNativePrimFunction *tin_object_makenativeprimitive(TinState *state, TinNative
 TinNativeMethod *tin_object_makenativemethod(TinState *state, TinNativeMethodFn method, TinString *name);
 TinPrimitiveMethod *tin_object_makeprimitivemethod(TinState *state, TinPrimitiveMethodFn method, TinString *name);
 TinBoundMethod *tin_object_makeboundmethod(TinState *state, TinValue receiver, TinValue method);
+TinValue tin_function_getname(TinVM *vm, TinValue instance);
 bool tin_value_iscallablefunction(TinValue value);
 void tin_state_openfunctionlibrary(TinState *state);
 /* modmap.c */
@@ -248,7 +249,6 @@ TinUserdata *tin_object_makeuserdata(TinState *state, size_t size, bool ispointe
 TinReference *tin_object_makereference(TinState *state, TinValue *slot);
 void tin_object_destroy(TinState *state, TinObject *object);
 void tin_object_destroylistof(TinState *state, TinObject *objects);
-TinValue tin_function_getname(TinVM *vm, TinValue instance);
 void tin_state_openobjectlibrary(TinState *state);
 /* modrange.c */
 TinRange *tin_object_makerange(TinState *state, double from, double to);
@@ -261,6 +261,7 @@ int tin_util_encodenumbytes(int value);
 int tin_util_ustringencode(int value, uint8_t *bytes);
 int tin_util_ustringdecode(const uint8_t *bytes, uint32_t length);
 int tin_util_ucharoffset(char *str, int index);
+bool tin_util_stringglob(const char *patstr, size_t patternlen, const char *text, size_t tlen, bool icase);
 void tin_strreg_init(TinState *state);
 void tin_strreg_destroy(TinState *state);
 void tin_strreg_put(TinState *state, TinString *string);

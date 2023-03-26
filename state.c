@@ -173,10 +173,14 @@ TinFunction* tin_state_getglobalfunction(TinState* state, TinString* name)
 
 void tin_state_setglobal(TinState* state, TinString* name, TinValue value)
 {
+    /*
     tin_state_pushroot(state, (TinObject*)name);
     tin_state_pushvalueroot(state, value);
     tin_table_set(state, &state->vm->globals->values, name, value);
     tin_state_poproots(state, 2);
+    */
+    tin_table_set(state, &state->vm->globals->values, name, value);
+
 }
 
 bool tin_state_hasglobal(TinState* state, TinString* name)
@@ -187,10 +191,11 @@ bool tin_state_hasglobal(TinState* state, TinString* name)
 
 void tin_state_defnativefunc(TinState* state, const char* name, TinNativeFunctionFn native)
 {
-    tin_state_pushroot(state, (TinObject*)tin_string_copyconst(state, name));
-    tin_state_pushroot(state, (TinObject*)tin_object_makenativefunction(state, native, tin_value_asstring(tin_state_peekroot(state, 0))));
-    tin_table_set(state, &state->vm->globals->values, tin_value_asstring(tin_state_peekroot(state, 1)), tin_state_peekroot(state, 0));
-    tin_state_poproots(state, 2);
+    TinObject* tobj;
+    TinString* ts;
+    ts = tin_string_copyconst(state, name);
+    tobj =(TinObject*)tin_object_makenativefunction(state, native, ts);
+    tin_state_setglobal(state, ts, tin_value_fromobject(tobj));
 }
 
 void tin_state_defnativeprimitive(TinState* state, const char* name, TinNativePrimitiveFn native)
@@ -304,7 +309,7 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
     fiber = vm->fiber;
     if(callee == NULL)
     {
-        tin_vm_raiseerror(vm, "attempt to tin_vm_callcallable a null value");
+        tin_vm_raiseerror(vm, "attempt to call a null value");
         return NULL;
     }
     if(ignfiber)
@@ -547,11 +552,11 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
     }
     if(tin_value_isnull(callee))
     {
-        tin_vm_raiseerror(vm, "attempt to tin_vm_callcallable a null value");
+        tin_vm_raiseerror(vm, "attempt to call a null value");
     }
     else
     {
-        tin_vm_raiseerror(vm, "can only tin_vm_callcallable functions and classes");
+        tin_vm_raiseerror(vm, "can only call functions and classes");
     }
 
     RETURN_RUNTIME_ERROR(state);

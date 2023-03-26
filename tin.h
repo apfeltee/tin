@@ -63,20 +63,24 @@
 
 
 #if defined(__ANDROID__) || defined(_ANDROID_)
+    #define TIN_OS_UNIXLIKE
+    #define TIN_OS_LINUX
     #define TIN_OS_ANDROID
 #elif defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
     #define TIN_OS_WINDOWS
-#elif __APPLE__
+#elif defined(__APPLE__)
     #define TIN_OS_MAC
-    #define TIN_OS_UNIX_LIKE
-#elif __linux__
+    #define TIN_OS_UNIXLIKE
+#elif defined(__linux__)
     #define TIN_OS_LINUX
-    #define TIN_OS_UNIX_LIKE
+    #define TIN_OS_UNIXLIKE
+#elif defined(__unix__)
+    #define TIN_OS_UNIXLIKE
 #else
     #define TIN_OS_UNKNOWN
 #endif
 
-#ifdef TIN_OS_UNIX_LIKE
+#ifdef TIN_OS_UNIXLIKE
     #define TIN_USE_LIBREADLINE
 #endif
 
@@ -1020,34 +1024,50 @@ static inline bool tin_value_isnatfunction(TinValue value)
     return tin_value_istype(value, TINTYPE_NATIVEFUNCTION);
 }
 
-#define tin_value_isnatprim(value) \
-    tin_value_istype(value, TINTYPE_NATIVEPRIMITIVE)
+static inline bool tin_value_isnatprim(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_NATIVEPRIMITIVE);
+}
 
-#define tin_value_isnatmethod(value) \
-    tin_value_istype(value, TINTYPE_NATIVEMETHOD)
+static inline bool tin_value_isnatmethod(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_NATIVEMETHOD);
+}
 
-#define tin_value_isprimmethod(value) \
-    tin_value_istype(value, TINTYPE_PRIMITIVEMETHOD)
+static inline bool tin_value_isprimmethod(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_PRIMITIVEMETHOD);
+}
 
-#define tin_value_ismodule(value) \
-    tin_value_istype(value, TINTYPE_MODULE)
+static inline bool tin_value_ismodule(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_MODULE);
+}
 
-#define tin_value_isclosure(value) \
-    tin_value_istype(value, TINTYPE_CLOSURE)
+static inline bool tin_value_isclosure(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_CLOSURE);
+}
 
-#define tin_value_isupvalue(value) \
-    tin_value_istype(value, TINTYPE_UPVALUE)
+static inline bool tin_value_isupvalue(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_UPVALUE);
+}
 
-#define tin_value_isclass(value) \
-    tin_value_istype(value, TINTYPE_CLASS)
+static inline bool tin_value_isclass(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_CLASS);
+}
 
-#define tin_value_isinstance(value) \
-    tin_value_istype(value, TINTYPE_INSTANCE)
+static inline bool tin_value_isinstance(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_INSTANCE);
+}
 
-#define tin_value_isarray(value) \
-    tin_value_istype(value, TINTYPE_ARRAY)
-
-
+static inline bool tin_value_isarray(TinValue v)
+{
+    return tin_value_istype(v, TINTYPE_ARRAY);
+}
 
 static inline bool tin_value_isnull(TinValue v)
 {
