@@ -210,6 +210,13 @@ void tin_state_openfunctionlibrary(TinState* state)
         tin_class_bindconstructor(state, klass, util_invalid_constructor);
         tin_class_bindmethod(state, klass, "toString", objfn_function_tostring);
         tin_class_bindgetset(state, klass, "name", objfn_function_name, NULL, false);
+
+        // implement me
+        #if 0
+        tin_class_bindgetset(state, klass, "arguments", objfn_function_arguments, NULL, false);
+        tin_class_bindgetset(state, klass, "length", objfn_function_length, NULL, false);
+        #endif
+
         state->primfunctionclass = klass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));

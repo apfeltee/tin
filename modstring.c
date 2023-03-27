@@ -1,6 +1,7 @@
 
 #include "priv.h"
 #include "sds.h"
+#include "fnmatch.h"
 
 static char *tin_util_itoshelper(char *dest, size_t n, int x)
 {
@@ -214,6 +215,8 @@ static bool tin_util_charcmp(int first, int second, bool icase)
 
 bool tin_util_stringglob(const char* patstr, size_t patternlen, const char* text, size_t tlen, bool icase)
 {
+    return strglob_textmatch(patstr, patternlen, text, tlen, icase ? FNM_CASEFOLD : 0) == 0;
+    #if 0
     const char* cp;
     const char* mp;
     cp = NULL;
@@ -271,6 +274,7 @@ bool tin_util_stringglob(const char* patstr, size_t patternlen, const char* text
         patstr++;
     }
     return (!(*patstr));
+    #endif
 }
 
 void tin_strreg_init(TinState* state)
