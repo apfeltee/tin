@@ -5,6 +5,10 @@
 #include <errno.h>
 #include "priv.h"
 
+
+#define TIN_CCSCAN_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
 void tin_bytelist_init(TinAstByteList* bl)
 {
     bl->values = NULL;
@@ -24,7 +28,7 @@ void tin_bytelist_push(TinState* state, TinAstByteList* bl, uint8_t value)
     if(bl->capacity < bl->count + 1)
     {
         oldcap = bl->capacity;
-        bl->capacity = TIN_GROW_CAPACITY(oldcap);
+        bl->capacity = TIN_CCSCAN_GROWCAPACITY(oldcap);
         bl->values = (uint8_t*)tin_gcmem_growarray(state, bl->values, sizeof(uint8_t), oldcap, bl->capacity);
     }
     bl->values[bl->count] = value;
@@ -479,7 +483,7 @@ static TinAstTokType tin_astlex_scanidenttype(TinAstScanner* scn)
         {TINTOK_KWIN, "in"},
         {TINTOK_KWCONST, "const"},
         {TINTOK_KWREF, "ref"},
-        {0, NULL},
+        {(TinAstTokType)0, NULL},
     };
     size_t i;
     size_t kwlen;

@@ -148,7 +148,7 @@ void util_run_fiber(TinVM* vm, TinFiber* fiber, TinValue* argv, size_t argc, boo
                 tin_vallist_ensuresize(vm->state, &array->list, varargcount);
                 for(i = 0; i < varargcount; i++)
                 {
-                    tin_vallist_set(&array->list, i, argv[i + objfn_function_arg_count - 1]);
+                    tin_vallist_set(vm->state, &array->list, i, argv[i + objfn_function_arg_count - 1]);
                 }
             }
         }

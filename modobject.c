@@ -168,8 +168,7 @@ void tin_object_destroy(TinState* state, TinObject* object)
             break;
         case TINTYPE_ARRAY:
             {
-                tin_vallist_destroy(state, &((TinArray*)object)->list);
-                tin_gcmem_free(state, sizeof(TinArray), object);
+                tin_array_destroy(state, (TinArray*)object);
             }
             break;
         case TINTYPE_MAP:

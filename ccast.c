@@ -1,6 +1,11 @@
 
 #include "priv.h"
 
+
+#define TIN_CCAST_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
+
 void tin_exprlist_init(TinAstExprList* array)
 {
     array->values = NULL;
@@ -20,7 +25,7 @@ void tin_exprlist_push(TinState* state, TinAstExprList* array, TinAstExpression*
     if(array->capacity < array->count + 1)
     {
         oldcapacity = array->capacity;
-        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->capacity = TIN_CCAST_GROWCAPACITY(oldcapacity);
         array->values = (TinAstExpression**)tin_gcmem_growarray(state, array->values, sizeof(TinAstExpression*), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
@@ -56,7 +61,7 @@ void tin_paramlist_push(TinState* state, TinAstParamList* array, TinAstParameter
     if(array->capacity < array->count + 1)
     {
         size_t oldcapacity = array->capacity;
-        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->capacity = TIN_CCAST_GROWCAPACITY(oldcapacity);
         array->values = (TinAstParameter*)tin_gcmem_growarray(state, array->values, sizeof(TinAstParameter), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;

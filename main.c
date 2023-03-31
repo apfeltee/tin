@@ -17,6 +17,8 @@
     #endif
 #endif
 
+#undef TIN_HAVE_READLINE
+
 #include "priv.h"
 
 enum
@@ -270,6 +272,8 @@ static int run_repl(TinState* state)
     return 0;
 }
 
+#define ptsize(t) fprintf(stderr, "sizeof(%s) = %d\n", #t, (int)sizeof(t))
+
 int main(int argc, char* argv[])
 {
     int i;
@@ -283,6 +287,7 @@ int main(int argc, char* argv[])
     TinStatus result;
     cmdfailed = false;
     result = TINSTATE_OK;
+    ptsize(TinValue);
     populate_flags(argc, 1, argv, "ed", &fx);
     state = tin_make_state();
     tin_open_libraries(state);

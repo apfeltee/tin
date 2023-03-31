@@ -11,7 +11,7 @@
     #include <unistd.h>
 #elif defined(TIN_OS_WINDOWS)
     #include <windows.h>
-    #define stat _stat
+    #include <direct.h>
 #endif
 
 #include "dirwrap.h"
@@ -56,6 +56,8 @@ static uint8_t g_tmpbyte;
 static uint16_t g_tmpshort;
 static uint32_t g_tmpint;
 static double g_tmpdouble;
+
+extern char* getcwd(char*, size_t);
 
 static void tin_ioutil_writechunk(FILE* fh, TinChunk* chunk);
 static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModule* module, TinChunk* chunk);
@@ -351,7 +353,7 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModu
     size_t i;
     size_t count;
     uint8_t type;
-    tin_chunk_init(chunk);
+    tin_chunk_init(state, chunk);
     count = tin_emufile_readuint32(femu);
     chunk->code = (uint8_t*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(uint8_t) * count);
     chunk->count = count;
@@ -381,7 +383,7 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModu
     chunk->constants.count = count;
     chunk->constants.capacity = count;
     */
-    tin_vallist_init(&chunk->constants);
+    tin_vallist_init(state, &chunk->constants);
     tin_vallist_ensuresize(state, &chunk->constants, count);
     for(i = 0; i < count; i++)
     {
@@ -389,7 +391,7 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModu
         if(type == 0)
         {
             //chunk->constants.values[i] = tin_value_makenumber(vm->state, tin_emufile_readdouble(femu));
-            tin_vallist_set(&chunk->constants, i, tin_value_makefloatnumber(state, tin_emufile_readdouble(femu)));
+            tin_vallist_set(state, &chunk->constants, i, tin_value_makefloatnumber(state, tin_emufile_readdouble(femu)));
         }
         else
         {
@@ -398,14 +400,14 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModu
                 case TINTYPE_STRING:
                     {
                         //chunk->constants.values[i] = tin_value_fromobject(tin_emufile_readstring(state, femu));
-                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_emufile_readstring(state, femu)));
+                        tin_vallist_set(state, &chunk->constants, i, tin_value_fromobject(tin_emufile_readstring(state, femu)));
 
                     }
                     break;
                 case TINTYPE_FUNCTION:
                     {
                         //chunk->constants.values[i] = tin_value_fromobject(tin_ioutil_readfunction(state, femu, module));
-                        tin_vallist_set(&chunk->constants, i, tin_value_fromobject(tin_ioutil_readfunction(state, femu, module)));
+                        tin_vallist_set(state, &chunk->constants, i, tin_value_fromobject(tin_ioutil_readfunction(state, femu, module)));
                     }
                     break;
                 default:
@@ -781,24 +783,18 @@ static long tin_util_filesize(FILE* fh)
 {
     int r;
     int fd;
-    struct stat sb;
+    struct stat st;
     fd = fileno(fh);
     if(fd == -1)
     {
         return -1;
     }
-    /* visualstudio is being a little bitch */
-    #if defined(__cplusplus) && defined(_MSC_VER)
-        //r = fstat(fd, reinterpret_cast<struct stat*>(&sb));
-        r = -1;
-    #else
-        r = fstat(fd, (struct stat*)&sb);
-    #endif
+    r = fstat(fd, &st);
     if(r == -1)
     {
         return -1;
     }
-    return sb.st_size;
+    return st.st_size;
 }
 
 static TinValue objmethod_file_readall(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)

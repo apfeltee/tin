@@ -35,53 +35,57 @@ class Tree {
         // If current tree/node is a leaf node, just
         // return the value.
         if(!this.left)
+        {
             return this.value;
+        }
         return this.value + this.right.check() - this.left.check();
     }
 };
 
-var minDepth = 4;
-var maxDepth = 14/1;
+var mindepth = 4;
+var maxdepth = 14/1;
 
-var stretchDepth = maxDepth + 1;
+var stretchdepth = maxdepth + 1;
 
-println($"Min depth : {minDepth}, max depth : {maxDepth} and stretched depth : {stretchDepth}");
+println($"Min depth : {mindepth}, max depth : {maxdepth} and stretched depth : {stretchdepth}");
 println("Starting benchmark...");
 
 
-println($"Check 1 : {Tree(0, stretchDepth).check()}");
+println($"Check 1 : {Tree(0, stretchdepth).check()}");
 
 // Long lived tree will be benchmarked later.
 
-var long_lived_tree = Tree(0, maxDepth);
+var ancient = Tree(0, maxdepth);
 
 // Maximum number of trees/nodes (BT) in max depth.
 
-var trees = 1;
+var totaltrees = 1;
 
-for(var i = 0; i < maxDepth; i++) 
-	trees *= 2;
+for(var i = 0; i < maxdepth; i++) 
+	totaltrees *= 2;
 
-var check_count = 2;
+var checkcnt = 2;
 
-for(var i = minDepth ; i < maxDepth; i += 2)
+for(var i = mindepth ; i < maxdepth; i += 2)
 {
-    var check = 0;
+    var checkval = 0;
 
-    for(var j = 0; j < trees; j++) 
+    for(var j = 0; j < totaltrees; j++) 
     {
-        check += Tree(j, i).check() + Tree(-j, i).check();    
+        checkval += Tree(j, i).check() + Tree(-j, i).check();    
     }
-    println($"Number of trees : {trees * 2}");
+    println($"Number of trees : {totaltrees * 2}");
     println($"Current running depth : {i}");
-    println($"Check {check_count++} : {check}");
-    trees /= 4;
+    checkcnt++;
+    actualval = (checkval == null) ? "(no value)" : checkval;
+    println($"Check {checkcnt} : {actualval}");
+    totaltrees /= 4;
 }
 
-// Checking long_lived_tree, which been there for long.
-// The "long_lived_tree" variable checks the sustainability.
+// Checking ancient, which been there for long.
+// The "ancient" variable checks the sustainability.
 
-println($"Long lived tree depth : {maxDepth}");
-println($"Check {check_count} : {long_lived_tree.check()}");
+println($"Long lived tree depth : {maxdepth}");
+println($"Check {checkcnt} : {ancient.check()}");
 
 println("Benchmarking finished!");

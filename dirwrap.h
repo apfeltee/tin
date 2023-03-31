@@ -7,12 +7,16 @@
 #define TINDIR_PATHSIZE 1024
 #if defined(__unix__) || defined(__linux__)
     #define TINDIR_ISUNIX
+#elif defined(_WIN32) || defined(_WIN64)
+    #define TINDIR_ISWINDOWS
 #endif
 
 #if defined(TINDIR_ISUNIX)
     #include <dirent.h>
 #else
-    #include <windows.h>
+    #if defined(TINDIR_ISWINDOWS)
+        #include <windows.h>
+    #endif
 #endif
 
 #if defined (S_IFDIR) && !defined (S_ISDIR)

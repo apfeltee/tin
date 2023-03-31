@@ -67,6 +67,7 @@ function testfiber()
     println("fiber is working fine");
 }
 
+function testvars()
 {
     println("testing basic vars")
     {
@@ -79,6 +80,20 @@ function testfiber()
         a = [1, 2, 3]
         check("basic array assignment", (a == [1, 2, 3]) && (a.length == 3))
     }
+}
+
+function testmap()
+{
+    println("testing map");
+    var m = {"foo": "bar"};
+    check("checking literal map instantiation", m["foo"] == "bar");
+    m["quux"] = "blah";
+    check("checking map assignment", m["quux"] == "blah");
+}
+
+{
+    testvars();
+    testmap();
     testfiber();
 }
 

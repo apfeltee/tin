@@ -5,7 +5,7 @@ TinFunction* tin_object_makefunction(TinState* state, TinModule* module)
 {
     TinFunction* function;
     function = (TinFunction*)tin_object_allocobject(state, sizeof(TinFunction), TINTYPE_FUNCTION, false);
-    tin_chunk_init(&function->chunk);
+    tin_chunk_init(state, &function->chunk);
     function->name = NULL;
     function->arg_count = 0;
     function->upvalue_count = 0;
@@ -85,6 +85,7 @@ TinValue tin_function_getname(TinVM* vm, TinValue instance)
     double* pv;
     TinString* name;
     TinField* field;
+    (void)pv;
     name = NULL;
     switch(tin_value_type(instance))
     {

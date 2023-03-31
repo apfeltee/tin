@@ -607,7 +607,7 @@ bool tin_vm_callcallable(TinVM* vm, TinFunction* function, TinClosure* closure, 
             tin_state_poproot(vm->state);
             for(i = 0; i < varargcount; i++)
             {
-                tin_vallist_set(&array->list, i, vm->fiber->stack_top[(int)i - (int)varargcount]);
+                tin_vallist_set(vm->state, &array->list, i, vm->fiber->stack_top[(int)i - (int)varargcount]);
             }
             vm->fiber->stack_top -= varargcount;
             tin_vm_push(vm, tin_value_fromobject(array));
@@ -1136,28 +1136,11 @@ TIN_VM_INLINE bool tin_vmdo_call(TinExecState* est, TinValue* finalresult)
 {
     size_t argc;
     TinValue peeked;
-    TinValue vname;
     TinString* name;
-    const char* cstr;
-    cstr = "?tin_vmdo_call?";
-
-
     argc = tin_vmintern_readbyte(est);
     tin_vmintern_writeframe(est, est->ip);
-
-
-
-    //name = tin_vmintern_readstringlong(est);
-    //name = tin_vmintern_readstring(est);
-    //vname =  tin_vmintern_readconstant(est);
     name = tin_vmintern_readstringlong(est);
     peeked = tin_vmintern_peek(est, argc);
-    
-    //name = tin_string_copy(est->state, cstr, strlen(cstr));
-    //name = est->frame->closure->function->name;
-    //name = est->frame->function->name;
-    //name = tin_value_asstring(vname);
-
     tin_vmmac_callvalue(peeked, name, argc);
     return true;
 }
@@ -2384,7 +2367,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 values = &tin_value_asarray(tin_vmintern_peek(est, 1))->list;
                 arindex = tin_vallist_count(values);
                 tin_vallist_ensuresize(est->state, values, arindex + 1);
-                tin_vallist_set(values, arindex, tin_vmintern_peek(est, 0));
+                tin_vallist_set(est->state, values, arindex, tin_vmintern_peek(est, 0));
                 tin_vmintern_drop(est);
                 continue;
             }

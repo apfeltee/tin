@@ -2,32 +2,48 @@
 #include <string.h>
 #include "priv.h"
 
+
+#define TIN_CCEMIT_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
+
 static bool tin_astemit_emitexpression(TinAstEmitter* emt, TinAstExpression* expr);
 static void tin_astemit_resolvestmt(TinAstEmitter* emt, TinAstExpression* stmt);
 
 static inline void tin_uintlist_init(TinUintList* array)
 {
-    tin_datalist_init(&array->list, sizeof(size_t));
+    array->values = NULL;
+    array->capacity = 0;
+    array->count = 0;
 }
 
 static inline void tin_uintlist_destroy(TinState* state, TinUintList* array)
 {
-    tin_datalist_destroy(state, &array->list);
+    tin_gcmem_freearray(state, sizeof(size_t), array->values, array->capacity);
+    tin_uintlist_init(array);
 }
 
 static inline void tin_uintlist_push(TinState* state, TinUintList* array, size_t value)
 {
-    tin_datalist_push(state, &array->list, value);
+    size_t oldcapacity;
+    if(array->capacity < (array->count + 1))
+    {
+        oldcapacity = array->capacity;
+        array->capacity = TIN_CCEMIT_GROWCAPACITY(oldcapacity);
+        array->values = (size_t*)tin_gcmem_growarray(state, array->values, sizeof(size_t), oldcapacity, array->capacity);
+    }
+    array->values[array->count] = value;
+    array->count++;
 }
 
 static inline size_t tin_uintlist_get(TinUintList* array, size_t idx)
 {
-    return (size_t)tin_datalist_get(&array->list, idx);
+    return array->values[idx];
 }
 
 static inline size_t tin_uintlist_count(TinUintList* array)
 {
-    return tin_datalist_count(&array->list);
+    return array->count;
 }
 
 static void resolve_statements(TinAstEmitter* emt, TinAstExprList* statements)
@@ -58,7 +74,7 @@ void tin_privlist_push(TinState* state, TinAstPrivList* array, TinAstPrivate val
     if(array->capacity < array->count + 1)
     {
         oldcapacity = array->capacity;
-        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->capacity = TIN_CCEMIT_GROWCAPACITY(oldcapacity);
         array->values = (TinAstPrivate*)tin_gcmem_growarray(state, array->values, sizeof(TinAstPrivate), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
@@ -83,7 +99,7 @@ void tin_loclist_push(TinState* state, TinAstLocList* array, TinAstLocal value)
     if(array->capacity < array->count + 1)
     {
         oldcapacity = array->capacity;
-        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->capacity = TIN_CCEMIT_GROWCAPACITY(oldcapacity);
         array->values = (TinAstLocal*)tin_gcmem_growarray(state, array->values, sizeof(TinAstLocal), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;
@@ -729,7 +745,7 @@ static bool tin_astemit_doemitliteral(TinAstEmitter* emt, TinAstExpression* expr
     }
     else
     {
-        UNREACHABLE;
+        assert(!"missing or invalid emit instruction for literal");
     }
     return true;
 }
@@ -867,8 +883,6 @@ static bool tin_astemit_doemitbinary(TinAstEmitter* emt, TinAstExpression* expr)
         default:
             {
                 fprintf(stderr, "in tin_astemit_emitexpression: binary expression #2 is NULL! might be a bug\n");
-                //return;
-                //UNREACHABLE;
             }
         break;
     }
@@ -900,8 +914,6 @@ static bool tin_astemit_doemitunary(TinAstEmitter* emt, TinAstExpression* expr)
         default:
             {
                 fprintf(stderr, "in tin_astemit_emitexpression: unary expr is NULL! might be an internal bug\n");
-                //return;
-                //UNREACHABLE;
             }
             break;
     }

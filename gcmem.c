@@ -4,6 +4,11 @@
 #include <time.h>
 #include "priv.h"
 
+
+#define TIN_GCMEM_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
+
 #if 0
 static TinObject g_stackmem[1024 * (1024 * 4)];
 static size_t g_objcount = 0;
@@ -117,7 +122,7 @@ void tin_gcmem_markobject(TinVM* vm, TinObject* object)
 #endif
     if(vm->gcgraycapacity < vm->gcgraycount + 1)
     {
-        vm->gcgraycapacity = TIN_GROW_CAPACITY(vm->gcgraycapacity);
+        vm->gcgraycapacity = TIN_GCMEM_GROWCAPACITY(vm->gcgraycapacity);
         vm->gcgraystack = (TinObject**)realloc(vm->gcgraystack, sizeof(TinObject*) * vm->gcgraycapacity);
     }
     vm->gcgraystack[vm->gcgraycount++] = object;
@@ -159,13 +164,18 @@ void tin_gcmem_vmmarkroots(TinVM* vm)
     tin_gcmem_marktable(vm, &vm->globals->values);
 }
 
-void tin_gcmem_markarray(TinVM* vm, TinValList* array)
+void tin_gcmem_markvallist(TinVM* vm, TinValList* array)
 {
     size_t i;
     for(i = 0; i < tin_vallist_count(array); i++)
     {
         tin_gcmem_markvalue(vm, tin_vallist_get(array, i));
     }
+}
+
+void tin_gcmem_markarray(TinVM* vm, TinArray* array)
+{
+    tin_gcmem_markvallist(vm, &array->list);
 }
 
 void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
@@ -204,7 +214,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
                 TinFunction* function;
                 function = (TinFunction*)object;
                 tin_gcmem_markobject(vm, (TinObject*)function->name);
-                tin_gcmem_markarray(vm, &function->chunk.constants);
+                tin_gcmem_markvallist(vm, &function->chunk.constants);
             }
             break;
         case TINTYPE_FIBER:
@@ -302,7 +312,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             {
                 TinArray* ta;
                 ta = (TinArray*)object;
-                tin_gcmem_markarray(vm, &ta->list);
+                tin_gcmem_markvallist(vm, &ta->list);
             }
             break;
         case TINTYPE_MAP:

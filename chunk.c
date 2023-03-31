@@ -1,7 +1,12 @@
 
 #include "priv.h"
 
-void tin_chunk_init(TinChunk* chunk)
+
+#define TIN_CHUNK_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
+
+void tin_chunk_init(TinState* state, TinChunk* chunk)
 {
     chunk->count = 0;
     chunk->capacity = 0;
@@ -10,7 +15,7 @@ void tin_chunk_init(TinChunk* chunk)
     chunk->line_count = 0;
     chunk->line_capacity = 0;
     chunk->lines = NULL;
-    tin_vallist_init(&chunk->constants);
+    tin_vallist_init(state, &chunk->constants);
 }
 
 void tin_chunk_destroy(TinState* state, TinChunk* chunk)
@@ -18,7 +23,7 @@ void tin_chunk_destroy(TinState* state, TinChunk* chunk)
     tin_gcmem_freearray(state, sizeof(uint8_t), chunk->code, chunk->capacity);
     tin_gcmem_freearray(state, sizeof(uint16_t), chunk->lines, chunk->line_capacity);
     tin_vallist_destroy(state, &chunk->constants);
-    tin_chunk_init(chunk);
+    tin_chunk_init(state, chunk);
 }
 
 void tin_chunk_push(TinState* state, TinChunk* chunk, uint8_t byte, uint16_t line)
@@ -29,7 +34,7 @@ void tin_chunk_push(TinState* state, TinChunk* chunk, uint8_t byte, uint16_t lin
     if(chunk->capacity < chunk->count + 1)
     {
         oldcapacity = chunk->capacity;
-        chunk->capacity = TIN_GROW_CAPACITY(oldcapacity + 2);
+        chunk->capacity = TIN_CHUNK_GROWCAPACITY(oldcapacity + 2);
         chunk->code = (uint8_t*)tin_gcmem_growarray(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity + 2);
     }
     chunk->code[chunk->count] = byte;
@@ -41,7 +46,7 @@ void tin_chunk_push(TinState* state, TinChunk* chunk, uint8_t byte, uint16_t lin
     if(chunk->line_capacity < chunk->line_count + 2)
     {
         oldcapacity = chunk->line_capacity;
-        chunk->line_capacity = TIN_GROW_CAPACITY(chunk->line_capacity + 2);
+        chunk->line_capacity = TIN_CHUNK_GROWCAPACITY(chunk->line_capacity + 2);
         chunk->lines = (uint16_t*)tin_gcmem_growarray(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity + 2);
         if(oldcapacity == 0)
         {

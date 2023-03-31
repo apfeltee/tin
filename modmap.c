@@ -1,6 +1,13 @@
 
 #include "priv.h"
 
+#define TABLE_MAX_LOAD 0.85
+
+#define TIN_MODMAP_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
+
+
 void tin_table_init(TinState* state, TinTable* table)
 {
     table->state = state;
@@ -85,7 +92,7 @@ bool tin_table_set(TinState* state, TinTable* table, TinString* key, TinValue va
     TinTabEntry* entry;
     if((table->count + 1) > ((table->capacity + 1) * TABLE_MAX_LOAD))
     {
-        capacity = TIN_GROW_CAPACITY(table->capacity + 1) - 1;
+        capacity = TIN_MODMAP_GROWCAPACITY(table->capacity + 1) - 1;
         adjust_capacity(state, table, capacity);
     }
     entry = find_entry(table->entries, table->capacity, key);

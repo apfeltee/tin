@@ -3,6 +3,11 @@
 
 #define TIN_DEBUG_OPTIMIZER
 
+
+#define TIN_CCOPT_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
+
 #define optc_do_binary_op(op) \
     if(tin_value_isnumber(a) && tin_value_isnumber(b)) \
     { \
@@ -92,7 +97,7 @@ void tin_varlist_push(TinState* state, TinVarList* array, TinVariable value)
     if(array->capacity < array->count + 1)
     {
         oldcapacity = array->capacity;
-        array->capacity = TIN_GROW_CAPACITY(oldcapacity);
+        array->capacity = TIN_CCOPT_GROWCAPACITY(oldcapacity);
         array->values = (TinVariable*)tin_gcmem_growarray(state, array->values, sizeof(TinVariable), oldcapacity, array->capacity);
     }
     array->values[array->count] = value;

@@ -2,108 +2,48 @@
 #include "priv.h"
 #include "sds.h"
 
-void tin_datalist_init(TinDataList* dl, size_t typsz)
-{
-    dl->values = NULL;
-    dl->capacity = 0;
-    dl->count = 0;
-    dl->rawelemsz = typsz;
-    dl->elemsz = dl->rawelemsz + sizeof(intptr_t);
-}
+#if 1
+    #define TIN_MODARRAY_GROWCAPACITY(cap) \
+        (((cap) < 8) ? (8) : ((cap) * 2))
+#else
+    #define TIN_MODARRAY_GROWCAPACITY(cap) \
+        (((cap) < 8) ? (8) : ((cap) + 8))
+#endif
 
-void tin_datalist_destroy(TinState* state, TinDataList* dl)
+/* do *not* call outside of this file */
+void tin_vallist_initsizeintern(TinState* state, TinValList* vl, size_t tsz)
 {
-    tin_gcmem_freearray(state, dl->elemsz, dl->values, dl->capacity);
-    tin_datalist_init(dl, dl->rawelemsz);
-}
-
-size_t tin_datalist_count(TinDataList* dl)
-{
-    return dl->count;
-}
-
-size_t tin_datalist_size(TinDataList* dl)
-{
-    return dl->count;
-}
-
-size_t tin_datalist_capacity(TinDataList* dl)
-{
-    return dl->capacity;
-}
-
-void tin_datalist_clear(TinDataList* dl)
-{
-    dl->count = 0;
-}
-
-void tin_datalist_setcount(TinDataList* dl, size_t nc)
-{
-    dl->count = nc;
-}
-
-void tin_datalist_deccount(TinDataList* dl)
-{
-    dl->count--;
-}
-
-intptr_t tin_datalist_get(TinDataList* dl, size_t idx)
-{
-    return dl->values[idx];
-}
-
-intptr_t tin_datalist_set(TinDataList* dl, size_t idx, intptr_t val)
-{
-    dl->values[idx] = val;
-    return val;
-}
-
-void tin_datalist_push(TinState* state, TinDataList* dl, intptr_t value)
-{
-    size_t oldcapacity;
-    if(dl->capacity < (dl->count + 1))
-    {
-        oldcapacity = dl->capacity;
-        dl->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        dl->values = (intptr_t*)tin_gcmem_growarray(state, dl->values, dl->elemsz, oldcapacity, dl->capacity);
-    }
-    dl->values[dl->count] = value;
-    dl->count++;
-}
-
-void tin_datalist_ensuresize(TinState* state, TinDataList* dl, size_t size)
-{
-    size_t i;
-    size_t oldcapacity;
-    if(dl->capacity < size)
-    {
-        oldcapacity = dl->capacity;
-        dl->capacity = size;
-        dl->values = (intptr_t*)tin_gcmem_growarray(state, dl->values, dl->elemsz, oldcapacity, size);
-        for(i = oldcapacity; i < size; i++)
-        {
-            dl->values[i] = 0;
-        }
-    }
-    if(dl->count < size)
-    {
-        dl->count = size;
-    }
-}
-
-/* -------------------------*/
-
-void tin_vallist_init(TinValList* vl)
-{
+    (void)state;
     vl->values = NULL;
     vl->capacity = 0;
     vl->count = 0;
+    vl->elemsize = tsz;
+}
+
+void tin_vallist_initsize(TinState* state, TinValList* vl, size_t tsz)
+{
+    size_t vsz;
+    vsz = sizeof(TinValue);
+    if(tsz < vsz)
+    {
+        tsz = vsz + tsz;
+    }
+    return tin_vallist_initsizeintern(state, vl, tsz);
+}
+
+void tin_vallist_init(TinState* state, TinValList* vl)
+{
+    size_t tsz;
+    tsz = sizeof(TinValue);
+    return tin_vallist_initsizeintern(state, vl, tsz);
 }
 
 void tin_vallist_destroy(TinState* state, TinValList* vl)
 {
-    tin_gcmem_freearray(state, sizeof(TinValue), vl->values, vl->capacity);
-    tin_vallist_init(vl);
+    size_t tsz;
+    tsz = vl->elemsize;
+    tin_gcmem_freearray(state, tsz, vl->values, vl->capacity);
+    tin_vallist_initsizeintern(state, vl, tsz);
 }
 
 size_t tin_vallist_size(TinValList* vl)
@@ -136,15 +76,22 @@ void tin_vallist_deccount(TinValList* vl)
     vl->count--;
 }
 
-void tin_vallist_ensuresize(TinState* state, TinValList* vl, size_t size)
+/* do *not* call outside of this file */
+void tin_vallist_ensuresizeintern(TinState* state, TinValList* vl, size_t size)
 {
     size_t i;
+    size_t tsz;
     size_t oldcapacity;
+    if(size == 0)
+    {
+        size = 1;
+    }
+    tsz = vl->elemsize;
     if(vl->capacity < size)
     {
         oldcapacity = vl->capacity;
         vl->capacity = size;
-        vl->values = (TinValue*)tin_gcmem_growarray(state, vl->values, sizeof(TinValue), oldcapacity, size);
+        vl->values = (TinValue*)tin_gcmem_growarray(state, vl->values, tsz, oldcapacity, size);
         for(i = oldcapacity; i < size; i++)
         {
             vl->values[i] = tin_value_makenull(state);
@@ -156,9 +103,15 @@ void tin_vallist_ensuresize(TinState* state, TinValList* vl, size_t size)
     }
 }
 
-
-TinValue tin_vallist_set(TinValList* vl, size_t idx, TinValue val)
+void tin_vallist_ensuresize(TinState* state, TinValList* vl, size_t size)
 {
+    //return;
+    tin_vallist_ensuresizeintern(state, vl, size);
+}
+
+TinValue tin_vallist_set(TinState* state, TinValList* vl, size_t idx, TinValue val)
+{
+    //tin_vallist_ensuresizeintern(state, vl, idx+1);
     vl->values[idx] = val;
     return val;
 }
@@ -170,12 +123,14 @@ TinValue tin_vallist_get(TinValList* vl, size_t idx)
 
 void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
 {
+    size_t tsz;
     size_t oldcapacity;
+    tsz = vl->elemsize;
     if(vl->capacity < vl->count + 1)
     {
         oldcapacity = vl->capacity;
-        vl->capacity = TIN_GROW_CAPACITY(oldcapacity);
-        vl->values = (TinValue*)tin_gcmem_growarray(state, vl->values, sizeof(TinValue), oldcapacity, vl->capacity);
+        vl->capacity = TIN_MODARRAY_GROWCAPACITY(oldcapacity);
+        vl->values = (TinValue*)tin_gcmem_growarray(state, vl->values, tsz, oldcapacity, vl->capacity);
     }
     vl->values[vl->count] = value;
     vl->count++;
@@ -187,8 +142,14 @@ TinArray* tin_object_makearray(TinState* state)
 {
     TinArray* array;
     array = (TinArray*)tin_object_allocobject(state, sizeof(TinArray), TINTYPE_ARRAY, false);
-    tin_vallist_init(&array->list);
+    tin_vallist_init(state, &array->list);
     return array;
+}
+
+void tin_array_destroy(TinState* state, TinArray* arr)
+{
+    tin_vallist_destroy(state, &arr->list);
+    tin_gcmem_free(state, sizeof(TinArray), arr);
 }
 
 size_t tin_array_count(TinArray* arr)
@@ -239,15 +200,15 @@ TinValue tin_array_removeat(TinState* state, TinArray* array, size_t index)
     value = tin_vallist_get(vl, index);
     if(index == count - 1)
     {
-        tin_vallist_set(vl, index, tin_value_makenull(state));
+        tin_vallist_set(state, vl, index, tin_value_makenull(state));
     }
     else
     {
         for(i = index; i < tin_vallist_count(vl) - 1; i++)
         {
-            tin_vallist_set(vl, i, tin_vallist_get(vl, i + 1));
+            tin_vallist_set(state, vl, i, tin_vallist_get(vl, i + 1));
         }
-        tin_vallist_set(vl, count - 1, tin_value_makenull(state));
+        tin_vallist_set(state, vl, count - 1, tin_value_makenull(state));
     }
     tin_vallist_deccount(vl);
     return value;
@@ -270,8 +231,7 @@ TinValue tin_array_get(TinState* state, TinArray* array, size_t idx)
 
 void tin_array_set(TinState* state, TinArray* array, size_t idx, TinValue val)
 {
-    (void)state;
-    tin_vallist_set(&array->list, idx, val);
+    tin_vallist_set(state, &array->list, idx, val);
 }
 
 TinArray* tin_array_splice(TinState* state, TinArray* oa, int from, int to)
@@ -346,7 +306,7 @@ static TinValue objfn_array_subscript(TinVM* vm, TinValue instance, size_t argc,
             index = fmax(0, tin_vallist_count(vl) + index);
         }
         tin_vallist_ensuresize(vm->state, vl, index + 1);
-        return tin_vallist_set(vl, index, argv[1]);
+        return tin_vallist_set(vm->state, vl, index, argv[1]);
     }
     if(!tin_value_isnumber(argv[0]))
     {
@@ -438,10 +398,10 @@ static TinValue objfn_array_insert(TinVM* vm, TinValue instance, size_t argc, Ti
         tin_vallist_ensuresize(vm->state, vl, tin_vallist_count(vl)  + 1);
         for(i = tin_vallist_count(vl) - 1; i > index; i--)
         {
-            tin_vallist_set(vl, i, tin_vallist_get(vl, i - 1));
+            tin_vallist_set(vm->state, vl, i, tin_vallist_get(vl, i - 1));
         }
     }
-    tin_vallist_set(vl, index, value);
+    tin_vallist_set(vm->state, vl, index, value);
     return tin_value_makenull(vm->state);
 }
 
@@ -571,10 +531,12 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
 {
     size_t i;
     size_t jlen;
-    size_t index;
+    //size_t index;
     size_t length;
+    size_t tmplen;
     char* chars;
     TinValList* vl;
+    TinString* res;
     TinString* string;
     TinString* joinee;
     (void)argc;
@@ -587,7 +549,7 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
     }
     vl = &tin_value_asarray(instance)->list;
     jlen = 0;
-    index = 0;
+    //index = 0;
     chars = sds_makeempty();
     chars = sds_allocroomfor(chars, length + 1);
     if(joinee != NULL)
@@ -597,19 +559,22 @@ static TinValue objfn_array_join(TinVM* vm, TinValue instance, size_t argc, TinV
     for(i = 0; i < tin_vallist_count(vl); i++)
     {
         string = tin_value_tostring(vm->state, tin_vallist_get(vl, i));
-        memcpy(chars + index, string->data, tin_string_getlength(string));
-        chars = sds_appendlen(chars, string->data, tin_string_getlength(string));
-        index += tin_string_getlength(string);
+        tmplen = tin_string_getlength(string);
+        //memcpy(chars + index, string->data, tin_string_getlength(string));
+        chars = sds_appendlen(chars, string->data, tmplen);
+        //index += tmplen;
         if(joinee != NULL)
         {
             //if((i+1) < vl->count)
             {
                 chars = sds_appendlen(chars, joinee->data, jlen);
             }
-            index += jlen;
+            //index += jlen;
         }
     }
-    return tin_value_fromobject(tin_string_take(vm->state, chars, length, true));
+    length = sds_getlength(chars);
+    res = tin_string_take(vm->state, chars, length, true);
+    return tin_value_fromobject(res);
 }
 
 static TinValue objfn_array_sort(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)

@@ -4,6 +4,11 @@
 #include <time.h>
 #include "priv.h"
 
+
+#define TIN_GCSTATE_GROWCAPACITY(cap) \
+    (((cap) < 8) ? (8) : ((cap) * 2))
+
+
 static bool measurecompilationtime;
 static double lastsourcetime = 0;
 
@@ -92,7 +97,7 @@ TinState* tin_make_state()
         state->printfn = tin_util_default_printf;
         tin_writer_init_file(state, &state->stdoutwriter, stdout, true);
     }
-    tin_vallist_init(&state->gclightobjects);
+    tin_vallist_init(state, &state->gclightobjects);
     state->haderror = false;
     state->gcroots = NULL;
     state->gcrootcount = 0;
@@ -357,7 +362,7 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
             tin_vallist_ensuresize(vm->state, &array->list, varargc);
             for(i = 0; i < varargc; i++)
             {
-                tin_vallist_set(&array->list, i, fiber->stack_top[(int)i - (int)varargc]);
+                tin_vallist_set(vm->state, &array->list, i, fiber->stack_top[(int)i - (int)varargc]);
             }
 
             fiber->stack_top -= varargc;
@@ -600,7 +605,7 @@ void tin_state_pushvalueroot(TinState* state, TinValue value)
 {
     if(state->gcrootcount + 1 >= state->gcrootcapacity)
     {
-        state->gcrootcapacity = TIN_GROW_CAPACITY(state->gcrootcapacity);
+        state->gcrootcapacity = TIN_GCSTATE_GROWCAPACITY(state->gcrootcapacity);
         state->gcroots = (TinValue*)realloc(state->gcroots, state->gcrootcapacity * sizeof(TinValue));
     }
     state->gcroots[state->gcrootcount++] = value;

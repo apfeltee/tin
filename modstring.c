@@ -203,7 +203,7 @@ int tin_util_ucharoffset(char* str, int index)
 #undef is_utf
 }
 
-
+#if 0
 static bool tin_util_charcmp(int first, int second, bool icase)
 {
     if(icase)
@@ -212,6 +212,7 @@ static bool tin_util_charcmp(int first, int second, bool icase)
     }
     return (first == second);
 }
+#endif
 
 bool tin_util_stringglob(const char* patstr, size_t patternlen, const char* text, size_t tlen, bool icase)
 {

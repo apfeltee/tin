@@ -36,6 +36,8 @@
 #define TIN_VALUE_THISNAME "this"
 #define TIN_VALUE_SUPERNAME "super"
 
+#define UINT8_COUNT UINT8_MAX + 1
+#define UINT16_COUNT UINT16_MAX + 1
 
 struct TinAstExpression
 {

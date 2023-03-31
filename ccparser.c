@@ -814,7 +814,7 @@ static TinAstTokType tin_astparser_convertcompoundop(TinAstTokType op)
             break;
         default:
             {
-                UNREACHABLE
+                assert(!"missing or invalid instruction for operator in convertcompound");
             }
             break;
     }
@@ -870,7 +870,7 @@ static TinAstExpression* tin_astparser_ruleliteral(TinAstParser* prs, bool canas
             break;
         default:
             {
-                UNREACHABLE
+                assert(!"missing or invalid instruction for ruleliteral");
             }
             break;
     }

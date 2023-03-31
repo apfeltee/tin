@@ -90,21 +90,14 @@
 #endif
 
 #define UNREACHABLE assert(false);
-#define UINT8_COUNT UINT8_MAX + 1
-#define UINT16_COUNT UINT16_MAX + 1
 
-#define TABLE_MAX_LOAD 0.85
+
 // Do not change these, or old bytecode files will break!
 #define TIN_BYTECODE_MAGIC_NUMBER 6932
 #define TIN_BYTECODE_END_NUMBER 2942
 #define TIN_STRING_KEY 48
 
 #define TIN_TESTS_DIRECTORY "tests"
-
-
-#define TIN_GROW_CAPACITY(cap) \
-    (((cap) < 8) ? (8) : ((cap) * 2))
-
 
 #if defined(__cplusplus)
     #define TIN_MAKESTATUS(code, value) TinInterpretResult{code, value}
@@ -516,7 +509,6 @@ typedef struct /**/TinAstExprList TinAstExprList;
 typedef struct /**/TinAstParamList TinAstParamList;
 typedef struct /**/TinAstPrivList TinAstPrivList;
 typedef struct /**/TinAstLocList TinAstLocList;
-typedef struct /**/TinDataList TinDataList;
 typedef struct /**/TinAstByteList TinAstByteList;
 
 /* ast/compiler types */
@@ -603,22 +595,8 @@ struct TinValList
 {
     size_t capacity;
     size_t count;
+    size_t elemsize;
     TinValue* values;
-};
-
-struct TinDataList
-{
-    /* how many values *could* this list hold? */
-    size_t capacity;
-
-    /* actual amount of values in this list */
-    size_t count;
-
-    size_t rawelemsz;
-    size_t elemsz;
-
-    /* the actual values */
-    intptr_t* values;
 };
 
 struct TinVarList
@@ -630,7 +608,14 @@ struct TinVarList
 
 struct TinUintList
 {
-    TinDataList list;
+    /* how many values *could* this list hold? */
+    size_t capacity;
+
+    /* actual amount of values in this list */
+    size_t count;
+
+    /* the actual values */
+    size_t* values;
 };
 
 
