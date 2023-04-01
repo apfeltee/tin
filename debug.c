@@ -4,7 +4,7 @@
 
 void tin_disassemble_module(TinState* state, TinModule* module, const char* source)
 {
-    tin_disassemble_chunk(state, &module->main_function->chunk, module->main_function->name->data, source);
+    tin_disassemble_chunk(state, &module->mainfunction->chunk, module->mainfunction->name->data, source);
 }
 
 void tin_disassemble_chunk(TinState* state, TinChunk* chunk, const char* name, const char* source)
@@ -118,7 +118,7 @@ size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offs
     TinFunction* function;
     wr = &state->debugwriter;
     line = tin_chunk_getline(chunk, offset);
-    same = !chunk->has_line_info || (offset > 0 && line == tin_chunk_getline(chunk, offset - 1));
+    same = !chunk->haslineinfo || (offset > 0 && line == tin_chunk_getline(chunk, offset - 1));
     if(!same && source != NULL)
     {
         index = 0;
@@ -261,7 +261,7 @@ size_t tin_disassemble_instruction(TinState* state, TinChunk* chunk, size_t offs
                 tin_towriter_value(state, wr, tin_vallist_get(&chunk->constants, constant), true);
                 tin_writer_writeformat(wr, "\n");
                 function = tin_value_asfunction(tin_vallist_get(&chunk->constants, constant));
-                for(j = 0; j < function->upvalue_count; j++)
+                for(j = 0; j < function->upvalcount; j++)
                 {
                     islocal = chunk->code[offset++];
                     index = chunk->code[offset++];
@@ -348,9 +348,9 @@ void tin_trace_frame(TinFiber* fiber, TinWriter* wr)
     {
         return;
     }
-    frame = &fiber->frames[fiber->frame_count - 1];
+    frame = &fiber->framevalues[fiber->framecount - 1];
     tin_writer_writeformat(wr, "== fiber %p f%i %s (expects %i, max %i, added %i, current %i, exits %i) ==\n", fiber,
-           fiber->frame_count - 1, frame->function->name->data, frame->function->arg_count, frame->function->maxslots,
-           frame->function->maxslots + (int)(fiber->stack_top - fiber->stack), fiber->stack_capacity, frame->return_to_c);
+           fiber->framecount - 1, frame->function->name->data, frame->function->arg_count, frame->function->maxslots,
+           frame->function->maxslots + (int)(fiber->stacktop - fiber->stackvalues), fiber->stackcap, frame->returntonative);
 #endif
 }

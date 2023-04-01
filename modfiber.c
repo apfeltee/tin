@@ -3,42 +3,42 @@
 
 TinFiber* tin_object_makefiber(TinState* state, TinModule* module, TinFunction* function)
 {
-    size_t stack_capacity;
+    size_t stackcap;
     TinValue* stack;
     TinCallFrame* frame;
     TinCallFrame* frames;
     TinFiber* fiber;
     // Allocate in advance, just in case GC is triggered
-    stack_capacity = function == NULL ? 1 : (size_t)tin_util_closestpowof2(function->maxslots + 1);
-    stack = (TinValue*)tin_gcmem_allocate(state, sizeof(TinValue), stack_capacity);
+    stackcap = function == NULL ? 1 : (size_t)tin_util_closestpowof2(function->maxslots + 1);
+    stack = (TinValue*)tin_gcmem_allocate(state, sizeof(TinValue), stackcap);
     frames = (TinCallFrame*)tin_gcmem_allocate(state, sizeof(TinCallFrame), TIN_INITIAL_CALL_FRAMES);
     fiber = (TinFiber*)tin_object_allocobject(state, sizeof(TinFiber), TINTYPE_FIBER, false);
     if(module != NULL)
     {
-        if(module->main_fiber == NULL)
+        if(module->mainfiber == NULL)
         {
-            module->main_fiber = fiber;
+            module->mainfiber = fiber;
         }
     }
-    fiber->stack = stack;
-    fiber->stack_capacity = stack_capacity;
-    fiber->stack_top = fiber->stack;
-    fiber->frames = frames;
-    fiber->frame_capacity = TIN_INITIAL_CALL_FRAMES;
+    fiber->stackvalues = stack;
+    fiber->stackcap = stackcap;
+    fiber->stacktop = fiber->stackvalues;
+    fiber->framevalues = frames;
+    fiber->framecap = TIN_INITIAL_CALL_FRAMES;
     fiber->parent = NULL;
-    fiber->frame_count = 1;
-    fiber->arg_count = 0;
+    fiber->framecount = 1;
+    fiber->funcargcount = 0;
     fiber->module = module;
     fiber->catcher = false;
     fiber->errorval = tin_value_makenull(state);
-    fiber->open_upvalues = NULL;
+    fiber->openupvalues = NULL;
     fiber->abort = false;
-    frame = &fiber->frames[0];
+    frame = &fiber->framevalues[0];
     frame->closure = NULL;
     frame->function = function;
-    frame->slots = fiber->stack;
-    frame->result_ignored = false;
-    frame->return_to_c = false;
+    frame->slots = fiber->stackvalues;
+    frame->ignresult = false;
+    frame->returntonative = false;
     if(function != NULL)
     {
         frame->ip = function->chunk.code;
@@ -53,26 +53,26 @@ void tin_fiber_ensurestack(TinState* state, TinFiber* fiber, size_t needed)
     TinValue* old_stack;
     TinUpvalue* upvalue;
     TinCallFrame* frame;
-    if(fiber->stack_capacity >= needed)
+    if(fiber->stackcap >= needed)
     {
         return;
     }
     capacity = (size_t)tin_util_closestpowof2((int)needed);
-    old_stack = fiber->stack;
-    fiber->stack = (TinValue*)tin_gcmem_memrealloc(state, fiber->stack, sizeof(TinValue) * fiber->stack_capacity, sizeof(TinValue) * capacity);
-    fiber->stack_capacity = capacity;
-    if(fiber->stack != old_stack)
+    old_stack = fiber->stackvalues;
+    fiber->stackvalues = (TinValue*)tin_gcmem_memrealloc(state, fiber->stackvalues, sizeof(TinValue) * fiber->stackcap, sizeof(TinValue) * capacity);
+    fiber->stackcap = capacity;
+    if(fiber->stackvalues != old_stack)
     {
-        for(i = 0; i < fiber->frame_capacity; i++)
+        for(i = 0; i < fiber->framecap; i++)
         {
-            frame = &fiber->frames[i];
-            frame->slots = fiber->stack + (frame->slots - old_stack);
+            frame = &fiber->framevalues[i];
+            frame->slots = fiber->stackvalues + (frame->slots - old_stack);
         }
-        for(upvalue = fiber->open_upvalues; upvalue != NULL; upvalue = upvalue->next)
+        for(upvalue = fiber->openupvalues; upvalue != NULL; upvalue = upvalue->next)
         {
-            upvalue->location = fiber->stack + (upvalue->location - old_stack);
+            upvalue->location = fiber->stackvalues + (upvalue->location - old_stack);
         }
-        fiber->stack_top = fiber->stack + (fiber->stack_top - old_stack);
+        fiber->stacktop = fiber->stackvalues + (fiber->stacktop - old_stack);
     }
 }
 
@@ -142,8 +142,8 @@ static bool objfn_fiber_yield(TinVM* vm, TinValue instance, size_t argc, TinValu
     }
     fiber = vm->fiber;
     vm->fiber = vm->fiber->parent;
-    vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? tin_value_makenull(vm->state) : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
+    vm->fiber->stacktop -= fiber->funcargcount;
+    vm->fiber->stacktop[-1] = argc == 0 ? tin_value_makenull(vm->state) : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
     argv[-1] = tin_value_makenull(vm->state);
     return true;
 }
@@ -161,8 +161,8 @@ static bool objfn_fiber_yeet(TinVM* vm, TinValue instance, size_t argc, TinValue
     }
     fiber = vm->fiber;
     vm->fiber = vm->fiber->parent;
-    vm->fiber->stack_top -= fiber->arg_count;
-    vm->fiber->stack_top[-1] = argc == 0 ? tin_value_makenull(vm->state) : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
+    vm->fiber->stacktop -= fiber->funcargcount;
+    vm->fiber->stacktop[-1] = argc == 0 ? tin_value_makenull(vm->state) : tin_value_fromobject(tin_value_tostring(vm->state, argv[0]));
     argv[-1] = tin_value_makenull(vm->state);
     return true;
 }
@@ -189,7 +189,6 @@ void tin_open_fiber_library(TinState* state)
     TinClass* klass;
     klass = tin_object_makeclassname(state, "Fiber");
     {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, objfn_fiber_constructor);
         tin_class_bindmethod(state, klass, "toString", objfn_fiber_tostring);
         tin_class_bindprimitive(state, klass, "run", objfn_fiber_run);
@@ -203,8 +202,4 @@ void tin_open_fiber_library(TinState* state)
         state->primfiberclass = klass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
-    {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
-    };
 }

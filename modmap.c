@@ -247,7 +247,7 @@ TinMap* tin_object_makemap(TinState* state)
     TinMap* map;
     map = (TinMap*)tin_object_allocobject(state, sizeof(TinMap), TINTYPE_MAP, false);
     tin_table_init(state, &map->values);
-    map->index_fn = NULL;
+    map->onindexfn = NULL;
     return map;
 }
 
@@ -315,16 +315,16 @@ static TinValue objfn_map_subscript(TinVM* vm, TinValue instance, size_t argc, T
     if(argc == 2)
     {
         val = argv[1];
-        if(map->index_fn != NULL)
+        if(map->onindexfn != NULL)
         {
-            return map->index_fn(vm, map, index, &val);
+            return map->onindexfn(vm, map, index, &val);
         }
         tin_map_set(vm->state, map, index, val);
         return val;
     }
-    if(map->index_fn != NULL)
+    if(map->onindexfn != NULL)
     {
-        return map->index_fn(vm, map, index, NULL);
+        return map->onindexfn(vm, map, index, NULL);
     }
     if(!tin_table_get(&map->values, index, &value))
     {
@@ -419,7 +419,6 @@ void tin_open_map_library(TinState* state)
     TinClass* klass;
     klass = tin_object_makeclassname(state, "Map");
     {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, objfn_map_constructor);
         tin_class_bindmethod(state, klass, "[]", objfn_map_subscript);
         tin_class_bindmethod(state, klass, "addAll", objfn_map_addall);
@@ -432,9 +431,5 @@ void tin_open_map_library(TinState* state)
         state->primmapclass = klass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
-    {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
-    };
 }
 

@@ -203,9 +203,9 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             {
                 TinUserdata* data;
                 data = (TinUserdata*)object;
-                if(data->cleanup_fn != NULL)
+                if(data->cleanupfn != NULL)
                 {
-                    data->cleanup_fn(vm->state, data, true);
+                    data->cleanupfn(vm->state, data, true);
                 }
             }
             break;
@@ -223,13 +223,13 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
                 TinCallFrame* frame;
                 TinUpvalue* upvalue;
                 fiber = (TinFiber*)object;
-                for(TinValue* slot = fiber->stack; slot < fiber->stack_top; slot++)
+                for(TinValue* slot = fiber->stackvalues; slot < fiber->stacktop; slot++)
                 {
                     tin_gcmem_markvalue(vm, *slot);
                 }
-                for(i = 0; i < fiber->frame_count; i++)
+                for(i = 0; i < fiber->framecount; i++)
                 {
-                    frame = &fiber->frames[i];
+                    frame = &fiber->framevalues[i];
                     if(frame->closure != NULL)
                     {
                         tin_gcmem_markobject(vm, (TinObject*)frame->closure);
@@ -239,7 +239,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
                         tin_gcmem_markobject(vm, (TinObject*)frame->function);
                     }
                 }
-                for(upvalue = fiber->open_upvalues; upvalue != NULL; upvalue = upvalue->next)
+                for(upvalue = fiber->openupvalues; upvalue != NULL; upvalue = upvalue->next)
                 {
                     tin_gcmem_markobject(vm, (TinObject*)upvalue);
                 }
@@ -252,12 +252,12 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
             {
                 TinModule* module;
                 module = (TinModule*)object;
-                tin_gcmem_markvalue(vm, module->return_value);
+                tin_gcmem_markvalue(vm, module->returnvalue);
                 tin_gcmem_markobject(vm, (TinObject*)module->name);
-                tin_gcmem_markobject(vm, (TinObject*)module->main_function);
-                tin_gcmem_markobject(vm, (TinObject*)module->main_fiber);
-                tin_gcmem_markobject(vm, (TinObject*)module->private_names);
-                for(i = 0; i < module->private_count; i++)
+                tin_gcmem_markobject(vm, (TinObject*)module->mainfunction);
+                tin_gcmem_markobject(vm, (TinObject*)module->mainfiber);
+                tin_gcmem_markobject(vm, (TinObject*)module->privnames);
+                for(i = 0; i < module->privcount; i++)
                 {
                     tin_gcmem_markvalue(vm, module->privates[i]);
                 }
@@ -271,7 +271,7 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
                 // Check for NULL is needed for a really specific gc-case
                 if(closure->upvalues != NULL)
                 {
-                    for(i = 0; i < closure->upvalue_count; i++)
+                    for(i = 0; i < closure->upvalcount; i++)
                     {
                         tin_gcmem_markobject(vm, (TinObject*)closure->upvalues[i]);
                     }
@@ -288,9 +288,9 @@ void tin_gcmem_vmblackobject(TinVM* vm, TinObject* object)
                 TinClass* klass;
                 klass = (TinClass*)object;
                 tin_gcmem_markobject(vm, (TinObject*)klass->name);
-                tin_gcmem_markobject(vm, (TinObject*)klass->super);
+                tin_gcmem_markobject(vm, (TinObject*)klass->parentclass);
                 tin_gcmem_marktable(vm, &klass->methods);
-                tin_gcmem_marktable(vm, &klass->static_fields);
+                tin_gcmem_marktable(vm, &klass->staticfields);
             }
             break;
         case TINTYPE_INSTANCE:
@@ -456,7 +456,7 @@ void tin_open_gc_library(TinState* state)
         tin_class_bindstaticmethod(state, klass, "trigger", objfn_gc_trigger);
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
+    if(klass->parentclass == NULL)
     {
         tin_class_inheritfrom(state, klass, state->primobjectclass);
     }

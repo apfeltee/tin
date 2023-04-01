@@ -558,7 +558,7 @@ typedef TinAstExpression* (*TinAstParseInfixFn)(TinAstParser*, TinAstExpression*
 
 typedef TinValue (*TinNativeFunctionFn)(TinVM*, size_t, TinValue*);
 typedef bool (*TinNativePrimitiveFn)(TinVM*, size_t, TinValue*);
-typedef TinValue (*TinNativeMethodFn)(TinVM*, TinValue, size_t arg_count, TinValue*);
+typedef TinValue (*TinNativeMethodFn)(TinVM*, TinValue, size_t, TinValue*);
 typedef bool (*TinPrimitiveMethodFn)(TinVM*, TinValue, size_t, TinValue*);
 typedef TinValue (*TinMapIndexFn)(TinVM*, TinMap*, TinString*, TinValue*);
 typedef void (*TinCleanupFn)(TinState*, TinUserdata*, bool mark);
@@ -633,9 +633,9 @@ struct TinChunk
     size_t count;
     size_t capacity;
     uint8_t* code;
-    bool has_line_info;
-    size_t line_count;
-    size_t line_capacity;
+    bool haslineinfo;
+    size_t linecount;
+    size_t linecap;
     uint16_t* lines;
     TinValList constants;
 };
@@ -707,8 +707,8 @@ struct TinFunction
     TinObject object;
     TinChunk chunk;
     TinString* name;
-    uint8_t arg_count;
-    uint16_t upvalue_count;
+    uint8_t argcount;
+    uint16_t upvalcount;
     size_t maxslots;
     bool vararg;
     TinModule* module;
@@ -727,7 +727,7 @@ struct TinClosure
     TinObject object;
     TinFunction* function;
     TinUpvalue** upvalues;
-    size_t upvalue_count;
+    size_t upvalcount;
 };
 
 struct TinNativeFunction
@@ -766,8 +766,8 @@ struct TinCallFrame
     TinClosure* closure;
     uint8_t* ip;
     TinValue* slots;
-    bool result_ignored;
-    bool return_to_c;
+    bool ignresult;
+    bool returntonative;
 };
 
 struct TinMap
@@ -776,19 +776,19 @@ struct TinMap
     /* the table that holds the actual entries */
     TinTable values;
     /* the index function corresponding to operator[] */
-    TinMapIndexFn index_fn;
+    TinMapIndexFn onindexfn;
 };
 
 struct TinModule
 {
     TinObject object;
-    TinValue return_value;
+    TinValue returnvalue;
     TinString* name;
     TinValue* privates;
-    TinMap* private_names;
-    size_t private_count;
-    TinFunction* main_function;
-    TinFiber* main_fiber;
+    TinMap* privnames;
+    size_t privcount;
+    TinFunction* mainfunction;
+    TinFiber* mainfiber;
     bool ran;
 };
 
@@ -796,14 +796,14 @@ struct TinFiber
 {
     TinObject object;
     TinFiber* parent;
-    TinValue* stack;
-    TinValue* stack_top;
-    size_t stack_capacity;
-    TinCallFrame* frames;
-    size_t frame_capacity;
-    size_t frame_count;
-    size_t arg_count;
-    TinUpvalue* open_upvalues;
+    TinValue* stackvalues;
+    TinValue* stacktop;
+    size_t stackcap;
+    TinCallFrame* framevalues;
+    size_t framecap;
+    size_t framecount;
+    size_t funcargcount;
+    TinUpvalue* openupvalues;
     TinModule* module;
     TinValue errorval;
     bool abort;
@@ -816,16 +816,16 @@ struct TinClass
     /* the name of this class */
     TinString* name;
     /* the constructor object */
-    TinObject* init_method;
+    TinObject* initmethod;
     /* runtime methods */
     TinTable methods;
     /* static fields, which include functions, and variables */
-    TinTable static_fields;
+    TinTable staticfields;
     /*
     * the parent class - the topmost is always TinClass, followed by TinObject.
     * that is, eg for TinString: TinString <- TinObject <- TinClass
     */
-    TinClass* super;
+    TinClass* parentclass;
 };
 
 struct TinInstance
@@ -854,7 +854,7 @@ struct TinUserdata
     TinObject object;
     void* data;
     size_t size;
-    TinCleanupFn cleanup_fn;
+    TinCleanupFn cleanupfn;
     bool canfree;
 };
 
@@ -880,9 +880,9 @@ struct TinReference
 
 struct TinInterpretResult
 {
-    /* the result of this interpret/tin_vm_callcallable attempt */
+    /* the result of this interpret/call attempt */
     TinStatus type;
-    /* the value returned from this interpret/tin_vm_callcallable attempt */
+    /* the value returned from this interpret/call attempt */
     TinValue result;
 };
 
@@ -936,7 +936,7 @@ struct TinState
     TinClass* primarrayclass;
     TinClass* primmapclass;
     TinClass* primrangeclass;
-    TinModule* last_module;
+    TinModule* lastmodule;
 };
 
 struct TinVM

@@ -323,7 +323,7 @@ static void tin_compiler_compiler(TinAstEmitter* emt, TinAstCompiler* compiler, 
     const char* name;
     tin_loclist_init(&compiler->locals);
     compiler->type = type;
-    compiler->scope_depth = 0;
+    compiler->scopedepth = 0;
     compiler->enclosing = (struct TinAstCompiler*)emt->compiler;
     compiler->skipreturn = false;
     compiler->function = tin_object_makefunction(emt->state, emt->module);
@@ -337,7 +337,7 @@ static void tin_compiler_compiler(TinAstEmitter* emt, TinAstCompiler* compiler, 
     emt->chunk = &compiler->function->chunk;
     if(tin_astopt_isoptenabled(TINOPTSTATE_LINEINFO))
     {
-        emt->chunk->has_line_info = false;
+        emt->chunk->haslineinfo = false;
     }
     if(type == TINFUNC_METHOD || type == TINFUNC_STATICMETHOD || type == TINFUNC_CONSTRUCTOR)
     {
@@ -393,17 +393,17 @@ static TinFunction* tin_compiler_end(TinAstEmitter* emt, TinString* name)
 
 static void tin_astemit_beginscope(TinAstEmitter* emt)
 {
-    emt->compiler->scope_depth++;
+    emt->compiler->scopedepth++;
 }
 
 static void tin_astemit_endscope(TinAstEmitter* emt, uint16_t line)
 {
     TinAstLocList* locals;
     TinAstCompiler* compiler;
-    emt->compiler->scope_depth--;
+    emt->compiler->scopedepth--;
     compiler = emt->compiler;
     locals = &compiler->locals;
-    while(locals->count > 0 && locals->values[locals->count - 1].depth > compiler->scope_depth)
+    while(locals->count > 0 && locals->values[locals->count - 1].depth > compiler->scopedepth)
     {
         if(locals->values[locals->count - 1].captured)
         {
@@ -469,7 +469,7 @@ static int tin_astemit_addprivate(TinAstEmitter* emt, const char* name, size_t l
     {
         tin_astemit_raiseerror(emt, line, "too many private locals for one module");
     }
-    privnames = &emt->module->private_names->values;
+    privnames = &emt->module->privnames->values;
     key = tin_table_findstring(privnames, name, length, tin_util_hashstring(name, length));
     if(key != NULL)
     {
@@ -481,7 +481,7 @@ static int tin_astemit_addprivate(TinAstEmitter* emt, const char* name, size_t l
     index = (int)privates->count;
     tin_privlist_push(state, privates, tin_astemit_makeprivate(false, constant));
     tin_table_set(state, privnames, tin_string_copy(state, name, length), tin_value_makefixednumber(state, index));
-    emt->module->private_count++;
+    emt->module->privcount++;
     return index;
 }
 
@@ -491,7 +491,7 @@ static int tin_astemit_resolveprivate(TinAstEmitter* emt, const char* name, size
     TinValue index;
     TinString* key;
     TinTable* privnames;
-    privnames = &emt->module->private_names->values;
+    privnames = &emt->module->privnames->values;
     key = tin_table_findstring(privnames, name, length, tin_util_hashstring(name, length));
     if(key != NULL)
     {
@@ -521,7 +521,7 @@ static int tin_astemit_addlocal(TinAstEmitter* emt, const char* name, size_t len
     for(i = (int)locals->count - 1; i >= 0; i--)
     {
         local = &locals->values[i];
-        if(local->depth != UINT16_MAX && local->depth < compiler->scope_depth)
+        if(local->depth != UINT16_MAX && local->depth < compiler->scopedepth)
         {
             break;
         }
@@ -563,7 +563,7 @@ static int tin_astemit_addupvalue(TinAstEmitter* emt, TinAstCompiler* compiler, 
     size_t i;
     size_t upvalcnt;
     TinAstCompUpvalue* upvalue;
-    upvalcnt = compiler->function->upvalue_count;
+    upvalcnt = compiler->function->upvalcount;
     for(i= 0; i < upvalcnt; i++)
     {
         upvalue = &compiler->upvalues[i];
@@ -579,7 +579,7 @@ static int tin_astemit_addupvalue(TinAstEmitter* emt, TinAstCompiler* compiler, 
     }
     compiler->upvalues[upvalcnt].isLocal = islocal;
     compiler->upvalues[upvalcnt].index = index;
-    return compiler->function->upvalue_count++;
+    return compiler->function->upvalcount++;
 }
 
 static int tin_astemit_resolveupvalue(TinAstEmitter* emt, TinAstCompiler* compiler, const char* name, size_t length, size_t line)
@@ -606,7 +606,7 @@ static int tin_astemit_resolveupvalue(TinAstEmitter* emt, TinAstCompiler* compil
 
 static void tin_astemit_marklocalinit(TinAstEmitter* emt, size_t index)
 {
-    emt->compiler->locals.values[index].depth = emt->compiler->scope_depth;
+    emt->compiler->locals.values[index].depth = emt->compiler->scopedepth;
 }
 
 static void tin_astemit_markprivateinit(TinAstEmitter* emt, size_t index)
@@ -1250,14 +1250,14 @@ static bool tin_astemit_doemitlambda(TinAstEmitter* emt, TinAstExpression* expr)
     }
     tin_astemit_endscope(emt, emt->lastline);
     function = tin_compiler_end(emt, name);
-    function->arg_count = lambdaexpr->parameters.count;
-    function->maxslots += function->arg_count;
+    function->argcount = lambdaexpr->parameters.count;
+    function->maxslots += function->argcount;
     function->vararg = vararg;
-    if(function->upvalue_count > 0)
+    if(function->upvalcount > 0)
     {
         tin_astemit_emit1op(emt, emt->lastline, OP_MAKECLOSURE);
         tin_astemit_emitshort(emt, emt->lastline, tin_astemit_addconstant(emt, emt->lastline, tin_value_fromobject(function)));
-        for(i = 0; i < function->upvalue_count; i++)
+        for(i = 0; i < function->upvalcount; i++)
         {
             tin_astemit_emit2bytes(emt, emt->lastline, compiler.upvalues[i].isLocal ? 1 : 0, compiler.upvalues[i].index);
         }
@@ -1409,7 +1409,7 @@ static bool tin_astemit_doemitvarstmt(TinAstEmitter* emt, TinAstExpression* expr
     TinAstAssignVarExpr* varstmt;
     varstmt = (TinAstAssignVarExpr*)expr;
     line = expr->line;
-    isprivate = emt->compiler->enclosing == NULL && emt->compiler->scope_depth == 0;
+    isprivate = emt->compiler->enclosing == NULL && emt->compiler->scopedepth == 0;
     index = 0;
     if(isprivate)
     {
@@ -1700,7 +1700,7 @@ static bool tin_astemit_doemitbreak(TinAstEmitter* emt, TinAstExpression* expr)
         tin_astemit_raiseerror(emt, expr->line, "cannot use '%s' outside of loops", "break");
     }
     tin_astemit_emit1op(emt, expr->line, OP_POPLOCALS);
-    depth = emt->compiler->scope_depth;
+    depth = emt->compiler->scopedepth;
     local_count = 0;
     locals = &emt->compiler->locals;
     for(ii = locals->count - 1; ii >= 0; ii--)
@@ -1749,7 +1749,7 @@ static bool tin_astemit_doemitreturn(TinAstEmitter* emt, TinAstExpression* expr)
         tin_astemit_emitexpression(emt, subexpr);
     }
     tin_astemit_emit1op(emt, emt->lastline, OP_RETURN);
-    if(emt->compiler->scope_depth == 0)
+    if(emt->compiler->scopedepth == 0)
     {
         emt->compiler->skipreturn = true;
     }
@@ -1770,7 +1770,7 @@ static bool tin_astemit_doemitfunction(TinAstEmitter* emt, TinAstExpression* exp
     TinAstFunctionExpr* funcstmt;
     funcstmt = (TinAstFunctionExpr*)expr;
     isexport = funcstmt->exported;
-    isprivate = !isexport && emt->compiler->enclosing == NULL && emt->compiler->scope_depth == 0;
+    isprivate = !isexport && emt->compiler->enclosing == NULL && emt->compiler->scopedepth == 0;
     islocal = !(isexport || isprivate);
     index = 0;
     if(!isexport)
@@ -1793,14 +1793,14 @@ static bool tin_astemit_doemitfunction(TinAstEmitter* emt, TinAstExpression* exp
     tin_astemit_emitexpression(emt, funcstmt->body);
     tin_astemit_endscope(emt, emt->lastline);
     function = tin_compiler_end(emt, name);
-    function->arg_count = funcstmt->parameters.count;
-    function->maxslots += function->arg_count;
+    function->argcount = funcstmt->parameters.count;
+    function->maxslots += function->argcount;
     function->vararg = vararg;
-    if(function->upvalue_count > 0)
+    if(function->upvalcount > 0)
     {
         tin_astemit_emit1op(emt, emt->lastline, OP_MAKECLOSURE);
         tin_astemit_emitshort(emt, emt->lastline, tin_astemit_addconstant(emt, emt->lastline, tin_value_fromobject(function)));
-        for(i = 0; i < function->upvalue_count; i++)
+        for(i = 0; i < function->upvalcount; i++)
         {
             tin_astemit_emit2bytes(emt, emt->lastline, compiler.upvalues[i].isLocal ? 1 : 0, compiler.upvalues[i].index);
         }
@@ -1848,14 +1848,14 @@ static bool tin_astemit_doemitmethod(TinAstEmitter* emt, TinAstExpression* expr)
     tin_astemit_emitexpression(emt, mthstmt->body);
     tin_astemit_endscope(emt, emt->lastline);
     function = tin_compiler_end(emt, tin_value_asstring(tin_string_format(emt->state, "@:@", tin_value_fromobject(emt->classname), tin_value_fromobject(mthstmt->name))));
-    function->arg_count = mthstmt->parameters.count;
-    function->maxslots += function->arg_count;
+    function->argcount = mthstmt->parameters.count;
+    function->maxslots += function->argcount;
     function->vararg = vararg;
-    if(function->upvalue_count > 0)
+    if(function->upvalcount > 0)
     {
         tin_astemit_emit1op(emt, emt->lastline, OP_MAKECLOSURE);
         tin_astemit_emitshort(emt, emt->lastline, tin_astemit_addconstant(emt, emt->lastline, tin_value_fromobject(function)));
-        for(i = 0; i < function->upvalue_count; i++)
+        for(i = 0; i < function->upvalcount; i++)
         {
             tin_astemit_emit2bytes(emt, emt->lastline, compiler.upvalues[i].isLocal ? 1 : 0, compiler.upvalues[i].index);
         }
@@ -1952,7 +1952,7 @@ static bool tin_astemit_doemitfield(TinAstEmitter* emt, TinAstExpression* expr)
         tin_astemit_endscope(emt, emt->lastline);
         setter = tin_compiler_end(emt,
             tin_value_asstring(tin_string_format(emt->state, "@:set @", tin_value_fromobject(emt->classname), fieldstmt->name)));
-        setter->arg_count = 1;
+        setter->argcount = 1;
         setter->maxslots++;
     }
     field = tin_object_makefield(emt->state, (TinObject*)getter, (TinObject*)setter);
@@ -2287,7 +2287,7 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
         isnew = true;
     }
     emt->module = module;
-    oldprivatescnt = module->private_count;
+    oldprivatescnt = module->privcount;
     if(oldprivatescnt > 0)
     {
         privates = &emt->privates;
@@ -2310,7 +2310,7 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
         }
     }
     tin_astemit_endscope(emt, emt->lastline);
-    module->main_function = tin_compiler_end(emt, module_name);
+    module->mainfunction = tin_compiler_end(emt, module_name);
     if(isnew)
     {
         total = emt->privates.count;
@@ -2322,8 +2322,8 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
     }
     else
     {
-        module->privates = (TinValue*)tin_gcmem_growarray(emt->state, module->privates, sizeof(TinValue), oldprivatescnt, module->private_count);
-        for(i = oldprivatescnt; i < module->private_count; i++)
+        module->privates = (TinValue*)tin_gcmem_growarray(emt->state, module->privates, sizeof(TinValue), oldprivatescnt, module->privcount);
+        for(i = oldprivatescnt; i < module->privcount; i++)
         {
             module->privates[i] = tin_value_makenull(emt->state);
         }
@@ -2331,7 +2331,7 @@ TinModule* tin_astemit_modemit(TinAstEmitter* emt, TinAstExprList* statements, T
     tin_privlist_destroy(emt->state, &emt->privates);
     if(tin_astopt_isoptenabled(TINOPTSTATE_PRIVATENAMES))
     {
-        tin_table_destroy(emt->state, &emt->module->private_names->values);
+        tin_table_destroy(emt->state, &emt->module->privnames->values);
     }
     if(isnew && !state->haderror)
     {

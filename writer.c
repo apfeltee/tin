@@ -759,7 +759,7 @@ void tin_astwriter_expr(TinAstWriterState* aw, TinAstExpression* expr)
         case TINEXPR_BINARY:
             {
                 as_type(exbin, expr, TinAstBinaryExpr);
-                //if(!exbin->ignore_left)
+                //if(!exbin->ignoreleft)
                 {
                     tin_astwriter_expr(aw, exbin->left);
                 }

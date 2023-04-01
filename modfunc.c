@@ -7,8 +7,8 @@ TinFunction* tin_object_makefunction(TinState* state, TinModule* module)
     function = (TinFunction*)tin_object_allocobject(state, sizeof(TinFunction), TINTYPE_FUNCTION, false);
     tin_chunk_init(state, &function->chunk);
     function->name = NULL;
-    function->arg_count = 0;
-    function->upvalue_count = 0;
+    function->argcount = 0;
+    function->upvalcount = 0;
     function->maxslots = 0;
     function->module = module;
     function->vararg = false;
@@ -22,15 +22,15 @@ TinClosure* tin_object_makeclosure(TinState* state, TinFunction* function)
     TinUpvalue** upvalues;
     closure = (TinClosure*)tin_object_allocobject(state, sizeof(TinClosure), TINTYPE_CLOSURE, false);
     tin_state_pushroot(state, (TinObject*)closure);
-    upvalues = (TinUpvalue**)tin_gcmem_allocate(state, sizeof(TinUpvalue*), function->upvalue_count);
+    upvalues = (TinUpvalue**)tin_gcmem_allocate(state, sizeof(TinUpvalue*), function->upvalcount);
     tin_state_poproot(state);
-    for(i = 0; i < function->upvalue_count; i++)
+    for(i = 0; i < function->upvalcount; i++)
     {
         upvalues[i] = NULL;
     }
     closure->function = function;
     closure->upvalues = upvalues;
-    closure->upvalue_count = function->upvalue_count;
+    closure->upvalcount = function->upvalcount;
     return closure;
 }
 
@@ -207,7 +207,6 @@ void tin_state_openfunctionlibrary(TinState* state)
     TinClass* klass;
     klass = tin_object_makeclassname(state, "Function");
     {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, util_invalid_constructor);
         tin_class_bindmethod(state, klass, "toString", objfn_function_tostring);
         tin_class_bindgetset(state, klass, "name", objfn_function_name, NULL, false);
@@ -221,8 +220,4 @@ void tin_state_openfunctionlibrary(TinState* state)
         state->primfunctionclass = klass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
-    {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
-    };
 }

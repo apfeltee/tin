@@ -11,9 +11,9 @@ void tin_chunk_init(TinState* state, TinChunk* chunk)
     chunk->count = 0;
     chunk->capacity = 0;
     chunk->code = NULL;
-    chunk->has_line_info = true;
-    chunk->line_count = 0;
-    chunk->line_capacity = 0;
+    chunk->haslineinfo = true;
+    chunk->linecount = 0;
+    chunk->linecap = 0;
     chunk->lines = NULL;
     tin_vallist_init(state, &chunk->constants);
 }
@@ -21,7 +21,7 @@ void tin_chunk_init(TinState* state, TinChunk* chunk)
 void tin_chunk_destroy(TinState* state, TinChunk* chunk)
 {
     tin_gcmem_freearray(state, sizeof(uint8_t), chunk->code, chunk->capacity);
-    tin_gcmem_freearray(state, sizeof(uint16_t), chunk->lines, chunk->line_capacity);
+    tin_gcmem_freearray(state, sizeof(uint16_t), chunk->lines, chunk->linecap);
     tin_vallist_destroy(state, &chunk->constants);
     tin_chunk_init(state, chunk);
 }
@@ -39,27 +39,27 @@ void tin_chunk_push(TinState* state, TinChunk* chunk, uint8_t byte, uint16_t lin
     }
     chunk->code[chunk->count] = byte;
     chunk->count++;
-    if(!chunk->has_line_info)
+    if(!chunk->haslineinfo)
     {
         return;
     }
-    if(chunk->line_capacity < chunk->line_count + 2)
+    if(chunk->linecap < chunk->linecount + 2)
     {
-        oldcapacity = chunk->line_capacity;
-        chunk->line_capacity = TIN_CHUNK_GROWCAPACITY(chunk->line_capacity + 2);
-        chunk->lines = (uint16_t*)tin_gcmem_growarray(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity + 2);
+        oldcapacity = chunk->linecap;
+        chunk->linecap = TIN_CHUNK_GROWCAPACITY(chunk->linecap + 2);
+        chunk->lines = (uint16_t*)tin_gcmem_growarray(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->linecap + 2);
         if(oldcapacity == 0)
         {
             chunk->lines[0] = 0;
             chunk->lines[1] = 0;
         }
     }
-    lineindex = chunk->line_count;
+    lineindex = chunk->linecount;
     value = chunk->lines[lineindex];
     if(value != 0 && value != line)
     {
-        chunk->line_count += 2;
-        lineindex = chunk->line_count;
+        chunk->linecount += 2;
+        lineindex = chunk->linecount;
         chunk->lines[lineindex + 1] = 0;
     }
     chunk->lines[lineindex] = line;
@@ -92,7 +92,7 @@ size_t tin_chunk_getline(TinChunk* chunk, size_t offset)
     size_t rle;
     size_t line;
     size_t index;
-    if(!chunk->has_line_info)
+    if(!chunk->haslineinfo)
     {
         return 0;
     }
@@ -126,11 +126,11 @@ void tin_chunk_shrink(TinState* state, TinChunk* chunk)
         chunk->capacity = chunk->count;
         chunk->code = (uint8_t*)tin_gcmem_growarray(state, chunk->code, sizeof(uint8_t), oldcapacity, chunk->capacity);
     }
-    if(chunk->line_capacity > chunk->line_count)
+    if(chunk->linecap > chunk->linecount)
     {
-        oldcapacity = chunk->line_capacity;
-        chunk->line_capacity = chunk->line_count + 2;
-        chunk->lines = (uint16_t*)tin_gcmem_growarray(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->line_capacity);
+        oldcapacity = chunk->linecap;
+        chunk->linecap = chunk->linecount + 2;
+        chunk->lines = (uint16_t*)tin_gcmem_growarray(state, chunk->lines, sizeof(uint16_t), oldcapacity, chunk->linecap);
     }
 }
 

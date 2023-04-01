@@ -1,7 +1,7 @@
 
 #include "priv.h"
 
-static TinValue access_private(TinVM* vm, TinMap* map, TinString* name, TinValue* val)
+static TinValue tin_module_accessprivate(TinVM* vm, TinMap* map, TinString* name, TinValue* val)
 {
     int index;
     TinValue value;
@@ -17,10 +17,10 @@ static TinValue access_private(TinVM* vm, TinMap* map, TinString* name, TinValue
     {
         return tin_value_fromobject(module);
     }
-    if(tin_table_get(&module->private_names->values, name, &value))
+    if(tin_table_get(&module->privnames->values, name, &value))
     {
         index = (int)tin_value_asnumber(value);
-        if(index > -1 && index < (int)module->private_count)
+        if(index > -1 && index < (int)module->privcount)
         {
             if(val != NULL)
             {
@@ -40,10 +40,10 @@ static TinValue objfn_module_privates(TinVM* vm, TinValue instance, size_t argc,
     (void)argc;
     (void)argv;
     module = tin_value_ismodule(instance) ? tin_value_asmodule(instance) : vm->fiber->module;
-    map = module->private_names;
-    if(map->index_fn == NULL)
+    map = module->privnames;
+    if(map->onindexfn == NULL)
     {
-        map->index_fn = access_private;
+        map->onindexfn = tin_module_accessprivate;
         tin_table_set(vm->state, &map->values, tin_string_copyconst(vm->state, "_module"), tin_value_fromobject(module));
     }
     return tin_value_fromobject(map);
@@ -77,7 +77,6 @@ void tin_open_module_library(TinState* state)
     TinClass* klass;
     klass = tin_object_makeclassname(state, "Module");
     {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, util_invalid_constructor);
         tin_class_setstaticfield(state, klass, "loaded", tin_value_fromobject(state->vm->modules));
         tin_class_bindgetset(state, klass, "privates", objfn_module_privates, NULL, true);
@@ -88,9 +87,5 @@ void tin_open_module_library(TinState* state)
         state->primmoduleclass = klass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
-    {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
-    };
 }
 

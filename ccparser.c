@@ -226,7 +226,7 @@ const char* tin_astparser_token2name(int t)
 
 static void tin_astparser_initcompiler(TinAstParser* prs, TinAstCompiler* compiler)
 {
-    compiler->scope_depth = 0;
+    compiler->scopedepth = 0;
     compiler->function = NULL;
     compiler->enclosing = (struct TinAstCompiler*)prs->compiler;
 
@@ -240,12 +240,12 @@ static void tin_astparser_endcompiler(TinAstParser* prs, TinAstCompiler* compile
 
 static void tin_astparser_beginscope(TinAstParser* prs)
 {
-    prs->compiler->scope_depth++;
+    prs->compiler->scopedepth++;
 }
 
 static void tin_astparser_endscope(TinAstParser* prs)
 {
-    prs->compiler->scope_depth--;
+    prs->compiler->scopedepth--;
 }
 
 static TinAstParseRule* tin_astparser_getrule(TinAstTokType type)
@@ -267,7 +267,7 @@ void tin_astparser_init(TinState* state, TinAstParser* prs)
     }
     prs->state = state;
     prs->haderror = false;
-    prs->panic_mode = false;
+    prs->panicmode = false;
 }
 
 void tin_astparser_destroy(TinAstParser* prs)
@@ -278,7 +278,7 @@ void tin_astparser_destroy(TinAstParser* prs)
 static void tin_astparser_raisestring(TinAstParser* prs, TinAstToken* token, const char* message)
 {
     (void)token;
-    if(prs->panic_mode)
+    if(prs->panicmode)
     {
         return;
     }
@@ -842,7 +842,7 @@ static TinAstExpression* tin_astparser_rulecompound(TinAstParser* prs, TinAstExp
     }
     binary = tin_ast_make_binaryexpr(prs->state, line, prev, expression, tin_astparser_convertcompoundop(op));
     // To make sure we don't free it twice
-    binary->ignore_left = true;
+    binary->ignoreleft = true;
     return (TinAstExpression*)tin_ast_make_assignexpr(prs->state, line, prev, (TinAstExpression*)binary);
 }
 
@@ -1700,7 +1700,7 @@ static TinAstExpression* tin_astparser_parseclass(TinAstParser* prs)
 
 static void tin_astparser_sync(TinAstParser* prs)
 {
-    prs->panic_mode = false;
+    prs->panicmode = false;
     while(prs->current.type != TINTOK_EOF)
     {
         if(prs->previous.type == TINTOK_NEWLINE)
@@ -1752,7 +1752,7 @@ bool tin_astparser_parsesource(TinAstParser* prs, const char* filename, const ch
     TinAstCompiler compiler;
     TinAstExpression* statement;
     prs->haderror = false;
-    prs->panic_mode = false;
+    prs->panicmode = false;
     tin_astlex_init(prs->state, prs->state->scanner, filename, source, srclength);
     tin_astparser_initcompiler(prs, &compiler);
     tin_astparser_advance(prs);

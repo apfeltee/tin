@@ -1,4 +1,7 @@
 
+// this is incredibly poorly performing. bintrees1.tin performs much better.
+// but why?
+
 class Tree
 {
     constructor(item, depth)

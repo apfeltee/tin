@@ -1,26 +1,40 @@
 
 #include "priv.h"
 
-TinClass* tin_object_makeclass(TinState* state, TinString* name)
+TinClass* tin_object_makeclasswithparent(TinState* state, TinString* name, TinClass* parentclass)
 {
     TinClass* klass;
     klass = (TinClass*)tin_object_allocobject(state, sizeof(TinClass), TINTYPE_CLASS, false);
     klass->name = name;
-    klass->init_method = NULL;
-    klass->super = NULL;
+    klass->initmethod = NULL;
+    klass->parentclass = parentclass;
     tin_table_init(state, &klass->methods);
-    tin_table_init(state, &klass->static_fields);
+    tin_table_init(state, &klass->staticfields);
+    if(parentclass != NULL)
+    {
+        tin_class_inheritfrom(state, klass, parentclass);
+    }
     return klass;
 }
 
-TinClass* tin_object_makeclassname(TinState* state, const char* name)
+TinClass* tin_object_makeclass(TinState* state, TinString* name)
+{
+    return tin_object_makeclasswithparent(state, name, state->primobjectclass);
+}
+
+TinClass* tin_object_makeclassnamewithparent(TinState* state, const char* name, TinClass* parentklass)
 {
     TinString* nm;
     TinClass* cl;
     nm = tin_string_copy(state, name, strlen(name));
-    cl = tin_object_makeclass(state, nm);
+    cl = tin_object_makeclasswithparent(state, nm, parentklass);
     cl->name = nm;
     return cl;
+}
+
+TinClass* tin_object_makeclassname(TinState* state, const char* name)
+{
+    return tin_object_makeclassnamewithparent(state, name, NULL);
 }
 
 TinField* tin_object_makefield(TinState* state, TinObject* getter, TinObject* setter)
@@ -34,19 +48,19 @@ TinField* tin_object_makefield(TinState* state, TinObject* getter, TinObject* se
 
 TinInstance* tin_object_makeinstance(TinState* state, TinClass* klass)
 {
-    TinInstance* instance;
-    instance = (TinInstance*)tin_object_allocobject(state, sizeof(TinInstance), TINTYPE_INSTANCE, false);
-    instance->klass = klass;
-    tin_table_init(state, &instance->fields);
-    instance->fields.count = 0;
-    return instance;
+    TinInstance* inst;
+    inst = (TinInstance*)tin_object_allocobject(state, sizeof(TinInstance), TINTYPE_INSTANCE, false);
+    inst->klass = klass;
+    tin_table_init(state, &inst->fields);
+    inst->fields.count = 0;
+    return inst;
 }
 
 void tin_class_bindconstructor(TinState* state, TinClass* cl, TinNativeMethodFn fn)
 {
     TinNativeMethod* mth;
     mth = tin_class_bindmethod(state, cl, TIN_VALUE_CTORNAME, fn);
-    cl->init_method = (TinObject*)mth;
+    cl->initmethod = (TinObject*)mth;
 }
 
 TinNativeMethod* tin_class_bindmethod(TinState* state, TinClass* cl, const char* name, TinNativeMethodFn fn)
@@ -75,7 +89,7 @@ TinNativeMethod* tin_class_bindstaticmethod(TinState* state, TinClass* cl, const
     TinNativeMethod* mth;
     nm = tin_string_copy(state, name, strlen(name));
     mth = tin_object_makenativemethod(state, fn, nm);
-    tin_table_set(state, &cl->static_fields, nm, tin_value_fromobject(mth));
+    tin_table_set(state, &cl->staticfields, nm, tin_value_fromobject(mth));
     return mth;
 }
 
@@ -85,7 +99,7 @@ TinPrimitiveMethod* tin_class_bindstaticprimitive(TinState* state, TinClass* cl,
     TinPrimitiveMethod* mth;
     nm = tin_string_copy(state, name, strlen(name));
     mth = tin_object_makeprimitivemethod(state, fn, nm);
-    tin_table_set(state, &cl->static_fields, nm, tin_value_fromobject(mth));
+    tin_table_set(state, &cl->staticfields, nm, tin_value_fromobject(mth));
     return mth;
 }
 
@@ -93,7 +107,7 @@ void tin_class_setstaticfield(TinState* state, TinClass* cl, const char* name, T
 {
     TinString* nm;
     nm = tin_string_copy(state, name, strlen(name));
-    tin_table_set(state, &cl->static_fields, nm, val);
+    tin_table_set(state, &cl->staticfields, nm, val);
 }
 
 TinField* tin_class_bindgetset(TinState* state, TinClass* cl, const char* name, TinNativeMethodFn getfn, TinNativeMethodFn setfn, bool isstatic)
@@ -118,7 +132,7 @@ TinField* tin_class_bindgetset(TinState* state, TinClass* cl, const char* name, 
     }
     if(isstatic)
     {
-        tbl = &cl->static_fields;
+        tbl = &cl->staticfields;
     }
     field = tin_object_makefield(state, (TinObject*)mthget, (TinObject*)mthset);
     tin_table_set(state, tbl, nm, tin_value_fromobject(field)); 
@@ -129,24 +143,24 @@ TinField* tin_class_bindgetset(TinState* state, TinClass* cl, const char* name, 
 /*
 
     #define TIN_INHERIT_CLASS(superklass)                                \
-        klass->super = (TinClass*)superklass;                            \
-        if(klass->init_method == NULL)                                    \
+        klass->parentclass = (TinClass*)superklass;                            \
+        if(klass->initmethod == NULL)                                    \
         {                                                                 \
-            klass->init_method = superklass->init_method;                \
+            klass->initmethod = superklass->initmethod;                \
         }                                                                 \
         tin_table_add_all(state, &superklass->methods, &klass->methods); \
-        tin_table_add_all(state, &superklass->static_fields, &klass->static_fields);
+        tin_table_add_all(state, &superklass->staticfields, &klass->staticfields);
 */
 
 void tin_class_inheritfrom(TinState* state, TinClass* current, TinClass* other)
 {
-    current->super = (TinClass*)other;
-    if(current->init_method == NULL)
+    current->parentclass = (TinClass*)other;
+    if(current->initmethod == NULL)
     {
-        current->init_method = other->init_method;
+        current->initmethod = other->initmethod;
     }
     tin_table_add_all(state, &other->methods, &current->methods); \
-    tin_table_add_all(state, &other->static_fields, &current->static_fields);
+    tin_table_add_all(state, &other->staticfields, &current->staticfields);
 }
 
 static TinValue objfn_class_tostring(TinVM* vm, TinValue instance, size_t argc, TinValue* argv)
@@ -175,7 +189,7 @@ static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, 
     index = tin_value_isnull(argv[0]) ? -1 : tin_value_asnumber(argv[0]);
     mthcap = (int)klass->methods.capacity;
     fields = index >= mthcap;
-    value = util_table_iterator(fields ? &klass->static_fields : &klass->methods, fields ? index - mthcap : index);
+    value = util_table_iterator(fields ? &klass->staticfields : &klass->methods, fields ? index - mthcap : index);
     if(value == -1)
     {
         if(fields)
@@ -184,7 +198,7 @@ static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, 
         }
         index++;
         fields = true;
-        value = util_table_iterator(&klass->static_fields, index - mthcap);
+        value = util_table_iterator(&klass->staticfields, index - mthcap);
     }
     if(value == -1)
     {
@@ -205,7 +219,7 @@ static TinValue objfn_class_iteratorvalue(TinVM* vm, TinValue instance, size_t a
     klass = tin_value_asclass(instance);
     mthcap = klass->methods.capacity;
     fields = index >= mthcap;
-    return util_table_iterator_key(fields ? &klass->static_fields : &klass->methods, fields ? index - mthcap : index);
+    return util_table_iterator_key(fields ? &klass->staticfields : &klass->methods, fields ? index - mthcap : index);
 }
 
 
@@ -218,11 +232,11 @@ static TinValue objfn_class_super(TinVM* vm, TinValue instance, size_t argc, Tin
     super = NULL;
     if(tin_value_isinstance(instance))
     {
-        super = tin_value_asinstance(instance)->klass->super;
+        super = tin_value_asinstance(instance)->klass->parentclass;
     }
     else
     {
-        super = tin_value_asclass(instance)->super;
+        super = tin_value_asclass(instance)->parentclass;
     }
     if(super == NULL)
     {
@@ -244,14 +258,14 @@ static TinValue objfn_class_subscript(TinVM* vm, TinValue instance, size_t argc,
             tin_vm_raiseexitingerror(vm, "class index must be a string");
         }
 
-        tin_table_set(vm->state, &klass->static_fields, tin_value_asstring(argv[0]), argv[1]);
+        tin_table_set(vm->state, &klass->staticfields, tin_value_asstring(argv[0]), argv[1]);
         return argv[1];
     }
     if(!tin_value_isstring(argv[0]))
     {
         tin_vm_raiseexitingerror(vm, "class index must be a string");
     }
-    if(tin_table_get(&klass->static_fields, tin_value_asstring(argv[0]), &value))
+    if(tin_table_get(&klass->staticfields, tin_value_asstring(argv[0]), &value))
     {
         return value;
     }

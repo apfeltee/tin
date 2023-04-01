@@ -124,11 +124,11 @@
             if(tin_vm_callvalue(est, mthval, mthname, argc)) \
             { \
                 tin_vmmac_recoverstate(est); \
-                est->frame->result_ignored = true; \
+                est->frame->ignresult = true; \
             } \
             else \
             { \
-                est->fiber->stack_top[-1] = callee; \
+                est->fiber->stacktop[-1] = callee; \
             } \
         } \
         else \
@@ -194,12 +194,12 @@
         tin_vmintern_drop(est); \
         if(tin_value_isnull(b)) \
         { \
-            *(est->fiber->stack_top - 1) = tin_value_makebool(est->state, true); \
+            *(est->fiber->stacktop - 1) = tin_value_makebool(est->state, true); \
         } \
         else \
         { \
             tin_vmmac_raiseerrorfmtcont("cannot use op %s on a null value", opstring); \
-            *(est->fiber->stack_top - 1) = tin_value_makebool(est->state, false);\
+            *(est->fiber->stacktop - 1) = tin_value_makebool(est->state, false);\
         } \
     } \
     else \
@@ -288,37 +288,37 @@ TIN_VM_INLINE TinString* tin_vmintern_readstringlong(TinExecState* est)
 
 TIN_VM_INLINE void tin_vmintern_push(TinExecState* est, TinValue v)
 {
-    *est->fiber->stack_top++ = v;
+    *est->fiber->stacktop++ = v;
 }
 
 TIN_VM_INLINE TinValue tin_vmintern_pop(TinExecState* est)
 {
-    return *(--est->fiber->stack_top);
+    return *(--est->fiber->stacktop);
 }
 
 TIN_VM_INLINE void tin_vmintern_drop(TinExecState* est)
 {
-    est->fiber->stack_top--;
+    est->fiber->stacktop--;
 }
 
 TIN_VM_INLINE void tin_vmintern_dropn(TinExecState* est, int amount)
 {
-    est->fiber->stack_top -= amount;
+    est->fiber->stacktop -= amount;
 }
 
 TIN_VM_INLINE TinValue tin_vmintern_peek(TinExecState* est, short distance)
 {
     int ofs;
     ofs = ((-1) - distance);
-    return est->fiber->stack_top[ofs];
+    return est->fiber->stacktop[ofs];
 }
 
 TIN_VM_INLINE void tin_vmintern_readframe(TinExecState* est)
 {
-    est->frame = &est->fiber->frames[est->fiber->frame_count - 1];
+    est->frame = &est->fiber->framevalues[est->fiber->framecount - 1];
     if(est->frame->function == NULL)
     {
-        est->frame->function = (&est->fiber->frames[0])->function;
+        est->frame->function = (&est->fiber->framevalues[0])->function;
     }
     est->currentchunk = &est->frame->function->chunk;
     est->ip = est->frame->ip;
@@ -337,7 +337,7 @@ void tin_vmintern_resetstack(TinVM* vm)
 {
     if(vm->fiber != NULL)
     {
-        vm->fiber->stack_top = vm->fiber->stack;
+        vm->fiber->stacktop = vm->fiber->stackvalues;
     }
 }
 
@@ -386,20 +386,20 @@ void tin_vmintern_tracestack(TinVM* vm, TinWriter* wr)
     TinValue* slot;
     TinFiber* fiber;
     fiber = vm->fiber;
-    if(fiber->stack_top == fiber->stack || fiber->frame_count == 0)
+    if(fiber->stacktop == fiber->stackvalues || fiber->framecount == 0)
     {
         return;
     }
-    top = fiber->frames[fiber->frame_count - 1].slots;
+    top = fiber->framevalues[fiber->framecount - 1].slots;
     tin_writer_writeformat(wr, "        | %s", COLOR_GREEN);
-    for(slot = fiber->stack; slot < top; slot++)
+    for(slot = fiber->stackvalues; slot < top; slot++)
     {
         tin_writer_writeformat(wr, "[ ");
         tin_towriter_value(vm->state, wr, *slot, true);
         tin_writer_writeformat(wr, " ]");
     }
     tin_writer_writeformat(wr, "%s", COLOR_RESET);
-    for(slot = top; slot < fiber->stack_top; slot++)
+    for(slot = top; slot < fiber->stacktop; slot++)
     {
         tin_writer_writeformat(wr, "[ ");
         tin_towriter_value(vm->state, wr, *slot, true);
@@ -431,8 +431,8 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
         if(fiber->catcher)
         {
             vm->fiber = fiber->parent;
-            vm->fiber->stack_top -= fiber->arg_count;
-            vm->fiber->stack_top[-1] = errval;
+            vm->fiber->stacktop -= fiber->funcargcount;
+            vm->fiber->stacktop[-1] = errval;
             return true;
         }
         caller = fiber->parent;
@@ -447,11 +447,11 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
         fiber->parent->abort = true;
     }
     // Maan, formatting c strings is hard...
-    count = (int)fiber->frame_count - 1;
+    count = (int)fiber->framecount - 1;
     length = snprintf(NULL, 0, "%s%s\n", COLOR_RED, errorstring->data);
     for(i = count; i >= 0; i--)
     {
-        frame = &fiber->frames[i];
+        frame = &fiber->framevalues[i];
         function = frame->function;
         chunk = &function->chunk;
         name = "unknown";
@@ -464,7 +464,7 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
                 name = function->name->data;
             }
         }
-        if(haschunk && chunk->has_line_info)
+        if(haschunk && chunk->haslineinfo)
         {
             length += snprintf(NULL, 0, "[line %d] in %s()\n", (int)tin_chunk_getline(chunk, frame->ip - chunk->code - 1), name);
         }
@@ -479,7 +479,7 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
     start = buffer + sprintf(buffer, "%s%s\n", COLOR_RED, errorstring->data);
     for(i = count; i >= 0; i--)
     {
-        frame = &fiber->frames[i];
+        frame = &fiber->framevalues[i];
         function = frame->function;
         chunk = &function->chunk;
         haschunk = false;
@@ -492,7 +492,7 @@ bool tin_vm_handleruntimeerror(TinVM* vm, TinString* errorstring)
                 name = function->name->data;
             }
         }
-        if(haschunk && chunk->has_line_info)
+        if(haschunk && chunk->haslineinfo)
         {
             start += sprintf(start, "[line %d] in %s()\n", (int)tin_chunk_getline(chunk, frame->ip - chunk->code - 1), name);
         }
@@ -558,31 +558,31 @@ bool tin_vm_callcallable(TinVM* vm, TinFunction* function, TinClosure* closure, 
     fiber = vm->fiber;
 
     #if 0
-    //if(fiber->frame_count == TIN_CALL_FRAMES_MAX)
+    //if(fiber->framecount == TIN_CALL_FRAMES_MAX)
     //{
-        //tin_vm_raiseerror(vm, "tin_vm_callcallable stack overflow");
+        //tin_vm_raiseerror(vm, "call stack overflow");
         //return true;
     //}
     #endif
-    if(fiber->frame_count + 1 > fiber->frame_capacity)
+    if(fiber->framecount + 1 > fiber->framecap)
     {
-        //newcapacity = fmin(TIN_CALL_FRAMES_MAX, fiber->frame_capacity * 2);
-        newcapacity = (fiber->frame_capacity * 2);
+        //newcapacity = fmin(TIN_CALL_FRAMES_MAX, fiber->framecap * 2);
+        newcapacity = (fiber->framecap * 2);
         newsize = (sizeof(TinCallFrame) * newcapacity);
-        osize = (sizeof(TinCallFrame) * fiber->frame_capacity);
-        fiber->frames = (TinCallFrame*)tin_gcmem_memrealloc(vm->state, fiber->frames, osize, newsize);
-        fiber->frame_capacity = newcapacity;
+        osize = (sizeof(TinCallFrame) * fiber->framecap);
+        fiber->framevalues = (TinCallFrame*)tin_gcmem_memrealloc(vm->state, fiber->framevalues, osize, newsize);
+        fiber->framecap = newcapacity;
     }
 
-    functionargcount = function->arg_count;
-    tin_fiber_ensurestack(vm->state, fiber, function->maxslots + (int)(fiber->stack_top - fiber->stack));
-    frame = &fiber->frames[fiber->frame_count++];
+    functionargcount = function->argcount;
+    tin_fiber_ensurestack(vm->state, fiber, function->maxslots + (int)(fiber->stacktop - fiber->stackvalues));
+    frame = &fiber->framevalues[fiber->framecount++];
     frame->function = function;
     frame->closure = closure;
     frame->ip = function->chunk.code;
-    frame->slots = fiber->stack_top - argc - 1;
-    frame->result_ignored = false;
-    frame->return_to_c = false;
+    frame->slots = fiber->stacktop - argc - 1;
+    frame->ignresult = false;
+    frame->returntonative = false;
     if(argc != functionargcount)
     {
         vararg = function->vararg;
@@ -607,14 +607,14 @@ bool tin_vm_callcallable(TinVM* vm, TinFunction* function, TinClosure* closure, 
             tin_state_poproot(vm->state);
             for(i = 0; i < varargcount; i++)
             {
-                tin_vallist_set(vm->state, &array->list, i, vm->fiber->stack_top[(int)i - (int)varargcount]);
+                tin_vallist_set(vm->state, &array->list, i, vm->fiber->stacktop[(int)i - (int)varargcount]);
             }
-            vm->fiber->stack_top -= varargcount;
+            vm->fiber->stacktop -= varargcount;
             tin_vm_push(vm, tin_value_fromobject(array));
         }
         else
         {
-            vm->fiber->stack_top -= (argc - functionargcount);
+            vm->fiber->stacktop -= (argc - functionargcount);
         }
     }
     else if(function->vararg)
@@ -622,8 +622,8 @@ bool tin_vm_callcallable(TinVM* vm, TinFunction* function, TinClosure* closure, 
         array = tin_object_makearray(vm->state);
         varargcount = argc - functionargcount + 1;
         tin_state_pushroot(vm->state, (TinObject*)array);
-        tin_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
-        *(fiber->stack_top - 1) = tin_value_fromobject(array);
+        tin_vallist_push(vm->state, &array->list, *(fiber->stacktop - 1));
+        *(fiber->stacktop - 1) = tin_value_fromobject(array);
         tin_state_poproot(vm->state);
     }
     return true;
@@ -678,8 +678,8 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
             case TINTYPE_NATIVEFUNCTION:
                 {
                     tin_vmmac_pushgc(est, false);
-                    result = tin_value_asnativefunction(callee)->function(est->vm, argc, est->vm->fiber->stack_top - argc);
-                    est->vm->fiber->stack_top -= argc + 1;
+                    result = tin_value_asnativefunction(callee)->function(est->vm, argc, est->vm->fiber->stacktop - argc);
+                    est->vm->fiber->stacktop -= argc + 1;
                     tin_vm_push(est->vm, result);
                     tin_vmmac_popgc(est);
                     return false;
@@ -689,10 +689,10 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
                 {
                     tin_vmmac_pushgc(est, false);
                     est->fiber = est->vm->fiber;
-                    bres = tin_value_asnativeprimitive(callee)->function(est->vm, argc, est->fiber->stack_top - argc);
+                    bres = tin_value_asnativeprimitive(callee)->function(est->vm, argc, est->fiber->stacktop - argc);
                     if(bres)
                     {
-                        est->fiber->stack_top -= argc;
+                        est->fiber->stacktop -= argc;
                     }
                     tin_vmmac_popgc(est);
                     return bres;
@@ -703,8 +703,8 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
                     tin_vmmac_pushgc(est, false);
                     mthobj = tin_value_asnativemethod(callee);
                     est->fiber = est->vm->fiber;
-                    result = mthobj->method(est->vm, *(est->vm->fiber->stack_top - argc - 1), argc, est->vm->fiber->stack_top - argc);
-                    est->vm->fiber->stack_top -= argc + 1;
+                    result = mthobj->method(est->vm, *(est->vm->fiber->stacktop - argc - 1), argc, est->vm->fiber->stacktop - argc);
+                    est->vm->fiber->stacktop -= argc + 1;
                     //if(!tin_value_isnull(result))
                     {
                         if(!est->vm->fiber->abort)
@@ -720,10 +720,10 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
                 {
                     tin_vmmac_pushgc(est, false);
                     est->fiber = est->vm->fiber;
-                    bres = tin_value_asprimitivemethod(callee)->method(est->vm, *(est->fiber->stack_top - argc - 1), argc, est->fiber->stack_top - argc);
+                    bres = tin_value_asprimitivemethod(callee)->method(est->vm, *(est->fiber->stacktop - argc - 1), argc, est->fiber->stacktop - argc);
                     if(bres)
                     {
-                        est->fiber->stack_top -= argc;
+                        est->fiber->stacktop -= argc;
                     }
                     tin_vmmac_popgc(est);
                     return bres;
@@ -733,10 +733,10 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
                 {
                     klass = tin_value_asclass(callee);
                     instance = tin_object_makeinstance(est->vm->state, klass);
-                    est->vm->fiber->stack_top[-argc - 1] = tin_value_fromobject(instance);
-                    if(klass->init_method != NULL)
+                    est->vm->fiber->stacktop[-argc - 1] = tin_value_fromobject(instance);
+                    if(klass->initmethod != NULL)
                     {
-                        return tin_vm_callvalue(est, tin_value_fromobject(klass->init_method), klass->name, argc);
+                        return tin_vm_callvalue(est, tin_value_fromobject(klass->initmethod), klass->name, argc);
                     }
                     // Remove the arguments, so that they don't mess up the stack
                     // (default constructor has no arguments)
@@ -754,8 +754,8 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
                     if(tin_value_isnatmethod(mthval))
                     {
                         tin_vmmac_pushgc(est, false);
-                        result = tin_value_asnativemethod(mthval)->method(est->vm, boundmethod->receiver, argc, est->vm->fiber->stack_top - argc);
-                        est->vm->fiber->stack_top -= argc + 1;
+                        result = tin_value_asnativemethod(mthval)->method(est->vm, boundmethod->receiver, argc, est->vm->fiber->stacktop - argc);
+                        est->vm->fiber->stacktop -= argc + 1;
                         tin_vm_push(est->vm, result);
                         tin_vmmac_popgc(est);
                         return false;
@@ -764,9 +764,9 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
                     {
                         est->fiber = est->vm->fiber;
                         tin_vmmac_pushgc(est, false);
-                        if(tin_value_asprimitivemethod(mthval)->method(est->vm, boundmethod->receiver, argc, est->fiber->stack_top - argc))
+                        if(tin_value_asprimitivemethod(mthval)->method(est->vm, boundmethod->receiver, argc, est->fiber->stacktop - argc))
                         {
-                            est->fiber->stack_top -= argc;
+                            est->fiber->stacktop -= argc;
                             return true;
                         }
                         tin_vmmac_popgc(est);
@@ -774,7 +774,7 @@ bool tin_vm_callvalue(TinExecState* est, TinValue callee, TinString* name, uint8
                     }
                     else
                     {
-                        est->vm->fiber->stack_top[-argc - 1] = boundmethod->receiver;
+                        est->vm->fiber->stacktop[-argc - 1] = boundmethod->receiver;
                         return tin_vm_callcallable(est->vm, tin_value_asfunction(mthval), NULL, argc);
                     }
                 }
@@ -817,7 +817,7 @@ TinUpvalue* tin_vmintern_captureupvalue(TinState* state, TinValue* local)
     TinUpvalue* createdupvalue;
     TinUpvalue* previousupvalue;
     previousupvalue = NULL;
-    upvalue = state->vm->fiber->open_upvalues;
+    upvalue = state->vm->fiber->openupvalues;
     while(upvalue != NULL && upvalue->location > local)
     {
         previousupvalue = upvalue;
@@ -831,7 +831,7 @@ TinUpvalue* tin_vmintern_captureupvalue(TinState* state, TinValue* local)
     createdupvalue->next = upvalue;
     if(previousupvalue == NULL)
     {
-        state->vm->fiber->open_upvalues = createdupvalue;
+        state->vm->fiber->openupvalues = createdupvalue;
     }
     else
     {
@@ -845,12 +845,12 @@ void tin_vmintern_closeupvalues(TinVM* vm, const TinValue* last)
     TinFiber* fiber;
     TinUpvalue* upvalue;
     fiber = vm->fiber;
-    while(fiber->open_upvalues != NULL && fiber->open_upvalues->location >= last)
+    while(fiber->openupvalues != NULL && fiber->openupvalues->location >= last)
     {
-        upvalue = fiber->open_upvalues;
+        upvalue = fiber->openupvalues;
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
-        fiber->open_upvalues = upvalue->next;
+        fiber->openupvalues = upvalue->next;
     }
 }
 
@@ -860,9 +860,9 @@ TinInterpretResult tin_vm_execmodule(TinState* state, TinModule* module)
     TinFiber* fiber;
     TinInterpretResult result;
     vm = state->vm;
-    fiber = tin_object_makefiber(state, module, module->main_function);
+    fiber = tin_object_makefiber(state, module, module->mainfunction);
     vm->fiber = fiber;
-    tin_vm_push(vm, tin_value_fromobject(module->main_function));
+    tin_vm_push(vm, tin_value_fromobject(module->mainfunction));
     result = tin_vm_execfiber(state, fiber);
     return result;
 }
@@ -949,13 +949,13 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     res = tin_value_makefloatnumber(est->vm->state, tin_value_asfixednumber(a) % tin_value_asfixednumber(b));
                 }
-                *(est->fiber->stack_top - 1) = res;
+                *(est->fiber->stacktop - 1) = res;
 
             }
             break;
         case OP_MATHPOWER:
             {
-                *(est->fiber->stack_top - 1) = tin_value_makefloatnumber(est->vm->state, pow(tin_value_asnumber(a), tin_value_asnumber(b)));
+                *(est->fiber->stacktop - 1) = tin_value_makefloatnumber(est->vm->state, pow(tin_value_asnumber(a), tin_value_asnumber(b)));
             }
             break;
         case OP_MATHADD:
@@ -972,7 +972,7 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     res = tin_value_makefloatnumber(est->vm->state, tin_value_asnumber(a) + tin_value_asnumber(b));
                 }
-                *(est->fiber->stack_top - 1) = res;
+                *(est->fiber->stacktop - 1) = res;
             }
             break;
         case OP_MATHSUB:
@@ -989,7 +989,7 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     res = tin_value_makefloatnumber(est->vm->state, tin_value_asnumber(a) - tin_value_asnumber(b));
                 }
-                *(est->fiber->stack_top - 1) = res;
+                *(est->fiber->stacktop - 1) = res;
             }
             break;
         case OP_MATHMULT:
@@ -1006,7 +1006,7 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     res = tin_value_makefloatnumber(est->vm->state, tin_value_asnumber(a) * tin_value_asnumber(b));
                 }
-                *(est->fiber->stack_top - 1) = res;
+                *(est->fiber->stacktop - 1) = res;
             }
             break;
         case OP_MATHDIV:
@@ -1023,28 +1023,28 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     res = tin_value_makefloatnumber(est->vm->state, tin_value_asnumber(a) / tin_value_asnumber(b));
                 }
-                *(est->fiber->stack_top - 1) = res;
+                *(est->fiber->stacktop - 1) = res;
             }
             break;
         case OP_BINAND:
             {
                 ia = tin_value_asfixednumber(a);
                 ib = tin_value_asfixednumber(b);
-                *(est->fiber->stack_top - 1) = (tin_value_makefixednumber(est->vm->state, ia & ib));
+                *(est->fiber->stacktop - 1) = (tin_value_makefixednumber(est->vm->state, ia & ib));
             }
             break;
         case OP_BINOR:
             {
                 ia = tin_value_asfixednumber(a);
                 ib = tin_value_asfixednumber(b);
-                *(est->fiber->stack_top - 1) = (tin_value_makefixednumber(est->vm->state, ia | ib));
+                *(est->fiber->stacktop - 1) = (tin_value_makefixednumber(est->vm->state, ia | ib));
             }
             break;
         case OP_BINXOR:
             {
                 ia = tin_value_asfixednumber(a);
                 ib = tin_value_asfixednumber(b);
-                *(est->fiber->stack_top - 1) = (tin_value_makefixednumber(est->vm->state, ia ^ ib));
+                *(est->fiber->stacktop - 1) = (tin_value_makefixednumber(est->vm->state, ia ^ ib));
             }
             break;
         case OP_LEFTSHIFT:
@@ -1062,7 +1062,7 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     ires = uleft << uright;
                 }
-                *(est->fiber->stack_top - 1) = tin_value_makefixednumber(est->vm->state, ires);
+                *(est->fiber->stacktop - 1) = tin_value_makefixednumber(est->vm->state, ires);
             }
             break;
         case OP_RIGHTSHIFT:
@@ -1080,7 +1080,7 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     ires = uleft >> uright;
                 }
-                *(est->fiber->stack_top - 1) = tin_value_makefixednumber(est->vm->state, ires);
+                *(est->fiber->stacktop - 1) = tin_value_makefixednumber(est->vm->state, ires);
             }
             break;
         case OP_EQUAL:
@@ -1098,27 +1098,27 @@ TIN_VM_INLINE bool vm_binaryop_actual(TinExecState* est, int op, TinValue a, Tin
                 {
                     eq = (tin_value_asnumber(a) == tin_value_asnumber(b));
                 }
-                *(est->fiber->stack_top - 1) = tin_value_makebool(est->vm->state, eq);
+                *(est->fiber->stacktop - 1) = tin_value_makebool(est->vm->state, eq);
             }
             break;
         case OP_GREATERTHAN:
             {
-                *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) > tin_value_asnumber(b)));
+                *(est->fiber->stacktop - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) > tin_value_asnumber(b)));
             }
             break;
         case OP_GREATEREQUAL:
             {
-                *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) >= tin_value_asnumber(b)));
+                *(est->fiber->stacktop - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) >= tin_value_asnumber(b)));
             }
             break;
         case OP_LESSTHAN:
             {
-                *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) < tin_value_asnumber(b)));
+                *(est->fiber->stacktop - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) < tin_value_asnumber(b)));
             }
             break;
         case OP_LESSEQUAL:
             {
-                *(est->fiber->stack_top - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) <= tin_value_asnumber(b)));
+                *(est->fiber->stacktop - 1) = (tin_value_makebool(est->vm->state, tin_value_asnumber(a) <= tin_value_asnumber(b)));
             }
             break;
         default:
@@ -1198,7 +1198,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldget(TinExecState* est, TinValue* finalresult)
     else if(tin_value_isclass(object))
     {
         klassobj = tin_value_asclass(object);
-        if(tin_table_get(&klassobj->static_fields, name, &getval))
+        if(tin_table_get(&klassobj->staticfields, name, &getval))
         {
             if(tin_value_isnatmethod(getval) || tin_value_isprimmethod(getval))
             {
@@ -1260,7 +1260,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldget(TinExecState* est, TinValue* finalresult)
         }
     }
     tin_vmintern_drop(est);// Pop field name
-    est->fiber->stack_top[-1] = getval;
+    est->fiber->stacktop[-1] = getval;
     return true;
 }
 
@@ -1285,7 +1285,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
     if(tin_value_isclass(instval))
     {
         klassobj = tin_value_asclass(instval);
-        if(tin_table_get(&klassobj->static_fields, fieldname, &setter) && tin_value_isfield(setter))
+        if(tin_table_get(&klassobj->staticfields, fieldname, &setter) && tin_value_isfield(setter))
         {
             field = tin_value_asfield(setter);
             if(field->setter == NULL)
@@ -1304,14 +1304,14 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
         }
         if(tin_value_isnull(value))
         {
-            tin_table_delete(&klassobj->static_fields, fieldname);
+            tin_table_delete(&klassobj->staticfields, fieldname);
         }
         else
         {
-            tin_table_set(est->state, &klassobj->static_fields, fieldname, value);
+            tin_table_set(est->state, &klassobj->staticfields, fieldname, value);
         }
         tin_vmintern_dropn(est, 2);// Pop field name and the value
-        est->fiber->stack_top[-1] = value;
+        est->fiber->stacktop[-1] = value;
     }
     else if(tin_value_isinstance(instval))
     {
@@ -1341,7 +1341,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
             tin_table_set(est->state, &instobj->fields, fieldname, value);
         }
         tin_vmintern_dropn(est, 2);// Pop field name and the value
-        est->fiber->stack_top[-1] = value;
+        est->fiber->stacktop[-1] = value;
     }
     else
     {
@@ -1401,7 +1401,7 @@ TIN_VM_INLINE bool tin_vmdo_makeclosure(TinExecState* est, TinValue* finalresult
     function = tin_value_asfunction(tin_vmintern_readconstantlong(est));
     closure = tin_object_makeclosure(est->state, function);
     tin_vmintern_push(est, tin_value_fromobject(closure));
-    for(i = 0; i < closure->upvalue_count; i++)
+    for(i = 0; i < closure->upvalcount; i++)
     {
         islocal = tin_vmintern_readbyte(est);
         index = tin_vmintern_readbyte(est);
@@ -1426,9 +1426,9 @@ TIN_VM_INLINE bool tin_vmdo_makeclass(TinExecState* est, TinValue* finalresult)
     name = tin_vmintern_readstringlong(est);
     klassobj = tin_object_makeclass(est->state, name);
     tin_vmintern_push(est, tin_value_fromobject(klassobj));
-    klassobj->super = est->state->primobjectclass;
-    tin_table_add_all(est->state, &klassobj->super->methods, &klassobj->methods);
-    tin_table_add_all(est->state, &klassobj->super->static_fields, &klassobj->static_fields);
+    klassobj->parentclass = est->state->primobjectclass;
+    tin_table_add_all(est->state, &klassobj->parentclass->methods, &klassobj->methods);
+    tin_table_add_all(est->state, &klassobj->parentclass->staticfields, &klassobj->staticfields);
     tin_table_set(est->state, &est->vm->globals->values, name, tin_value_fromobject(klassobj));
     return true;
 }
@@ -1445,10 +1445,10 @@ TIN_VM_INLINE bool tin_vmdo_makemethod(TinExecState* est, TinValue* finalresult)
     ctorlen = strlen(ctorname);
     klassobj = tin_value_asclass(tin_vmintern_peek(est, 1));
     name = tin_vmintern_readstringlong(est);
-    if((klassobj->init_method == NULL || (klassobj->super != NULL && klassobj->init_method == ((TinClass*)klassobj->super)->init_method))
+    if((klassobj->initmethod == NULL || (klassobj->parentclass != NULL && klassobj->initmethod == ((TinClass*)klassobj->parentclass)->initmethod))
        && tin_string_getlength(name) == ctorlen && memcmp(name->data, ctorname, ctorlen) == 0)
     {
-        klassobj->init_method = tin_value_asobject(tin_vmintern_peek(est, 0));
+        klassobj->initmethod = tin_value_asobject(tin_vmintern_peek(est, 0));
     }
     tin_table_set(est->state, &klassobj->methods, name, tin_vmintern_peek(est, 0));
     tin_vmintern_drop(est);
@@ -1498,7 +1498,7 @@ TIN_VM_INLINE bool tin_vmdo_vararg(TinExecState* est, TinValue* finalresult)
         return true;
     }
     values = &tin_value_asarray(slot)->list;
-    tin_fiber_ensurestack(est->state, est->fiber, tin_vallist_count(values) + est->frame->function->maxslots + (int)(est->fiber->stack_top - est->fiber->stack));
+    tin_fiber_ensurestack(est->state, est->fiber, tin_vallist_count(values) + est->frame->function->maxslots + (int)(est->fiber->stacktop - est->fiber->stackvalues));
     for(i = 0; i < tin_vallist_count(values); i++)
     {
         tin_vmintern_push(est, tin_vallist_get(values, i));
@@ -1535,7 +1535,7 @@ TIN_VM_INLINE bool tin_vmdo_reffield(TinExecState* est, TinValue* finalresult)
         tin_vmmac_raiseerrorfmtnocont("cannot reference field '%s' of a non-instance", name->data);
     }
     tin_vmintern_drop(est);// Pop field name
-    est->fiber->stack_top[-1] = tin_value_fromobject(tin_object_makereference(est->state, pval));
+    est->fiber->stacktop[-1] = tin_value_fromobject(tin_object_makereference(est->state, pval));
     return true;
 }
 
@@ -1624,16 +1624,16 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
     if(tin_value_isclass(receiver))
     {
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval)))
-           || tin_table_get(&tin_value_asclass(receiver)->static_fields, mthname, &mthval))
+           || tin_table_get(&tin_value_asclass(receiver)->staticfields, mthname, &mthval))
         {
             if(tin_vm_callvalue(est, mthval, mthname, argc))
             {
                 tin_vmmac_recoverstate(est);
-                est->frame->result_ignored = true;
+                est->frame->ignresult = true;
             }
             else
             {
-                est->fiber->stack_top[-1] = receiver;
+                est->fiber->stacktop[-1] = receiver;
             }
         }
         else
@@ -1647,7 +1647,7 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
         instance = tin_value_asinstance(receiver);
         if(tin_table_get(&instance->fields, mthname, &vmthval))
         {
-            est->fiber->stack_top[-argc - 1] = vmthval;
+            est->fiber->stacktop[-argc - 1] = vmthval;
             tin_vmmac_callvalue(vmthval, mthname, argc);
             tin_vmintern_readframe(est);
             return true;
@@ -1658,11 +1658,11 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
             if(tin_vm_callvalue(est, mthval, mthname, argc))
             {
                 tin_vmmac_recoverstate(est);
-                est->frame->result_ignored = true;
+                est->frame->ignresult = true;
             }
             else
             {
-                est->fiber->stack_top[-1] = receiver;
+                est->fiber->stacktop[-1] = receiver;
             }
         }
         else
@@ -1683,11 +1683,11 @@ TIN_VM_INLINE bool tin_vmdo_invokeignoring(TinExecState* est, TinValue* finalres
             if(tin_vm_callvalue(est, mthval, mthname, argc))
             {
                 tin_vmmac_recoverstate(est);
-                est->frame->result_ignored = true;
+                est->frame->ignresult = true;
             }
             else
             {
-                est->fiber->stack_top[-1] = receiver;
+                est->fiber->stacktop[-1] = receiver;
             }
         }
         else
@@ -1721,7 +1721,7 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
     if(tin_value_isclass(receiver))
     {
         if((tin_value_isinstance(receiver) && (tin_table_get(&tin_value_asinstance(receiver)->fields, mthname, &mthval)))
-           || tin_table_get(&tin_value_asclass(receiver)->static_fields, mthname, &mthval))
+           || tin_table_get(&tin_value_asclass(receiver)->staticfields, mthname, &mthval))
         {
             tin_vmmac_callvalue(mthval, mthname, argc);
         }
@@ -1736,7 +1736,7 @@ TIN_VM_INLINE bool tin_vmdo_invokemethod(TinExecState* est, TinValue* finalresul
         instance = tin_value_asinstance(receiver);
         if(tin_table_get(&instance->fields, mthname, &vmthval))
         {
-            est->fiber->stack_top[-argc - 1] = vmthval;
+            est->fiber->stacktop[-argc - 1] = vmthval;
             tin_vmmac_callvalue(vmthval, mthname, argc);
             tin_vmintern_readframe(est);
             return true;
@@ -1809,7 +1809,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
     est->fiber = exfiber;
     est->state = exstate;
     est->vm = exvm;
-    est->frame = &est->fiber->frames[est->fiber->frame_count - 1];
+    est->frame = &est->fiber->framevalues[est->fiber->framecount - 1];
     est->currentchunk = &est->frame->function->chunk;
     est->fiber->module = est->frame->function->module;
     est->ip = est->frame->ip;
@@ -1914,10 +1914,10 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
 #endif
 
 #ifdef TIN_CHECK_STACK_SIZE
-        if((est->fiber->stack_top - est->frame->slots) > est->fiber->stack_capacity)
+        if((est->fiber->stacktop - est->frame->slots) > est->fiber->stackcap)
         {
-            tin_vmmac_raiseerrorfmtcont("fiber stack too small (%i > %i)", (int)(est->fiber->stack_top - est->frame->slots),
-                               est->fiber->stack_capacity);
+            tin_vmmac_raiseerrorfmtcont("fiber stack too small (%i > %i)", (int)(est->fiber->stacktop - est->frame->slots),
+                               est->fiber->stackcap);
         }
 #endif
 
@@ -1959,18 +1959,18 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 result = tin_vmintern_pop(est);
                 tin_vmintern_closeupvalues(est->vm, est->slots);
                 tin_vmintern_writeframe(est, est->ip);
-                est->fiber->frame_count--;
-                if(est->frame->return_to_c)
+                est->fiber->framecount--;
+                if(est->frame->returntonative)
                 {
-                    est->frame->return_to_c = false;
-                    est->fiber->module->return_value = result;
-                    est->fiber->stack_top = est->frame->slots;
+                    est->frame->returntonative = false;
+                    est->fiber->module->returnvalue = result;
+                    est->fiber->stacktop = est->frame->slots;
                     *finalresult = result;
                     return true;
                 }
-                if(est->fiber->frame_count == 0)
+                if(est->fiber->framecount == 0)
                 {
-                    est->fiber->module->return_value = result;
+                    est->fiber->module->returnvalue = result;
                     if(est->fiber->parent == NULL)
                     {
                         tin_vmintern_drop(est);
@@ -1978,21 +1978,21 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                         *finalresult = result;
                         return true;
                     }
-                    argc = est->fiber->arg_count;
+                    argc = est->fiber->funcargcount;
                     parent = est->fiber->parent;
                     est->fiber->parent = NULL;
                     est->vm->fiber = est->fiber = parent;
                     tin_vmintern_readframe(est);
                     tin_vmmac_traceframe(est->fiber);
-                    est->fiber->stack_top -= argc;
-                    est->fiber->stack_top[-1] = result;
+                    est->fiber->stacktop -= argc;
+                    est->fiber->stacktop[-1] = result;
                     continue;
                 }
-                est->fiber->stack_top = est->frame->slots;
-                if(est->frame->result_ignored)
+                est->fiber->stacktop = est->frame->slots;
+                if(est->frame->ignresult)
                 {
-                    est->fiber->stack_top++;
-                    est->frame->result_ignored = false;
+                    est->fiber->stacktop++;
+                    est->frame->ignresult = false;
                 }
                 else
                 {
@@ -2107,7 +2107,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 if(tin_value_isnumber(vala) && tin_value_isnumber(valb))
                 {
                     tin_vmintern_drop(est);
-                    *(est->fiber->stack_top - 1) = tin_value_makefloatnumber(est->vm->state, floor(tin_value_asnumber(vala) / tin_value_asnumber(valb)));
+                    *(est->fiber->stacktop - 1) = tin_value_makefloatnumber(est->vm->state, floor(tin_value_asnumber(vala) / tin_value_asnumber(valb)));
                 }
                 else
                 {
@@ -2323,7 +2323,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
             }
             op_case(OP_UPVALCLOSE)
             {
-                tin_vmintern_closeupvalues(est->vm, est->fiber->stack_top - 1);
+                tin_vmintern_closeupvalues(est->vm, est->fiber->stacktop - 1);
                 tin_vmintern_drop(est);
                 continue;
             }
@@ -2381,7 +2381,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
             }
             op_case(OP_FIELDSTATIC)
             {
-                tin_table_set(est->state, &tin_value_asclass(tin_vmintern_peek(est, 1))->static_fields, tin_vmintern_readstringlong(est), tin_vmintern_peek(est, 0));
+                tin_table_set(est->state, &tin_value_asclass(tin_vmintern_peek(est, 1))->staticfields, tin_vmintern_readstringlong(est), tin_vmintern_peek(est, 0));
                 tin_vmintern_drop(est);
                 continue;
             }
@@ -2477,10 +2477,10 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                 }
                 klassobj = tin_value_asclass(tin_vmintern_peek(est, 0));
                 superklass = tin_value_asclass(super);
-                klassobj->super = superklass;
-                klassobj->init_method = superklass->init_method;
+                klassobj->parentclass = superklass;
+                klassobj->initmethod = superklass->initmethod;
                 tin_table_add_all(est->state, &superklass->methods, &klassobj->methods);
-                tin_table_add_all(est->state, &klassobj->super->static_fields, &klassobj->static_fields);
+                tin_table_add_all(est->state, &klassobj->parentclass->staticfields, &klassobj->staticfields);
                 continue;
             }
             op_case(OP_ISCLASS)
@@ -2513,7 +2513,7 @@ bool tin_vmintern_execfiber(TinState* exstate, TinFiber* exfiber, TinValue* fina
                         found = true;
                         break;
                     }
-                    instanceklass = (TinClass*)instanceklass->super;
+                    instanceklass = (TinClass*)instanceklass->parentclass;
                 }
                 tin_vmintern_dropn(est, 2);// Drop the instance and class
                 tin_vmintern_push(est, tin_value_makebool(est->vm->state, found));

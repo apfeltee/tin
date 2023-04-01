@@ -27,7 +27,7 @@
 #define optc_do_fn_op(fn, tokstr) \
     if(tin_value_isnumber(a) && tin_value_isnumber(b)) \
     { \
-        tin_astopt_optdbg("translating constant expression of '" tokstr "' to constant value via tin_vm_callcallable to '" #fn "'"); \
+        tin_astopt_optdbg("translating constant expression of '" tokstr "' to constant value via call to '" #fn "'"); \
         return tin_value_makenumber(optimizer->state, fn(tin_value_asnumber(a), tin_value_asnumber(b))); \
     } \
     return tin_value_makenull(optimizer->state);
@@ -108,7 +108,7 @@ void tin_astopt_init(TinState* state, TinAstOptimizer* optimizer)
 {
     optimizer->state = state;
     optimizer->depth = -1;
-    optimizer->mark_used = false;
+    optimizer->markused = false;
     tin_varlist_init(&optimizer->variables);
 }
 
@@ -144,7 +144,7 @@ static TinVariable* tin_astopt_addvar(TinAstOptimizer* optimizer, const char* na
     tv.length = length;
     tv.depth = optimizer->depth;
     tv.constant = constant;
-    tv.used = optimizer->mark_used;
+    tv.used = optimizer->markused;
     tv.constvalue = tin_value_makenull(optimizer->state);
     tv.declaration = declaration;
     tin_varlist_push(optimizer->state, &optimizer->variables, tv);
@@ -428,12 +428,12 @@ static void tin_astopt_optforstmt(TinState* state, TinAstOptimizer* optimizer, T
     TinAstForExpr* stmt = (TinAstForExpr*)expression;
     tin_astopt_beginscope(optimizer);
     // This is required, so that optimizer doesn't optimize out our i variable (and such)
-    optimizer->mark_used = true;
+    optimizer->markused = true;
     tin_astopt_optexpression(optimizer, &stmt->init);
     tin_astopt_optexpression(optimizer, &stmt->condition);
     tin_astopt_optexpression(optimizer, &stmt->increment);
     tin_astopt_optexpression(optimizer, &stmt->var);
-    optimizer->mark_used = false;
+    optimizer->markused = false;
     tin_astopt_optexpression(optimizer, &stmt->body);
     tin_astopt_endscope(optimizer);
     if(tin_astopt_isoptenabled(TINOPTSTATE_EMPTYBODY) && tin_astopt_isemptyexpr(stmt->body))
@@ -466,7 +466,7 @@ static void tin_astopt_optforstmt(TinState* state, TinAstOptimizer* optimizer, T
     TinAstBinaryExpr* assign_value = tin_ast_make_binaryexpr(
     state, line, var_get, (TinAstExpression*)tin_ast_make_literalexpr(state, line, tin_value_makenumber(optimizer->state, 1)),
     reverse ? TINTOK_DOUBLEMINUS : TINTOK_PLUS);
-    assign_value->ignore_left = true;
+    assign_value->ignoreleft = true;
     TinAstExpression* increment
     = (TinAstExpression*)tin_ast_make_assignexpr(state, line, var_get, (TinAstExpression*)assign_value);
     stmt->increment = (TinAstExpression*)increment;

@@ -104,7 +104,7 @@ void util_custom_quick_sort(TinVM* vm, TinValue* l, int length, TinValue callee)
 
 bool util_is_fiber_done(TinFiber* fiber)
 {
-    return fiber->frame_count == 0 || fiber->abort;
+    return fiber->framecount == 0 || fiber->abort;
 }
 
 void util_run_fiber(TinVM* vm, TinFiber* fiber, TinValue* argv, size_t argc, bool catcher)
@@ -123,17 +123,17 @@ void util_run_fiber(TinVM* vm, TinFiber* fiber, TinValue* argv, size_t argc, boo
     fiber->parent = vm->fiber;
     fiber->catcher = catcher;
     vm->fiber = fiber;
-    frame = &fiber->frames[fiber->frame_count - 1];
+    frame = &fiber->framevalues[fiber->framecount - 1];
     if(frame->ip == frame->function->chunk.code)
     {
-        fiber->arg_count = argc;
-        tin_fiber_ensurestack(vm->state, fiber, frame->function->maxslots + 1 + (int)(fiber->stack_top - fiber->stack));
-        frame->slots = fiber->stack_top;
+        fiber->funcargcount = argc;
+        tin_fiber_ensurestack(vm->state, fiber, frame->function->maxslots + 1 + (int)(fiber->stacktop - fiber->stackvalues));
+        frame->slots = fiber->stacktop;
         tin_vm_push(vm, tin_value_fromobject(frame->function));
         vararg = frame->function->vararg;
-        objfn_function_arg_count = frame->function->arg_count;
+        objfn_function_arg_count = frame->function->argcount;
         to = objfn_function_arg_count - (vararg ? 1 : 0);
-        fiber->arg_count = objfn_function_arg_count;
+        fiber->funcargcount = objfn_function_arg_count;
         for(i = 0; i < to; i++)
         {
             tin_vm_push(vm, i < (int)argc ? argv[i] : tin_value_makenull(vm->state));
@@ -208,14 +208,14 @@ bool util_interpret(TinVM* vm, TinModule* module)
     TinFunction* function;
     TinFiber* fiber;
     TinCallFrame* frame;
-    function = module->main_function;
+    function = module->mainfunction;
     fiber = tin_object_makefiber(vm->state, module, function);
     fiber->parent = vm->fiber;
     vm->fiber = fiber;
-    frame = &fiber->frames[fiber->frame_count - 1];
+    frame = &fiber->framevalues[fiber->framecount - 1];
     if(frame->ip == frame->function->chunk.code)
     {
-        frame->slots = fiber->stack_top;
+        frame->slots = fiber->stacktop;
         tin_vm_push(vm, tin_value_fromobject(frame->function));
     }
     return true;
@@ -388,13 +388,8 @@ void tin_open_core_library(TinState* state)
         #if 0
         klass = tin_object_makeclassname(state, "Struct");
         {
-            tin_class_bindstaticmethod(state, klass, "getenv", objfn_system_getenv);
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        };
         #endif
     }
     {
@@ -402,16 +397,11 @@ void tin_open_core_library(TinState* state)
         {
             tin_class_bindstaticmethod(state, klass, "getenv", objfn_system_getenv);
         }
-        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        };        
+        tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));      
     }
     {
         klass = tin_object_makeclassname(state, "Number");
         {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
             tin_class_bindconstructor(state, klass, util_invalid_constructor);
             tin_class_bindmethod(state, klass, "toString", objfn_number_tostring);
             tin_class_bindmethod(state, klass, "toChar", objfn_number_tochar);
@@ -419,25 +409,16 @@ void tin_open_core_library(TinState* state)
             state->primnumberclass = klass;
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        };
     }
     {
         klass = tin_object_makeclassname(state, "Bool");
         {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
             tin_class_bindconstructor(state, klass, util_invalid_constructor);
             tin_class_bindmethod(state, klass, "==", objfn_bool_compare);
             tin_class_bindmethod(state, klass, "toString", objfn_bool_tostring);
             state->primboolclass = klass;
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        };
     }
     {
         tin_state_defnativefunc(state, "time", cfn_time);

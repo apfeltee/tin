@@ -21,7 +21,7 @@ TinString* tin_vformat_error(TinState* state, size_t line, const char* fmt, va_l
     va_copy(argscopy, args);
     buffersize = vsnprintf(NULL, 0, fmt, argscopy) + 1;
     va_end(argscopy);
-    buffer = (char*)malloc(buffersize+1);
+    buffer = (char*)tin_gcmem_allocate(state, sizeof(char), buffersize+1);
     vsnprintf(buffer, buffersize, fmt, args);
     buffer[buffersize - 1] = '\0';
     if(line != 0)
@@ -69,7 +69,6 @@ TinState* tin_make_state()
 {
     TinState* state;
     state = (TinState*)malloc(sizeof(TinState));
-
     {
         state->config.dumpbytecode = false;
         state->config.dumpast = false;
@@ -102,7 +101,7 @@ TinState* tin_make_state()
     state->gcroots = NULL;
     state->gcrootcount = 0;
     state->gcrootcapacity = 0;
-    state->last_module = NULL;
+    state->lastmodule = NULL;
     tin_writer_init_file(state, &state->debugwriter, stdout, true);
     state->scanner = (TinAstScanner*)malloc(sizeof(TinAstScanner));
     state->parser = (TinAstParser*)malloc(sizeof(TinAstParser));
@@ -279,19 +278,19 @@ bool tin_state_ensurefiber(TinVM* vm, TinFiber* fiber)
         tin_vm_raiseerror(vm, "no fiber to run on");
         return true;
     }
-    if(fiber->frame_count == TIN_CALL_FRAMES_MAX)
+    if(fiber->framecount == TIN_CALL_FRAMES_MAX)
     {
         tin_vm_raiseerror(vm, "fiber frame overflow");
         return true;
     }
-    if(fiber->frame_count + 1 > fiber->frame_capacity)
+    if(fiber->framecount + 1 > fiber->framecap)
     {
-        //newcapacity = fmin(TIN_CALL_FRAMES_MAX, fiber->frame_capacity * 2);
-        newcapacity = (fiber->frame_capacity * 2) + 1;
-        osize = (sizeof(TinCallFrame) * fiber->frame_capacity);
+        //newcapacity = fmin(TIN_CALL_FRAMES_MAX, fiber->framecap * 2);
+        newcapacity = (fiber->framecap * 2) + 1;
+        osize = (sizeof(TinCallFrame) * fiber->framecap);
         newsize = (sizeof(TinCallFrame) * newcapacity);
-        fiber->frames = (TinCallFrame*)tin_gcmem_memrealloc(vm->state, fiber->frames, osize, newsize);
-        fiber->frame_capacity = newcapacity;
+        fiber->framevalues = (TinCallFrame*)tin_gcmem_memrealloc(vm->state, fiber->framevalues, osize, newsize);
+        fiber->framecap = newcapacity;
     }
 
     return false;
@@ -331,15 +330,15 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
             return NULL;
         }        
     }
-    tin_fiber_ensurestack(state, fiber, callee->maxslots + (int)(fiber->stack_top - fiber->stack));
-    frame = &fiber->frames[fiber->frame_count++];
-    frame->slots = fiber->stack_top;
+    tin_fiber_ensurestack(state, fiber, callee->maxslots + (int)(fiber->stacktop - fiber->stackvalues));
+    frame = &fiber->framevalues[fiber->framecount++];
+    frame->slots = fiber->stacktop;
     tin_vm_push(state->vm, tin_value_fromobject(callee));
     for(i = 0; i < argc; i++)
     {
         tin_vm_push(state->vm, argv[i]);
     }
-    functionargcount = callee->arg_count;
+    functionargcount = callee->argcount;
     if(argc != functionargcount)
     {
         vararg = callee->vararg;
@@ -362,29 +361,29 @@ static inline TinCallFrame* setup_call(TinState* state, TinFunction* callee, Tin
             tin_vallist_ensuresize(vm->state, &array->list, varargc);
             for(i = 0; i < varargc; i++)
             {
-                tin_vallist_set(vm->state, &array->list, i, fiber->stack_top[(int)i - (int)varargc]);
+                tin_vallist_set(vm->state, &array->list, i, fiber->stacktop[(int)i - (int)varargc]);
             }
 
-            fiber->stack_top -= varargc;
+            fiber->stacktop -= varargc;
             tin_vm_push(vm, tin_value_fromobject(array));
         }
         else
         {
-            fiber->stack_top -= (argc - functionargcount);
+            fiber->stacktop -= (argc - functionargcount);
         }
     }
     else if(callee->vararg)
     {
         array = tin_object_makearray(vm->state);
         varargc = argc - functionargcount + 1;
-        tin_vallist_push(vm->state, &array->list, *(fiber->stack_top - 1));
-        *(fiber->stack_top - 1) = tin_value_fromobject(array);
+        tin_vallist_push(vm->state, &array->list, *(fiber->stacktop - 1));
+        *(fiber->stacktop - 1) = tin_value_fromobject(array);
     }
     frame->ip = callee->chunk.code;
     frame->closure = NULL;
     frame->function = callee;
-    frame->result_ignored = false;
-    frame->return_to_c = true;
+    frame->ignresult = false;
+    frame->returntonative = true;
     return frame;
 }
 
@@ -469,8 +468,8 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
                 RETURN_RUNTIME_ERROR(state);
             }
         }
-        tin_fiber_ensurestack(state, fiber, 3 + argc + (int)(fiber->stack_top - fiber->stack));
-        slot = fiber->stack_top;
+        tin_fiber_ensurestack(state, fiber, 3 + argc + (int)(fiber->stacktop - fiber->stackvalues));
+        slot = fiber->stacktop;
         tin_vm_push(state->vm, instance);
         if(type != TINTYPE_CLASS)
         {
@@ -483,23 +482,23 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
         {
             case TINTYPE_NATIVEFUNCTION:
                 {
-                    result = tin_value_asnativefunction(callee)->function(vm, argc, fiber->stack_top - argc);
-                    fiber->stack_top = slot;
+                    result = tin_value_asnativefunction(callee)->function(vm, argc, fiber->stacktop - argc);
+                    fiber->stacktop = slot;
                     RETURN_OK(result);
                 }
                 break;
             case TINTYPE_NATIVEPRIMITIVE:
                 {
-                    tin_value_asnativeprimitive(callee)->function(vm, argc, fiber->stack_top - argc);
-                    fiber->stack_top = slot;
+                    tin_value_asnativeprimitive(callee)->function(vm, argc, fiber->stacktop - argc);
+                    fiber->stacktop = slot;
                     RETURN_OK(tin_value_makenull(state));
                 }
                 break;
             case TINTYPE_NATIVEMETHOD:
                 {
                     natmethod = tin_value_asnativemethod(callee);
-                    result = natmethod->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
-                    fiber->stack_top = slot;
+                    result = natmethod->method(vm, *(fiber->stacktop - argc - 1), argc, fiber->stacktop - argc);
+                    fiber->stacktop = slot;
                     RETURN_OK(result);
                 }
                 break;
@@ -507,12 +506,12 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
                 {
                     klass = tin_value_asclass(callee);
                     *slot = tin_value_fromobject(tin_object_makeinstance(vm->state, klass));
-                    if(klass->init_method != NULL)
+                    if(klass->initmethod != NULL)
                     {
-                        lir = tin_state_callmethod(state, *slot, tin_value_fromobject(klass->init_method), argv, argc, ignfiber);
+                        lir = tin_state_callmethod(state, *slot, tin_value_fromobject(klass->initmethod), argv, argc, ignfiber);
                     }
                     // TODO: when should this return *slot instead of lir?
-                    fiber->stack_top = slot;
+                    fiber->stacktop = slot;
                     //RETURN_OK(*slot);
                     return lir;
                 }
@@ -524,28 +523,28 @@ TinInterpretResult tin_state_callmethod(TinState* state, TinValue instance, TinV
                     *slot = boundmethod->receiver;
                     if(tin_value_isnatmethod(mthval))
                     {
-                        result = tin_value_asnativemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
-                        fiber->stack_top = slot;
+                        result = tin_value_asnativemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stacktop - argc);
+                        fiber->stacktop = slot;
                         RETURN_OK(result);
                     }
                     else if(tin_value_isprimmethod(mthval))
                     {
-                        tin_value_asprimitivemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stack_top - argc);
+                        tin_value_asprimitivemethod(mthval)->method(vm, boundmethod->receiver, argc, fiber->stacktop - argc);
 
-                        fiber->stack_top = slot;
+                        fiber->stacktop = slot;
                         RETURN_OK(tin_value_makenull(state));
                     }
                     else
                     {
-                        fiber->stack_top = slot;
+                        fiber->stacktop = slot;
                         return tin_state_callfunction(state, tin_value_asfunction(mthval), argv, argc, ignfiber);
                     }
                 }
                 break;
             case TINTYPE_PRIMITIVEMETHOD:
                 {
-                    tin_value_asprimitivemethod(callee)->method(vm, *(fiber->stack_top - argc - 1), argc, fiber->stack_top - argc);
-                    fiber->stack_top = slot;
+                    tin_value_asprimitivemethod(callee)->method(vm, *(fiber->stacktop - argc - 1), argc, fiber->stacktop - argc);
+                    fiber->stacktop = slot;
                     RETURN_OK(tin_value_makenull(state));
                 }
                 break;
@@ -836,16 +835,16 @@ TinInterpretResult tin_state_internexecsource(TinState* state, TinString* module
     }
     
     result = tin_vm_execmodule(state, module);
-    fiber = module->main_fiber;
-    if(!state->haderror && !fiber->abort && fiber->stack_top != fiber->stack)
+    fiber = module->mainfiber;
+    if(!state->haderror && !fiber->abort && fiber->stacktop != fiber->stackvalues)
     {
-        istack = (intptr_t)(fiber->stack);
-        itop = (intptr_t)(fiber->stack_top);
-        idif = (intptr_t)(fiber->stack - fiber->stack_top);
+        istack = (intptr_t)(fiber->stackvalues);
+        itop = (intptr_t)(fiber->stacktop);
+        idif = (intptr_t)(fiber->stackvalues - fiber->stacktop);
         /* me fail english. how do i put this better? */
         tin_state_raiseerror(state, RUNTIME_ERROR, "stack should be same as stack top", idif, istack, istack, itop, itop);
     }
-    state->last_module = module;
+    state->lastmodule = module;
     return result;
 }
 
@@ -986,7 +985,7 @@ void tin_state_raiseerror(TinState* state, TinErrType type, const char* message,
     va_copy(argscopy, args);
     buffersize = vsnprintf(NULL, 0, message, argscopy) + 1;
     va_end(argscopy);
-    buffer = (char*)malloc(buffersize+1);
+    buffer = (char*)tin_gcmem_allocate(state, sizeof(char), buffersize+1);
     vsnprintf(buffer, buffersize, message, args);
     va_end(args);
     state->errorfn(state, buffer);
@@ -995,19 +994,3 @@ void tin_state_raiseerror(TinState* state, TinErrType type, const char* message,
     free(buffer);
 }
 
-void tin_state_printf(TinState* state, const char* message, ...)
-{
-    size_t buffersize;
-    char* buffer;
-    va_list args;
-    va_start(args, message);
-    va_list argscopy;
-    va_copy(argscopy, args);
-    buffersize = vsnprintf(NULL, 0, message, argscopy) + 1;
-    va_end(argscopy);
-    buffer = (char*)malloc(buffersize+1);
-    vsnprintf(buffer, buffersize, message, args);
-    va_end(args);
-    state->printfn(state, buffer);
-    free(buffer);
-}

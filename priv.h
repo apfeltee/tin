@@ -104,7 +104,7 @@ struct TinAstBinaryExpr
     TinAstExpression* left;
     TinAstExpression* right;
     TinAstTokType op;
-    bool ignore_left;
+    bool ignoreleft;
 };
 
 struct TinAstUnaryExpr
@@ -397,7 +397,7 @@ struct TinAstCompUpvalue
 struct TinAstCompiler
 {
     TinAstLocList locals;
-    int scope_depth;
+    int scopedepth;
     TinFunction* function;
     TinAstFuncType type;
     TinAstCompUpvalue upvalues[UINT8_COUNT];
@@ -412,7 +412,7 @@ struct TinAstParser
 {
     TinState* state;
     bool haderror;
-    bool panic_mode;
+    bool panicmode;
     TinAstToken prevprev;
     TinAstToken previous;
     TinAstToken current;
@@ -446,20 +446,20 @@ struct TinAstOptimizer
     TinState* state;
     TinVarList variables;
     int depth;
-    bool mark_used;
+    bool markused;
 };
 
 static inline void tin_vm_push(TinVM* vm, TinValue value)
 {
-    *(vm->fiber->stack_top) = value;
-    vm->fiber->stack_top++;
+    *(vm->fiber->stacktop) = value;
+    vm->fiber->stacktop++;
 }
 
 static inline TinValue tin_vm_pop(TinVM* vm)
 {
     TinValue rt;
-    rt = *(vm->fiber->stack_top);
-    vm->fiber->stack_top--;
+    rt = *(vm->fiber->stacktop);
+    vm->fiber->stacktop--;
     return rt;
 }
 

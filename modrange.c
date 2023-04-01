@@ -101,7 +101,6 @@ void tin_open_range_library(TinState* state)
     TinClass* klass;
     klass = tin_object_makeclassname(state, "Range");
     {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, util_invalid_constructor);
         tin_class_bindmethod(state, klass, "iterator", objfn_range_iterator);
         tin_class_bindmethod(state, klass, "iteratorValue", objfn_range_iteratorvalue);
@@ -112,9 +111,5 @@ void tin_open_range_library(TinState* state)
         state->primrangeclass = klass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
-    {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
-    };
 }
 

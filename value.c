@@ -177,7 +177,7 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
     if(function == NULL)
     {
         function = state->capifunction = tin_object_makefunction(state, fiber->module);
-        function->chunk.has_line_info = false;
+        function->chunk.haslineinfo = false;
         function->name = state->capiname;
         chunk = &function->chunk;
         chunk->count = 0;
@@ -188,14 +188,14 @@ TinString* tin_value_tostring(TinState* state, TinValue object)
         tin_chunk_emitshort(state, chunk, tin_chunk_addconst(state, chunk, tin_value_makestring(state, "toString")));
         tin_chunk_emitbyte(state, chunk, OP_RETURN);
     }
-    tin_fiber_ensurestack(state, fiber, function->maxslots + (int)(fiber->stack_top - fiber->stack));
-    frame = &fiber->frames[fiber->frame_count++];
+    tin_fiber_ensurestack(state, fiber, function->maxslots + (int)(fiber->stacktop - fiber->stackvalues));
+    frame = &fiber->framevalues[fiber->framecount++];
     frame->ip = function->chunk.code;
     frame->closure = NULL;
     frame->function = function;
-    frame->slots = fiber->stack_top;
-    frame->result_ignored = false;
-    frame->return_to_c = true;
+    frame->slots = fiber->stacktop;
+    frame->ignresult = false;
+    frame->returntonative = true;
     tin_vm_push(state->vm, tin_value_fromobject(function));
     tin_vm_push(state->vm, object);
     result = tin_vm_execfiber(state, fiber);
@@ -340,7 +340,7 @@ TinValue tin_value_callnew(TinVM* vm, const char* name, TinValue* args, size_t a
         return tin_value_makenull(vm->state);
     }
     klass = tin_value_asclass(value);
-    if(klass->init_method == NULL)
+    if(klass->initmethod == NULL)
     {
         return tin_value_fromobject(tin_object_makeinstance(vm->state, klass));
     }

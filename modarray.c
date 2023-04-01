@@ -105,20 +105,7 @@ void tin_vallist_ensuresizeintern(TinState* state, TinValList* vl, size_t size)
 
 void tin_vallist_ensuresize(TinState* state, TinValList* vl, size_t size)
 {
-    //return;
     tin_vallist_ensuresizeintern(state, vl, size);
-}
-
-TinValue tin_vallist_set(TinState* state, TinValList* vl, size_t idx, TinValue val)
-{
-    //tin_vallist_ensuresizeintern(state, vl, idx+1);
-    vl->values[idx] = val;
-    return val;
-}
-
-TinValue tin_vallist_get(TinValList* vl, size_t idx)
-{
-    return vl->values[idx];
 }
 
 void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
@@ -134,6 +121,18 @@ void tin_vallist_push(TinState* state, TinValList* vl, TinValue value)
     }
     vl->values[vl->count] = value;
     vl->count++;
+}
+
+TinValue tin_vallist_set(TinState* state, TinValList* vl, size_t idx, TinValue val)
+{
+    tin_vallist_ensuresizeintern(state, vl, idx+1);
+    vl->values[idx] = val;
+    return val;
+}
+
+TinValue tin_vallist_get(TinValList* vl, size_t idx)
+{
+    return vl->values[idx];
 }
 
 /* ---- Array object instance functions */
@@ -338,7 +337,7 @@ static TinValue objfn_array_compare(TinVM* vm, TinValue instance, size_t argc, T
     TinArray* self;
     TinArray* other;
     (void)argc;
-    //fprintf(stderr, "tin_vm_callcallable to objfn_array_compare\n");
+    //fprintf(stderr, "call to objfn_array_compare\n");
     self = tin_value_asarray(instance);
     if(tin_value_isarray(argv[0]))
     {
@@ -741,7 +740,6 @@ void tin_open_array_library(TinState* state)
     TinClass* klass;
     klass = tin_object_makeclassname(state, "Array");
     {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
         tin_class_bindconstructor(state, klass, objfn_array_constructor);
         tin_class_bindmethod(state, klass, "[]", objfn_array_subscript);
         tin_class_bindmethod(state, klass, "==", objfn_array_compare);
@@ -768,10 +766,6 @@ void tin_open_array_library(TinState* state)
         state->primarrayclass = klass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
-    {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
-    }
 }
 
 

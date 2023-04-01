@@ -65,7 +65,7 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModu
 static void* tin_util_instancedataset(TinVM* vm, TinValue instance, size_t typsz, CleanupFunc cleanup)
 {
     TinUserdata* userdata = tin_object_makeuserdata(vm->state, typsz, false);
-    userdata->cleanup_fn = cleanup;
+    userdata->cleanupfn = cleanup;
     tin_table_set(vm->state, &tin_value_asinstance(instance)->fields, tin_string_copyconst(vm->state, "_data"), tin_value_fromobject(userdata));
     return userdata->data;
 }
@@ -270,8 +270,8 @@ static void tin_ioutil_writefunction(FILE* fh, TinFunction* function)
 {
     tin_ioutil_writechunk(fh, &function->chunk);
     tin_ioutil_writestring(fh, function->name);
-    tin_ioutil_writeuint8(fh, function->arg_count);
-    tin_ioutil_writeuint16(fh, function->upvalue_count);
+    tin_ioutil_writeuint8(fh, function->argcount);
+    tin_ioutil_writeuint16(fh, function->upvalcount);
     tin_ioutil_writeuint8(fh, (uint8_t)function->vararg);
     tin_ioutil_writeuint16(fh, (uint16_t)function->maxslots);
 }
@@ -282,8 +282,8 @@ static TinFunction* tin_ioutil_readfunction(TinState* state, TinEmulatedFile* fe
     function = tin_object_makefunction(state, module);
     tin_ioutil_readchunk(state, femu, module, &function->chunk);
     function->name = tin_emufile_readstring(state, femu);
-    function->arg_count = tin_emufile_readuint8(femu);
-    function->upvalue_count = tin_emufile_readuint16(femu);
+    function->argcount = tin_emufile_readuint8(femu);
+    function->upvalcount = tin_emufile_readuint16(femu);
     function->vararg = (bool)tin_emufile_readuint8(femu);
     function->maxslots = tin_emufile_readuint16(femu);
     return function;
@@ -300,9 +300,9 @@ static void tin_ioutil_writechunk(FILE* fh, TinChunk* chunk)
     {
         tin_ioutil_writeuint8(fh, chunk->code[i]);
     }
-    if(chunk->has_line_info)
+    if(chunk->haslineinfo)
     {
-        c = chunk->line_count * 2 + 2;
+        c = chunk->linecount * 2 + 2;
         tin_ioutil_writeuint32(fh, c);
         for(i = 0; i < c; i++)
         {
@@ -366,8 +366,8 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModu
     if(count > 0)
     {
         chunk->lines = (uint16_t*)tin_gcmem_memrealloc(state, NULL, 0, sizeof(uint16_t) * count);
-        chunk->line_count = count;
-        chunk->line_capacity = count;
+        chunk->linecount = count;
+        chunk->linecap = count;
         for(i = 0; i < count; i++)
         {
             chunk->lines[i] = tin_emufile_readuint16(femu);
@@ -375,7 +375,7 @@ static void tin_ioutil_readchunk(TinState* state, TinEmulatedFile* femu, TinModu
     }
     else
     {
-        chunk->has_line_info = false;
+        chunk->haslineinfo = false;
     }
     count = tin_emufile_readuint32(femu);
     /*
@@ -427,12 +427,12 @@ void tin_ioutil_writemodule(TinModule* module, FILE* fh)
     TinTable* privates;
     disabled = tin_astopt_isoptenabled(TINOPTSTATE_PRIVATENAMES);
     tin_ioutil_writestring(fh, module->name);
-    tin_ioutil_writeuint16(fh, module->private_count);
+    tin_ioutil_writeuint16(fh, module->privcount);
     tin_ioutil_writeuint8(fh, (uint8_t)disabled);
     if(!disabled)
     {
-        privates = &module->private_names->values;
-        for(i = 0; i < module->private_count; i++)
+        privates = &module->privnames->values;
+        for(i = 0; i < module->privcount; i++)
         {
             if(privates->entries[i].key != NULL)
             {
@@ -441,7 +441,7 @@ void tin_ioutil_writemodule(TinModule* module, FILE* fh)
             }
         }
     }
-    tin_ioutil_writefunction(fh, module->main_function);
+    tin_ioutil_writefunction(fh, module->mainfunction);
 }
 
 TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
@@ -473,11 +473,11 @@ TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
     for(j = 0; j < modulecount; j++)
     {
         module = tin_object_makemodule(state, tin_emufile_readstring(state, &femu));
-        privates = &module->private_names->values;
+        privates = &module->privnames->values;
         privatescount = tin_emufile_readuint16(&femu);
         enabled = !((bool)tin_emufile_readuint8(&femu));
         module->privates = (TinValue*)tin_gcmem_allocate(state, sizeof(TinValue), privatescount);
-        module->private_count = privatescount;
+        module->privcount = privatescount;
         for(i = 0; i < privatescount; i++)
         {
             module->privates[i] = tin_value_makenull(state);
@@ -487,7 +487,7 @@ TinModule* tin_ioutil_readmodule(TinState* state, const char* input, size_t len)
                 tin_table_set(state, privates, name, tin_value_makefixednumber(state, tin_emufile_readuint16(&femu)));
             }
         }
-        module->main_function = tin_ioutil_readfunction(state, &femu, module);
+        module->mainfunction = tin_ioutil_readfunction(state, &femu, module);
         tin_table_set(state, &state->vm->modules->values, module->name, tin_value_fromobject(module));
         if(j == 0)
         {
@@ -1116,7 +1116,7 @@ static void tin_userfile_makehandle(TinState* state, TinValue fileval, const cha
     TinFiber* oldfiber;
     TinStdioHandle* hstd;
     oldfiber = state->vm->fiber;
-    state->vm->fiber = tin_object_makefiber(state, state->last_module, NULL);
+    state->vm->fiber = tin_object_makefiber(state, state->lastmodule, NULL);
     {
         hstd = (TinStdioHandle*)tin_gcmem_allocate(state, sizeof(TinStdioHandle), 1);
         hstd->handle = hnd;
@@ -1126,7 +1126,7 @@ static void tin_userfile_makehandle(TinState* state, TinValue fileval, const cha
         userhnd = tin_object_makeuserdata(state, sizeof(TinStdioHandle), true);
         userhnd->data = hstd;
         userhnd->canfree = false;
-        userhnd->cleanup_fn = tin_userfile_destroyhandle;
+        userhnd->cleanupfn = tin_userfile_destroyhandle;
         varname = tin_string_copyconst(state, name);
         descname = tin_string_copyconst(state, name);
         args[0] = tin_value_fromobject(userhnd);
@@ -1181,10 +1181,6 @@ void tin_open_file_library(TinState* state)
             tin_class_bindgetset(state, klass, "exists", objstatic_file_exists, NULL, false);
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        };
     }
     {
         klass = tin_object_makeclassname(state, "Dir");
@@ -1200,10 +1196,6 @@ void tin_open_file_library(TinState* state)
             tin_class_bindstaticmethod(state, klass, "read", objstatic_directory_read);
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        };
     }
     tin_userfile_makestdhandles(state);
 }

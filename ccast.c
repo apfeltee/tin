@@ -122,7 +122,7 @@ void tin_ast_destroyexpression(TinState* state, TinAstExpression* expr)
         case TINEXPR_BINARY:
             {
                 TinAstBinaryExpr* herex = (TinAstBinaryExpr*)expr;
-                if(!herex->ignore_left)
+                if(!herex->ignoreleft)
                 {
                     tin_ast_destroyexpression(state, herex->left);
                 }
@@ -374,7 +374,7 @@ TinAstBinaryExpr* tin_ast_make_binaryexpr(TinState* state, size_t line, TinAstEx
     expr->left = left;
     expr->right = right;
     expr->op = op;
-    expr->ignore_left = false;
+    expr->ignoreleft = false;
     return expr;
 }
 

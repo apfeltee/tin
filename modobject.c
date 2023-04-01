@@ -19,13 +19,13 @@ TinModule* tin_object_makemodule(TinState* state, TinString* name)
     TinModule* module;
     module = (TinModule*)tin_object_allocobject(state, sizeof(TinModule), TINTYPE_MODULE, false);
     module->name = name;
-    module->return_value = tin_value_makenull(state);
-    module->main_function = NULL;
+    module->returnvalue = tin_value_makenull(state);
+    module->mainfunction = NULL;
     module->privates = NULL;
     module->ran = false;
-    module->main_fiber = NULL;
-    module->private_count = 0;
-    module->private_names = tin_object_makemap(state);
+    module->mainfiber = NULL;
+    module->privcount = 0;
+    module->privnames = tin_object_makemap(state);
     return module;
 }
 
@@ -42,7 +42,7 @@ TinUserdata* tin_object_makeuserdata(TinState* state, size_t size, bool ispointe
         }
     }
     userdata->size = size;
-    userdata->cleanup_fn = NULL;
+    userdata->cleanupfn = NULL;
     userdata->canfree = true;
     return userdata;
 }
@@ -122,22 +122,22 @@ void tin_object_destroy(TinState* state, TinObject* object)
         case TINTYPE_FIBER:
             {
                 fiber = (TinFiber*)object;
-                tin_gcmem_freearray(state, sizeof(TinCallFrame), fiber->frames, fiber->frame_capacity);
-                tin_gcmem_freearray(state, sizeof(TinValue), fiber->stack, fiber->stack_capacity);
+                tin_gcmem_freearray(state, sizeof(TinCallFrame), fiber->framevalues, fiber->framecap);
+                tin_gcmem_freearray(state, sizeof(TinValue), fiber->stackvalues, fiber->stackcap);
                 tin_gcmem_free(state, sizeof(TinFiber), object);
             }
             break;
         case TINTYPE_MODULE:
             {
                 module = (TinModule*)object;
-                tin_gcmem_freearray(state, sizeof(TinValue), module->privates, module->private_count);
+                tin_gcmem_freearray(state, sizeof(TinValue), module->privates, module->privcount);
                 tin_gcmem_free(state, sizeof(TinModule), object);
             }
             break;
         case TINTYPE_CLOSURE:
             {
                 closure = (TinClosure*)object;
-                tin_gcmem_freearray(state, sizeof(TinUpvalue*), closure->upvalues, closure->upvalue_count);
+                tin_gcmem_freearray(state, sizeof(TinUpvalue*), closure->upvalues, closure->upvalcount);
                 tin_gcmem_free(state, sizeof(TinClosure), object);
             }
             break;
@@ -150,7 +150,7 @@ void tin_object_destroy(TinState* state, TinObject* object)
             {
                 TinClass* klass = (TinClass*)object;
                 tin_table_destroy(state, &klass->methods);
-                tin_table_destroy(state, &klass->static_fields);
+                tin_table_destroy(state, &klass->staticfields);
                 tin_gcmem_free(state, sizeof(TinClass), object);
             }
             break;
@@ -180,9 +180,9 @@ void tin_object_destroy(TinState* state, TinObject* object)
         case TINTYPE_USERDATA:
             {
                 TinUserdata* data = (TinUserdata*)object;
-                if(data->cleanup_fn != NULL)
+                if(data->cleanupfn != NULL)
                 {
-                    data->cleanup_fn(state, data, false);
+                    data->cleanupfn(state, data, false);
                 }
                 if(data->size > 0)
                 {
@@ -246,7 +246,7 @@ static TinValue objfn_instance_super(TinVM* vm, TinValue instance, size_t argc, 
     (void)argc;
     (void)argv;
     TinClass* cl;
-    cl = tin_state_getclassfor(vm->state, instance)->super;
+    cl = tin_state_getclassfor(vm->state, instance)->parentclass;
     if(cl == NULL)
     {
         return tin_value_makenull(vm->state);
@@ -311,7 +311,7 @@ static TinValue objfn_instance_tomap(TinVM* vm, TinValue instance, size_t argc, 
         mclass = tin_object_makemap(vm->state);
         {
             mclstatics = tin_object_makemap(vm->state);
-            fillmap(vm->state, mclstatics, &(inst->klass->static_fields), false);
+            fillmap(vm->state, mclstatics, &(inst->klass->staticfields), false);
         }
         {
             mclmethods = tin_object_makemap(vm->state);
@@ -354,7 +354,7 @@ static TinValue objfn_instance_subscript(TinVM* vm, TinValue instance, size_t ar
     {
         return value;
     }
-    if(tin_table_get(&inst->klass->static_fields, tin_value_asstring(argv[0]), &value))
+    if(tin_table_get(&inst->klass->staticfields, tin_value_asstring(argv[0]), &value))
     {
         return value;
     }
@@ -412,9 +412,9 @@ static TinValue objfn_instance_dump(TinVM* vm, TinValue instance, size_t argc, T
 void tin_state_openobjectlibrary(TinState* state)
 {
     TinClass* klass;
-    klass = tin_object_makeclassname(state, "Object");
+    klass = tin_object_makeclassnamewithparent(state, "Object", NULL);
     {
-        tin_class_inheritfrom(state, klass, state->primclassclass);
+        //tin_class_inheritfrom(state, klass, state->primclassclass);
         tin_class_bindgetset(state, klass, "class", objfn_instance_class, NULL, false);
         tin_class_bindgetset(state, klass, "super", objfn_instance_super, NULL, false);
         tin_class_bindmethod(state, klass, "[]", objfn_instance_subscript);
@@ -428,12 +428,13 @@ void tin_state_openobjectlibrary(TinState* state)
         tin_class_bindmethod(state, klass, "iterator", objfn_instance_iterator);
         tin_class_bindmethod(state, klass, "iteratorValue", objfn_instance_iteratorvalue);
         state->primobjectclass = klass;
-        state->primobjectclass->super = state->primclassclass;
     }
     tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-    if(klass->super == NULL)
+    if(klass->parentclass == NULL)
     {
-        tin_class_inheritfrom(state, klass, state->primobjectclass);
+        //tin_class_inheritfrom(state, klass, state->primobjectclass);
+        tin_class_inheritfrom(state, klass, state->primclassclass);
     };
+
 }
 

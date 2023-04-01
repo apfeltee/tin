@@ -373,10 +373,6 @@ void tin_open_math_library(TinState* state)
             tin_class_bindstaticmethod(state, klass, "exp", math_exp);
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        };
     }
     srand(time(NULL));
     staticrandomdata = time(NULL);
@@ -397,9 +393,5 @@ void tin_open_math_library(TinState* state)
             tin_class_bindstaticmethod(state, klass, "pick", random_pick);
         }
         tin_state_setglobal(state, klass->name, tin_value_fromobject(klass));
-        if(klass->super == NULL)
-        {
-            tin_class_inheritfrom(state, klass, state->primobjectclass);
-        }
     }
 }
