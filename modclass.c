@@ -52,7 +52,7 @@ TinInstance* tin_object_makeinstance(TinState* state, TinClass* klass)
     inst = (TinInstance*)tin_object_allocobject(state, sizeof(TinInstance), TINTYPE_INSTANCE, false);
     inst->klass = klass;
     tin_table_init(state, &inst->fields);
-    inst->fields.count = 0;
+    //inst->fields.count = 0;
     return inst;
 }
 
@@ -187,7 +187,7 @@ static TinValue objfn_class_iterator(TinVM* vm, TinValue instance, size_t argc, 
     }
     klass = tin_value_asclass(instance);
     index = tin_value_isnull(argv[0]) ? -1 : tin_value_asnumber(argv[0]);
-    mthcap = (int)klass->methods.capacity;
+    mthcap = (int)tin_table_getcapacity(&klass->methods);
     fields = index >= mthcap;
     value = util_table_iterator(fields ? &klass->staticfields : &klass->methods, fields ? index - mthcap : index);
     if(value == -1)
@@ -217,7 +217,7 @@ static TinValue objfn_class_iteratorvalue(TinVM* vm, TinValue instance, size_t a
     TinClass* klass;
     index = tin_args_checknumber(vm, argv, argc, 0);
     klass = tin_value_asclass(instance);
-    mthcap = klass->methods.capacity;
+    mthcap = tin_table_getcapacity(&klass->methods);
     fields = index >= mthcap;
     return util_table_iterator_key(fields ? &klass->staticfields : &klass->methods, fields ? index - mthcap : index);
 }

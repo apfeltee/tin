@@ -281,10 +281,11 @@ static TinValue pickrand_map(TinVM* vm, int randoffset, TinValue* av0)
     size_t length;
     size_t capacity;
     TinMap* map;
+    TinTabEntry* ent;
     (void)vm;
     map = tin_value_asmap(*av0);
-    length = map->values.count;
-    capacity = map->values.capacity;
+    length = tin_table_getcount(&map->values);
+    capacity = tin_table_getcapacity(&map->values);
     if(length == 0)
     {
         return tin_value_makenull(vm->state);
@@ -293,11 +294,12 @@ static TinValue pickrand_map(TinVM* vm, int randoffset, TinValue* av0)
     fidx = 0;
     for(i = 0; i < capacity; i++)
     {
-        if(map->values.entries[i].key != NULL)
+        ent = tin_table_getindex(&map->values, i);
+        if(ent->key != NULL)
         {
             if(fidx == target)
             {
-                return map->values.entries[i].value;
+                return ent->value;
             }
             fidx++;
         }

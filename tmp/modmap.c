@@ -24,23 +24,6 @@ void tin_table_destroy(TinState* state, TinTable* table)
     tin_table_init(state, table);
 }
 
-TinTabEntry* tin_table_getindex(TinTable* tab, size_t idx)
-{
-    return &tab->entries[idx];
-}
-
-size_t tin_table_getcapacity(TinTable* tab)
-{
-    return tab->capacity;
-}
-
-
-size_t tin_table_getcount(TinTable* tab)
-{
-    return tab->count;
-}
-
-
 static TinTabEntry* tin_table_findentry(TinTabEntry* entries, int capacity, TinString* key)
 {
     uint32_t index;

@@ -223,9 +223,9 @@ void tin_towriter_map(TinState* state, TinWriter* wr, TinMap* map, size_t size)
     hadbefore = false;
     if(size > 0)
     {
-        for(i = 0; i < (size_t)map->values.capacity; i++)
+        for(i = 0; i < (size_t)tin_table_getcapacity(&map->values); i++)
         {
-            entry = &map->values.entries[i];
+            entry = tin_table_getindex(&map->values, i);
             if(entry->key != NULL)
             {
                 if(hadbefore)
@@ -399,7 +399,7 @@ void tin_towriter_object(TinState* state, TinWriter* wr, TinValue value, bool wi
                         tin_writer_writeformat(wr, "<map>");
                     #else
                         map = tin_value_asmap(value);
-                        size = map->values.count;
+                        size = tin_table_getcount(&map->values);
                         tin_towriter_map(state, wr, map, size);
                     #endif
                 }

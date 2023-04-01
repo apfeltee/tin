@@ -1302,6 +1302,7 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
             tin_vmintern_readframe(est);
             return true;
         }
+        /*
         if(tin_value_isnull(value))
         {
             tin_table_delete(&klassobj->staticfields, fieldname);
@@ -1310,6 +1311,9 @@ TIN_VM_INLINE bool tin_vmdo_fieldset(TinExecState* est, TinValue* finalresult)
         {
             tin_table_set(est->state, &klassobj->staticfields, fieldname, value);
         }
+        */
+                    tin_table_set(est->state, &klassobj->staticfields, fieldname, value);
+
         tin_vmintern_dropn(est, 2);// Pop field name and the value
         est->fiber->stacktop[-1] = value;
     }

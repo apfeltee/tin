@@ -98,9 +98,9 @@ void tin_gcmem_marktable(TinVM* vm, TinTable* table)
 {
     int i;
     TinTabEntry* entry;
-    for(i = 0; i <= table->capacity; i++)
+    for(i = 0; i <= tin_table_getcapacity(table); i++)
     {
-        entry = &table->entries[i];
+        entry = tin_table_getindex(table, i);
         tin_gcmem_markobject(vm, (TinObject*)entry->key);
         tin_gcmem_markvalue(vm, entry->value);
     }

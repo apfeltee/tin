@@ -273,14 +273,16 @@ static void fillmap(TinState* state, TinMap* destmap, TinTable* fromtbl, bool in
 {
     size_t i;
     TinString* key;
+    TinTabEntry* ent;
     TinValue val;
     (void)includenullkeys;
-    for(i=0; i<(size_t)(fromtbl->count); i++)
+    for(i=0; i<(size_t)tin_table_getcount(fromtbl); i++)
     {
-        key = fromtbl->entries[i].key;
+        ent = tin_table_getindex(fromtbl, i);
+        key = ent->key;
         if(key != NULL)
         {
-            val = fromtbl->entries[i].value;
+            val = ent->value;
             tin_map_set(state, destmap, key, val);
         }
     }

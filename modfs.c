@@ -424,6 +424,7 @@ void tin_ioutil_writemodule(TinModule* module, FILE* fh)
 {
     size_t i;
     bool disabled;
+    TinTabEntry* ent;
     TinTable* privates;
     disabled = tin_astopt_isoptenabled(TINOPTSTATE_PRIVATENAMES);
     tin_ioutil_writestring(fh, module->name);
@@ -434,10 +435,11 @@ void tin_ioutil_writemodule(TinModule* module, FILE* fh)
         privates = &module->privnames->values;
         for(i = 0; i < module->privcount; i++)
         {
-            if(privates->entries[i].key != NULL)
+            ent = tin_table_getindex(privates, i);
+            if(ent->key != NULL)
             {
-                tin_ioutil_writestring(fh, privates->entries[i].key);
-                tin_ioutil_writeuint16(fh, (uint16_t)tin_value_asnumber(privates->entries[i].value));
+                tin_ioutil_writestring(fh, ent->key);
+                tin_ioutil_writeuint16(fh, (uint16_t)tin_value_asnumber(ent->value));
             }
         }
     }

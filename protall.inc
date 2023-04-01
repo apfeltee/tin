@@ -217,6 +217,9 @@ void tin_state_openfunctionlibrary(TinState *state);
 /* modmap.c */
 void tin_table_init(TinState *state, TinTable *table);
 void tin_table_destroy(TinState *state, TinTable *table);
+TinTabEntry *tin_table_getindex(TinTable *tab, size_t idx);
+size_t tin_table_getcapacity(TinTable *tab);
+size_t tin_table_getcount(TinTable *tab);
 bool tin_table_set(TinState *state, TinTable *table, TinString *key, TinValue value);
 bool tin_table_get(TinTable *table, TinString *key, TinValue *value);
 bool tin_table_get_slot(TinTable *table, TinString *key, TinValue **value);
@@ -321,7 +324,6 @@ bool tin_state_compileandsave(TinState *state, char *files[], size_t numfiles, c
 TinInterpretResult tin_state_execfile(TinState *state, const char *file);
 TinInterpretResult tin_state_dumpfile(TinState *state, const char *file);
 void tin_state_raiseerror(TinState *state, TinErrType type, const char *message, ...);
-void tin_state_printf(TinState *state, const char *message, ...);
 /* util.c */
 uint64_t pack754(long double f, unsigned bits, unsigned expbits);
 long double unpack754(uint64_t i, unsigned bits, unsigned expbits);
